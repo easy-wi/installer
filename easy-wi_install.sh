@@ -120,7 +120,7 @@ else
 fi
 
 cyanMessage "Checking for the latest latest installer"
-LATEST_VERSION=`wget -q --timeout=60 -O - https://api.github.com/repos/easy-wi/whmcs/releases/latest | grep -Po '(?<="tag_name": ")([0-9]\.[0-9])'`
+LATEST_VERSION=`wget -q --timeout=60 -O - https://api.github.com/repos/easy-wi/installer/releases/latest | grep -Po '(?<="tag_name": ")([0-9]\.[0-9])'`
 
 if [ "`printf "${LATEST_VERSION}\n${INSTALLER_VERSION}" | sort -V | tail -n 1`" != "$INSTALLER_VERSION" ]; then
     errorAndExit "You are using the old version ${INSTALLER_VERSION}. Please upgrade to version ${LATEST_VERSION} and retry."
