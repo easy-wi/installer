@@ -120,7 +120,7 @@ else
 fi
 
 cyanMessage "Checking for the latest latest installer"
-LATEST_VERSION=`wget -q --timeout=60 -O - http://l.easy-wi.com/installer_version.php | sed 's/^\xef\xbb\xbf//g'`
+LATEST_VERSION=`wget -q --timeout=60 -O - https://api.github.com/repos/easy-wi/whmcs/releases/latest | grep -Po '(?<="tag_name": ")([0-9]\.[0-9])'`
 
 if [ "`printf "${LATEST_VERSION}\n${INSTALLER_VERSION}" | sort -V | tail -n 1`" != "$INSTALLER_VERSION" ]; then
     errorAndExit "You are using the old version ${INSTALLER_VERSION}. Please upgrade to version ${LATEST_VERSION} and retry."
@@ -1581,7 +1581,7 @@ if [ "$INSTALL" == "EW" ]; then
 elif [ "$INSTALL" == "GS" ]; then
     greenMessage "Gameserver Root setup is done. Please enter the above data at the webpanel at \"App/Game Master > Overview > Add\"."
 elif [ "$INSTALL" == "VS" ]; then
-    greenMessage "Teamspeak 3 setup is done. TS3 Query password is $QUERY_PASSWORD. Please enter the data at the webpanel at \"Voiceserver > Master > Add\"."
+    greenMessage "Teamspeak 3 setup is done. TS3 Query password is $QUERY_PASSWORD. Please enter this server at the webpanel at \"Voiceserver > Master > Add\"."
 elif [ "$INSTALL" == "WR" ]; then
     greenMessage "Webspace Root setup is done. Please enter the above data at the webpanel at \"Webspace > Master > Add\"."
 fi
