@@ -346,6 +346,10 @@ if [ "$INSTALL" != "MY" ]; then
         errorAndExit "Fatal Error: No masteruser specified"
     fi
 
+    if [ "$MASTERUSER" == "root" ]; then
+        errorAndExit "Fatal Error: Using root as masteruser is a security hazard and not allowed."
+    fi
+
     if [ "`id $MASTERUSER 2> /dev/null`" == "" ]; then
 
         if [ "$INSTALL" == "EW" -o  "$INSTALL" == "WR" ]; then
@@ -743,6 +747,7 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" -o "$INSTALL" == "MY" ]; then
         checkInstall php${USE_PHP_VERSION}-mcrypt
         checkInstall php${USE_PHP_VERSION}-mysql
         checkInstall php${USE_PHP_VERSION}-cli
+        checkInstall php${USE_PHP_VERSION}-xml
 
         if [ "$WEBSERVER" == "Nginx" -o "$WEBSERVER" == "Lighttpd" ]; then
 
@@ -834,8 +839,8 @@ if [ "$INSTALL" != "VS" -a "$INSTALL" != "EW" -a "$INSTALL" != "MY" ]; then
 
                 echo "
 <Directory ~>
-    HideFiles (^\..+|\.ssh|\.bash_history|\.bash_logout|\.bashrc|\.profile|srcds_run|srcds_linux|hlds_run|hlds_amd|hlds_i686|\.rc|\.sh|\.zip|\.rar|\.7z|\.dll)$
-    PathDenyFilter (^\..+|\.ssh|\.bash_history|\.bash_logout|\.bashrc|\.profile|srcds_run|srcds_linux|hlds_run|hlds_amd|hlds_i686|\.rc|\.sh|\.zip|\.rar|\.7z|\.dll)$
+    HideFiles (^\..+|\.ssh|\.bash_history|\.bash_logout|\.bashrc|\.profile|srcds_run|srcds_linux|hlds_run|hlds_amd|hlds_i686|\.rc|\.sh|\.7z|\.dll)$
+    PathDenyFilter (^\..+|\.ssh|\.bash_history|\.bash_logout|\.bashrc|\.profile|srcds_run|srcds_linux|hlds_run|hlds_amd|hlds_i686|\.rc|\.sh|\.7z|\.dll)$
     HideNoAccess on
     <Limit RNTO RNFR STOR DELE CHMOD SITE_CHMOD MKD RMD>
         DenyAll
@@ -863,8 +868,8 @@ if [ "$INSTALL" != "VS" -a "$INSTALL" != "EW" -a "$INSTALL" != "MY" ]; then
     </Limit>
 </Directory>
 <Directory ~/*/*/>
-    HideFiles (^\..+|srcds_run|srcds_linux|hlds_run|hlds_amd|hlds_i686|\.rc|\.sh|\.zip|\.rar|\.7z|\.dll)$
-    PathDenyFilter (^\..+|srcds_run|srcds_linux|hlds_run|hlds_amd|hlds_i686|\.rc|\.sh|\.zip|\.rar|\.7z|\.dll)$
+    HideFiles (^\..+|srcds_run|srcds_linux|hlds_run|hlds_amd|hlds_i686|\.rc|\.sh|\.7z|\.dll)$
+    PathDenyFilter (^\..+|srcds_run|srcds_linux|hlds_run|hlds_amd|hlds_i686|\.rc|\.sh|\.7z|\.dll)$
     HideNoAccess on
 </Directory>" >> /etc/proftpd/conf.d/easy-wi.conf
 
