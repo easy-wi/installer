@@ -1159,6 +1159,7 @@ if [ "$INSTALL" == "GS" ]; then
 	apt-get update
 	apt-get install oracle-java8-installer
     fi
+    fi
 
     okAndSleep "Creating folders and files"
     CREATEDIRS=("conf" "fdl_data/hl2" "logs" "masteraddons" "mastermaps" "masterserver" "temp")
