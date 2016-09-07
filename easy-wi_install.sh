@@ -1139,7 +1139,25 @@ if [ "$INSTALL" == "GS" ]; then
     done
 
     if [ "$OPTION" == "Yes" ]; then
+    cyanMessage " "
+    cyanMessage "Which Java JRE shoul be installed? Newer Minecraft Plugins prefer Java 8."
+    OPTIONS=("Java 7" "Java 8" "Quit")
+    select OPTION in "${OPTIONS[@]}"; do
+        case "$REPLY" in
+            1|2 ) break;;
+            3 ) errorAndQuit;;
+            *) errorAndContinue;;
+        esac
+    done
+    
+    if [ "$OPTION" == "Java 7"]
         checkInstall default-jre
+    elif [ "$OPTION" == "Java 8"]
+    	echo "deb http://ppa.launchpad.net/webupd8team/java/ubuntu xenial main" | tee /etc/apt/sources.list.d/webupd8team-java.list
+	echo "deb-src http://ppa.launchpad.net/webupd8team/java/ubuntu xenial main" | tee -a /etc/apt/sources.list.d/webupd8team-java.list
+	apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys EEA14886
+	apt-get update
+	apt-get install oracle-java8-installer
     fi
 
     okAndSleep "Creating folders and files"
