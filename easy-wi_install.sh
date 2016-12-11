@@ -1096,8 +1096,11 @@ if [ "$INSTALL" == "GS" -o  "$INSTALL" == "WR" ]; then
         fi
 
         if [ "$PHPINSTALL" == "Yes" -a "$WEBSERVER" == "Nginx" -a "`grep $MASTERUSER /etc/sudoers | grep 'php${USE_PHP_VERSION}-fpm'`" == "" ]; then
+
+            FPM_BIN=`which php${USE_PHP_VERSION}-fpm`
+
             echo "$MASTERUSER ALL = NOPASSWD: /etc/init.d/php${USE_PHP_VERSION}-fpm" >> /etc/sudoers
-            echo "$MASTERUSER ALL = NOPASSWD: /usr/sbin/php${USE_PHP_VERSION}-fpm" >> /etc/sudoers
+            echo "$MASTERUSER ALL = NOPASSWD: $FPM_BIN" >> /etc/sudoers
         fi
     fi
 fi
@@ -1122,6 +1125,11 @@ if [ "$INSTALL" == "WR" ]; then
 
     greenMessage "The HTTPD restart command is:"
     greenMessage "sudo $HTTPDSCRIPT reload"
+
+    if [ "$PHPINSTALL" == "Yes" -a "$WEBSERVER" == "Nginx" ]; then
+        greenMessage "The PHP FPM restart command is:"
+        greenMessage "sudo $FPM_BIN reload"
+    fi
 fi
 
 if ([ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ] && [ "$QUOTAINSTALL" == "Yes" ]); then
