@@ -759,6 +759,7 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" -o "$INSTALL" == "MY" ]; then
             fi
 
             makeDir /home/$MASTERUSER/fpm-pool.d/
+
             sed -i "s/include=\/etc\/php5\/fpm\/pool.d\/\*.conf/include=\/home\/$MASTERUSER\/fpm-pool.d\/\*.conf/g" /etc/php5/fpm/php-fpm.conf
             sed -i "s/include=\/etc\/php/7.0\/fpm\/pool.d\/\*.conf/include=\/home\/$MASTERUSER\/fpm-pool.d\/\*.conf/g" /etc/php/7.0/fpm/php-fpm.conf
 
@@ -1233,8 +1234,6 @@ fi
 
 if [ "$INSTALL" == "EW" ]; then
 
-    makeDir /home/$MASTERUSER/fpm-pool.d/
-
     if [ -f /home/easywi_web/htdocs/serverallocation.php ]; then
 
         cyanMessage " "
@@ -1328,6 +1327,7 @@ if [ "$INSTALL" == "EW" ]; then
 
     if [ "$WEBSERVER" == "Nginx" -o "$WEBSERVER" == "Lighttpd" ]; then
 
+        makeDir /home/$MASTERUSER/fpm-pool.d/
         FILE_NAME_POOL=/home/$MASTERUSER/fpm-pool.d/$FILE_NAME.conf
 
         echo "[$IP_DOMAIN]" > $FILE_NAME_POOL
