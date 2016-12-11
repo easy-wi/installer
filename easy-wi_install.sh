@@ -104,7 +104,7 @@ function checkInstall {
     fi
 }
 
-INSTALLER_VERSION="1.6"
+INSTALLER_VERSION="1.7"
 OS=""
 USERADD=`which useradd`
 USERMOD=`which usermod`
@@ -1092,6 +1092,10 @@ if [ "$INSTALL" == "GS" -o  "$INSTALL" == "WR" ]; then
 
         if [ "`grep $MASTERUSER /etc/sudoers | grep $HTTPDSCRIPT`" == "" ]; then
             echo "$MASTERUSER ALL = NOPASSWD: $HTTPDSCRIPT" >> /etc/sudoers
+        fi
+
+        if [ "$PHPINSTALL" == "Yes" -a "$WEBSERVER" == "Nginx" ]; then
+            echo "$MASTERUSER ALL = NOPASSWD: /etc/init.d/php-fpm" >> /etc/sudoers
         fi
     fi
 fi
