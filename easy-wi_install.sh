@@ -1095,8 +1095,9 @@ if [ "$INSTALL" == "GS" -o  "$INSTALL" == "WR" ]; then
             echo "$MASTERUSER ALL = NOPASSWD: $HTTPDSCRIPT" >> /etc/sudoers
         fi
 
-        if [ "$PHPINSTALL" == "Yes" -a "$WEBSERVER" == "Nginx" ]; then
-            echo "$MASTERUSER ALL = NOPASSWD: /etc/init.d/php-fpm" >> /etc/sudoers
+        if [ "$PHPINSTALL" == "Yes" -a "$WEBSERVER" == "Nginx" -a "`grep $MASTERUSER /etc/sudoers | grep 'php${USE_PHP_VERSION}-fpm'`" == "" ]; then
+            echo "$MASTERUSER ALL = NOPASSWD: /etc/init.d/php${USE_PHP_VERSION}-fpm" >> /etc/sudoers
+            echo "$MASTERUSER ALL = NOPASSWD: /usr/sbin/php${USE_PHP_VERSION}-fpm" >> /etc/sudoers
         fi
     fi
 fi
