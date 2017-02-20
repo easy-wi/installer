@@ -1140,7 +1140,7 @@ if [ "$INSTALL" == "GS" ]; then
 
     if [ "$OPTION" == "Yes" ]; then
     cyanMessage " "
-    cyanMessage "Which Java JRE shoul be installed? Newer Minecraft Plugins prefer Java 8."
+    cyanMessage "Which Java JRE should be installed? Since Minecraft 1.8 Java 8 is preferred."
     OPTIONS=("Java 7" "Java 8" "Quit")
     select OPTION in "${OPTIONS[@]}"; do
         case "$REPLY" in
