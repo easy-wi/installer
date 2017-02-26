@@ -104,7 +104,7 @@ function checkInstall {
     fi
 }
 
-INSTALLER_VERSION="1.8"
+INSTALLER_VERSION="1.9"
 OS=""
 USERADD=`which useradd`
 USERMOD=`which usermod`
@@ -337,50 +337,44 @@ if [ "$INSTALL" == "EW" -o  "$INSTALL" == "WR" ]; then
     fi
 fi
 
+function checkUser {
+
+    if [ "$1" == "" ]; then
+        redMessage "Error: No masteruser specified"
+    elif [ "$1" == "root" ]; then
+        redMessage "Error: Using root as masteruser is a security hazard and not allowed."
+    elif [ "`id $1 2> /dev/null`" != "" ] && ([ "$INSTALL" != "EW" -a "$INSTALL" != "WR" ] || [ ! -d "/home/$1/sites-enabled" ]); then
+        redMessage "Error: User \"$1\" already exists. Please name a not yet existing user"
+    else
+        echo 1
+    fi
+}
+
 if [ "$INSTALL" != "MY" ]; then
 
-    cyanMessage "Please enter the name of the masteruser. If it does not exists, the installer will create it."
+    cyanMessage "Please enter the name of the masteruser, which does not exist yet."
     read MASTERUSER
 
-    if [ "$MASTERUSER" == "" ]; then
-        errorAndExit "Fatal Error: No masteruser specified"
+    CHECK_USER=`checkUser $MASTERUSER`
+
+    if [ "$CHECK_USER" != "1" ]; then
+        echo $CHECK_USER
+        read MASTERUSER
+        CHECK_USER=`checkUser $MASTERUSER`
+
+        if [ "$CHECK_USER" != "1" ]; then
+            echo $CHECK_USER
+            errorAndExit "Fatal Error: No valid masteruser specified in two tries"
+        fi
     fi
 
-    if [ "$MASTERUSER" == "root" ]; then
-        errorAndExit "Fatal Error: Using root as masteruser is a security hazard and not allowed."
-    fi
-
-    if [ "`id $MASTERUSER 2> /dev/null`" == "" ]; then
-
-        if [ "$INSTALL" == "EW" -o  "$INSTALL" == "WR" ]; then
+    if [ "`id $1 2> /dev/null`" != "" ]; then
+        if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" ]; then
             $USERADD -m -b /home -s /bin/bash -g $WEBGROUPID $MASTERUSER
         else
-
-            if [ -d /home/$MASTERUSER ]; then
-                $GROUPADD $MASTERUSER
-                $USERADD -d /home/$MASTERUSER -s /bin/bash -g $MASTERUSER $MASTERUSER
-            else
-                $GROUPADD $MASTERUSER
-                $USERADD -m -b /home -s /bin/bash -g $MASTERUSER $MASTERUSER
-            fi
+            $GROUPADD $MASTERUSER
+            $USERADD -m -b /home -s /bin/bash -g $MASTERUSER $MASTERUSER
         fi
-
-    elif [ "$INSTALL" != "VS" -a "$INSTALL" != "MY" ]; then
-
-        okAndSleep "User \"$MASTERUSER\" found setting group \"$MASTERUSER\" as mastegroup"
-
-        if [ "$INSTALL" == "EW" -o  "$INSTALL" == "WR" ]; then
-            $USERMOD -G $WEBGROUPID $MASTERUSER
-        else
-
-            if [ "`getent group $MASTERUSER`" == "" ]; then
-                $GROUPADD $MASTERUSER
-            fi
-
-            $USERMOD -G $MASTERUSER $MASTERUSER
-        fi
-    else
-        okAndSleep "User \"$MASTERUSER\" already exists."
     fi
 
     cyanMessage " "
@@ -388,7 +382,7 @@ if [ "$INSTALL" != "MY" ]; then
     cyanMessage "Safest way of login is a password protected key."
 
     if [ "$INSTALL" == "EW" ]; then
-        cyanMessage "Neither is not required, when installing Easy-WI Webpanel."
+        cyanMessage "Neither is required, when installing Easy-WI Webpanel."
     fi
 
     OPTIONS=("Create key" "Set password" "Skip" "Quit")
