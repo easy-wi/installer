@@ -104,7 +104,7 @@ function checkInstall {
     fi
 }
 
-INSTALLER_VERSION="1.9"
+INSTALLER_VERSION="1.10"
 OS=""
 USERADD=`which useradd`
 USERMOD=`which usermod`
@@ -1136,7 +1136,7 @@ fi
 if [ "$INSTALL" == "GS" ]; then
 
     cyanMessage " "
-    cyanMessage "Java JRE will be required for running Minecraft and its mods. Shall it be installed?"
+    cyanMessage "Java JRE 8 will be required for running Minecraft and its mods. Shall it be installed?"
     OPTIONS=("Yes" "No" "Quit")
     select OPTION in "${OPTIONS[@]}"; do
         case "$REPLY" in
@@ -1147,26 +1147,17 @@ if [ "$INSTALL" == "GS" ]; then
     done
 
     if [ "$OPTION" == "Yes" ]; then
-    cyanMessage " "
-    cyanMessage "Which Java JRE should be installed? Since Minecraft 1.8 Java 8 is preferred."
-    OPTIONS=("Java 7" "Java 8" "Quit")
-    select OPTION in "${OPTIONS[@]}"; do
-        case "$REPLY" in
-            1|2 ) break;;
-            3 ) errorAndQuit;;
-            *) errorAndContinue;;
-        esac
-    done
-    
-    if [ "$OPTION" == "Java 7"]
-        checkInstall default-jre
-    elif [ "$OPTION" == "Java 8"]
-    	echo "deb http://ppa.launchpad.net/webupd8team/java/ubuntu xenial main" | tee /etc/apt/sources.list.d/webupd8team-java.list
-	echo "deb-src http://ppa.launchpad.net/webupd8team/java/ubuntu xenial main" | tee -a /etc/apt/sources.list.d/webupd8team-java.list
-	apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys EEA14886
-	apt-get update
-	apt-get install oracle-java8-installer
-    fi
+
+        if [ "$OSBRANCH" == "jessie" -a "`grep jessie-backports /etc/apt/sources.list`" == "" ]; then
+            okAndSleep "Adding jessie backports"
+            echo "deb http://ftp.de.debian.org/debian jessie-backports main" >> /etc/apt/sources.list
+            apt-get update
+        fi
+
+        if [ "$OSBRANCH" == "jessie" ]; then
+            apt install -t jessie-backports openjdk-8-jre-headless ca-certificates-java -y
+        fi
+        checkInstall openjdk-8-jdk
     fi
 
     okAndSleep "Creating folders and files"
