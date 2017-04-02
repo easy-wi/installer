@@ -900,7 +900,7 @@ if [ "$INSTALL" != "VS" -a "$INSTALL" != "EW" -a "$INSTALL" != "MY" ]; then
         AllowAll
     </Limit>
 </Directory>
-<Directory ~/*/*/*/${FOLDER}>
+<Directory ~/*/*/${FOLDER}>
     Umask 077 077
     <Limit RNFR RNTO STOR DELE MKD RMD>
         AllowAll
