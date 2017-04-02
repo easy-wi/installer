@@ -862,7 +862,7 @@ if [ "$INSTALL" != "VS" -a "$INSTALL" != "EW" -a "$INSTALL" != "MY" ]; then
         AllowAll
     </Limit>
 </Directory>
-<Directory ~/*/*/>
+<Directory ~/*/>
     HideFiles (^\..+|srcds_run|srcds_linux|hlds_run|hlds_amd|hlds_i686|\.rc|\.sh|\.7z|\.dll)$
     PathDenyFilter (^\..+|srcds_run|srcds_linux|hlds_run|hlds_amd|hlds_i686|\.rc|\.sh|\.7z|\.dll)$
     HideNoAccess on
@@ -872,7 +872,7 @@ if [ "$INSTALL" != "VS" -a "$INSTALL" != "EW" -a "$INSTALL" != "MY" ]; then
                 GAMES=("ark" "arma3" "bukkit" "hexxit" "mc" "mtasa" "projectcars" "rust" "samp" "spigot" "teeworlds" "tekkit" "tekkit-classic")
 
                 for GAME in ${GAMES[@]}; do
-                    echo "<Directory ~/server/*/$GAME*/*>
+                    echo "<Directory ~/server/$GAME*/*>
     Umask 077 077
     <Limit RNFR RNTO STOR DELE MKD RMD>
         AllowAll
@@ -883,7 +883,7 @@ if [ "$INSTALL" != "VS" -a "$INSTALL" != "EW" -a "$INSTALL" != "MY" ]; then
                 GAME_MODS=("csgo" "cstrike" "czero" "orangebox" "dod" "garrysmod")
 
                 for GAME_MOD in ${GAME_MODS[@]}; do
-                    echo "<Directory ~/server/*/*/${GAME_MOD}/*>
+                    echo "<Directory ~/server/*/${GAME_MOD}/*>
     Umask 077 077
     <Limit RNFR RNTO STOR DELE MKD RMD>
         AllowAll
@@ -894,7 +894,7 @@ if [ "$INSTALL" != "VS" -a "$INSTALL" != "EW" -a "$INSTALL" != "MY" ]; then
                 FOLDERS=("addons" "cfg" "maps")
 
                 for FOLDER in ${FOLDERS[@]}; do
-                    echo "<Directory ~/*/*/*/*/${FOLDER}>
+                    echo "<Directory ~/*/*/*/${FOLDER}>
     Umask 077 077
     <Limit RNFR RNTO STOR DELE>
         AllowAll
@@ -1235,7 +1235,7 @@ if [ "$INSTALL" == "GS" ]; then
         fi
 
         echo "#Minecraft can easily produce 1GB+ logs within one hour" >> /etc/crontab
-        echo "*/5 * * * * root nice -n +19 ionice -n 7 find /home/*/server/*/*/ -maxdepth 2 -type f -name \"screenlog.0\" -size +100M -delete" >> /etc/crontab
+        echo "*/5 * * * * root nice -n +19 ionice -n 7 find /home/*/server/*/ -maxdepth 2 -type f -name \"screenlog.0\" -size +100M -delete" >> /etc/crontab
         echo "# Even sudo /usr/sbin/deluser --remove-all-files is used some data remain from time to time" >> /etc/crontab
         echo "*/5 * * * * root nice -n +19 $IONICE find /home/ -maxdepth 2 -type d -nouser -delete" >> /etc/crontab
         echo "*/5 * * * * root nice -n +19 $IONICE find /home/*/fdl_data/ /home/*/temp/ /tmp/ /var/run/screen/ -nouser -print0 | xargs -0 rm -rf" >> /etc/crontab
