@@ -1135,7 +1135,7 @@ fi
 
 if [ "$INSTALL" == "GS" ]; then
 
-    if [ -f /bin/false ]; then
+    if [ ! -f /bin/false ]; then
         touch /bin/false
     fi
 
