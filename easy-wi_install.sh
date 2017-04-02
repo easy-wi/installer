@@ -1135,6 +1135,14 @@ fi
 
 if [ "$INSTALL" == "GS" ]; then
 
+    if [ -f /bin/false ]; then
+        touch /bin/false
+    fi
+
+    if [ "`grep '/bin/false' /etc/shells`" == "" ]; then
+        echo "/bin/false" >> /etc/shells
+    fi
+
     cyanMessage " "
     cyanMessage "Java JRE 8 will be required for running Minecraft and its mods. Shall it be installed?"
     OPTIONS=("Yes" "No" "Quit")
