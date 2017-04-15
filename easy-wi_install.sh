@@ -265,6 +265,20 @@ if [ "$INSTALL" == "EW" ]; then
     if [ "`grep -E '\b((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.|$)){4}\b' <<< $IP_DOMAIN`" == "" -a "`grep -E '^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$' <<< $IP_DOMAIN`" == "" ]; then
         errorAndExit "Error: $IP_DOMAIN is neither a domain nor an IPv4 address!"
     fi
+
+    cyanMessage " "
+    cyanMessage "Install stable or latest developer version?"
+
+    OPTIONS=("Stable" "Developer" "Quit")
+    select OPTION in "${OPTIONS[@]}"; do
+        case "$REPLY" in
+            1|2 ) break;;
+            3 ) errorAndQuit;;
+            *) errorAndContinue;;
+        esac
+    done
+
+    RELEASE_TYPE=$OPTION
 fi
 
 # Run the TS3 server version detect up front to avoid user executing steps first and fail at download last.
@@ -1296,8 +1310,15 @@ if [ "$INSTALL" == "EW" ]; then
 
     cd /home/easywi_web/htdocs/
 
-    okAndSleep "Downloading latest Easy-WI stable."
-    curl https://easy-wi.com/uk/downloads/get/3/ -o web.zip
+    okAndSleep "Downloading latest Easy-WI ${RELEASE_TYPE} version."
+
+    if [ "${RELEASE_TYPE}" == "Stable" ]; then
+        DOWNLOAD_URL=`wget -q --timeout=60 -O - https://api.github.com/repos/easy-wi/developer/releases/latest | grep -Po '(?<="zipball_url": ")([\w:/\-.]+)'`
+    else
+        DOWNLOAD_URL=`wget -q --timeout=60 -O - https://api.github.com/repos/easy-wi/developer/tags | grep -Po '(?<="zipball_url": ")([\w:/\-.]+)' | head -n 1`
+    fi
+
+    curl -L ${DOWNLOAD_URL} -o web.zip
 
     if [ ! -f web.zip ]; then
         errorAndExit "Can not download Easy-WI. Aborting!"
@@ -1307,8 +1328,15 @@ if [ "$INSTALL" == "EW" ]; then
     unzip -u web.zip >/dev/null 2>&1
     removeIfExists web.zip
 
-    find /home/easywi_web/ -type f -print0 | xargs -0 chmod 640
-    find /home/easywi_web/ -mindepth 1 -type d -print0 | xargs -0 chmod 750
+    HEX_FOLDER=`ls | grep 'easy-wi-developer-' | head -n 1`
+
+    if [ "${HEX_FOLDER}" != "" ]; then
+        mv ${HEX_FOLDER}/* ./
+        rm -rf ${HEX_FOLDER}
+    fi
+
+    find /home/easywi_web/ -type f -exec chmod 0640 {} \;
+    find /home/easywi_web/ -mindepth 1 -type d -exec chmod 0750 {} \;
 
     chown -R easywi_web:www-data /home/easywi_web
 
