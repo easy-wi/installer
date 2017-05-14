@@ -415,7 +415,7 @@ if [ "$INSTALL" != "MY" ]; then
         fi
 
         mkdir -p /home/$MASTERUSER/.ssh
-        chown $MASTERUSER:$MASTERUSER /home/$MASTERUSER/.ssh
+        chown $MASTERUSER:$WEBGROUPID /home/$MASTERUSER/.ssh
         cd /home/$MASTERUSER/.ssh
 
         cyanMessage " "
