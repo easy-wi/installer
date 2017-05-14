@@ -1214,7 +1214,11 @@ if [ "$INSTALL" == "GS" ]; then
             okAndSleep "Installing 32bit support for 64bit systems."
 
             if ([ "$OS" == "ubuntu" ] || [ "$OS" == "debian" -a "`printf "${OSVERSION}\n8.0" | sort -V | tail -n 1`" == "$OSVERSION" ]); then
-                apt-get install zlib1g lib32z1 lib32gcc1 lib32readline5 lib32ncursesw5 -y
+                apt-get install zlib1g -y
+                apt-get install lib32z1 -y
+                apt-get install lib32gcc1 -y
+                apt-get install lib32readline5 -y
+                apt-get install lib32ncursesw5 -y
                 apt-get install lib32stdc++6 -y
                 apt-get install lib64stdc++6 -y
                 apt-get install libstdc++6 -y
