@@ -266,6 +266,8 @@ if [ "$INSTALL" == "EW" ]; then
         errorAndExit "Error: $IP_DOMAIN is neither a domain nor an IPv4 address!"
     fi
 
+    FILE_NAME=${IP_DOMAIN//./_}
+
     cyanMessage " "
     cyanMessage "Install stable or latest developer version?"
 
@@ -1359,8 +1361,6 @@ if [ "$INSTALL" == "EW" ]; then
             *) errorAndContinue;;
         esac
     done
-
-    FILE_NAME=${IP_DOMAIN//./_}
 
     if [ "$SSL" == "Yes" ]; then
 
