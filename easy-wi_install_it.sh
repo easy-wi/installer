@@ -130,7 +130,7 @@ fi
 
 # We need to be root to install and update
 if [ "`id -u`" != "0" ]; then
-    cyanMessage "Per poter proseguire con l'installazione è necessario utilizzare l'account di root"
+    cyanMessage "Per poter proseguire con l'installazione Ã¨ necessario utilizzare l'account di root"
     su -
 fi
 
@@ -225,7 +225,7 @@ fi
 if [ "$OTHER_PANEL" != "" ]; then
     if [ "$INSTALL" == "GS" ]; then
         yellowMessage " "
-        yellowMessage "Attenzione, una installazione del pannello di controllo $OTHER_PANEL è stata rilevata."
+        yellowMessage "Attenzione, una installazione del pannello di controllo $OTHER_PANEL Ã¨ stata rilevata."
         yellowMessage "Se continuerai l'installazione potrebbe interrompersi danneggiando $OTHER_PANEL o alcune parti dell'Easy-WI potrebbero non funzionare."
         OPTIONS=("Continua" "Esci")
         select UPDATE_UPGRADE_SYSTEM in "${OPTIONS[@]}"; do
@@ -263,7 +263,7 @@ if [ "$INSTALL" == "EW" ]; then
     fi
 
     if [ "`grep -E '\b((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.|$)){4}\b' <<< $IP_DOMAIN`" == "" -a "`grep -E '^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$' <<< $IP_DOMAIN`" == "" ]; then
-        errorAndExit "Errore: $IP_DOMAIN non è né un dominio né un IPv4!"
+        errorAndExit "Errore: $IP_DOMAIN non Ã¨ nÃ© un dominio nÃ© un IPv4!"
     fi
 fi
 
@@ -275,7 +275,7 @@ if [ "$INSTALL" == "VS" ]; then
     elif [ "$MACHINE" == "i386" ]||[ "$MACHINE" == "i686" ]; then
         ARCH="x86"
     else
-        errorAndExit "$MACHINE non è supportata!"
+        errorAndExit "$MACHINE non Ã¨ supportata!"
     fi
 
     okAndSleep "Cercando l'ultima build per hardware di tipo $MACHINE con architettura $ARCH."
@@ -339,7 +339,7 @@ fi
 
 if [ "$INSTALL" != "MY" ]; then
 
-    cyanMessage "Perfavore inserisci il nome dell'utente principale. Se non esiste, l'installer provvederà a crearlo."
+    cyanMessage "Perfavore inserisci il nome dell'utente principale. Se non esiste, l'installer provvederÃ  a crearlo."
     read MASTERUSER
 
     if [ "$MASTERUSER" == "" ]; then
@@ -376,15 +376,15 @@ if [ "$INSTALL" != "MY" ]; then
             $USERMOD -G $MASTERUSER $MASTERUSER
         fi
     else
-        okAndSleep "L'utente \"$MASTERUSER\" è già esistente."
+        okAndSleep "L'utente \"$MASTERUSER\" Ã¨ giÃ  esistente."
     fi
 
     cyanMessage " "
     cyanMessage "Creare una chiave o impostare una password per il login?"
-    cyanMessage "Il modo più sicuro di effettuare il login è mediante una chiave protetta da password."
+    cyanMessage "Il modo piÃ¹ sicuro di effettuare il login Ã¨ mediante una chiave protetta da password."
 
     if [ "$INSTALL" == "EW" ]; then
-        cyanMessage "Nessuno dei due è richiesto per l'installazione del pannello web dell' Easy-WI."
+        cyanMessage "Nessuno dei due Ã¨ richiesto per l'installazione del pannello web dell' Easy-WI."
     fi
 
     OPTIONS=("Crea una chiave" "Imposta una password" "Salta" "Esci")
@@ -405,7 +405,7 @@ if [ "$INSTALL" != "MY" ]; then
         fi
 
         cyanMessage " "
-        cyanMessage "È raccomandato ma non richesto impostare una password"
+        cyanMessage "Ãˆ raccomandato ma non richesto impostare una password"
         su -c "ssh-keygen -t rsa" $MASTERUSER
 
         cd /home/$MASTERUSER/.ssh
@@ -415,7 +415,7 @@ if [ "$INSTALL" != "MY" ]; then
         if [ "$KEYNAME" != "" ]; then
             su -c "cat $KEYNAME >> authorized_keys" $MASTERUSER
         else
-            redMessage "Errore: non posso trovare una chiave. Potresti dover crearne una manualemnte più avanti."
+            redMessage "Errore: non posso trovare una chiave. Potresti dover crearne una manualemnte piÃ¹ avanti."
         fi
 
     elif [ "$OPTION" == "Imposta una password" ]; then
@@ -476,8 +476,8 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" -o "$INSTALL" == "MY" ]; then
 
     if [ "$INSTALL" == "EW" ]; then
 
-        cyanMessage "Apache è raccomandato in caso si vogliano utilizzare ulteriori siti soltre a questo host."
-        cyanMessage "Nginx è raccomandato se il server dovrebbe solo eseguire il pannello web Easy-WI."
+        cyanMessage "Apache Ã¨ raccomandato in caso si vogliano utilizzare ulteriori siti soltre a questo host."
+        cyanMessage "Nginx Ã¨ raccomandato se il server dovrebbe solo eseguire il pannello web Easy-WI."
 
         OPTIONS=("Nginx" "Apache" "Esci")
         select WEBSERVER in "${OPTIONS[@]}"; do
@@ -490,8 +490,8 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" -o "$INSTALL" == "MY" ]; then
 
     elif [ "$INSTALL" != "MY" ]; then
 
-        cyanMessage "Nginx è raccomandato per per il FastDL e un pò più efficente per i vhosts"
-        cyanMessage "Apache è raccomandato in caso in caso si voglia eseguire più siti in PHP supportando Vhosts ovvero hosting web in massa"
+        cyanMessage "Nginx Ã¨ raccomandato per per il FastDL e un pÃ² piÃ¹ efficente per i vhosts"
+        cyanMessage "Apache Ã¨ raccomandato in caso in caso si voglia eseguire piÃ¹ siti in PHP supportando Vhosts ovvero hosting web in massa"
 
         OPTIONS=("Nginx" "Apache" "Lighttpd" "Nessuno" "Esci")
         select WEBSERVER in "${OPTIONS[@]}"; do
@@ -513,7 +513,7 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" -o "$INSTALL" == "MY" ]; then
 
     if [ "$INSTALL" == "EW" ]; then
 
-        okAndSleep "Perfavore, prendi nota del fatto che l'Easy-Wi richiede MySQL o MariaDB installato, ed installerà MySQL se nessun servizio risulterà installato"
+        okAndSleep "Perfavore, prendi nota del fatto che l'Easy-Wi richiede MySQL o MariaDB installato, ed installerÃ  MySQL se nessun servizio risulterÃ  installato"
 
         if [ "`ps ax | grep mysql | grep -v grep`" == "" ]; then
             SQL="MySQL"
@@ -615,7 +615,7 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" -o "$INSTALL" == "MY" ]; then
         if [ "$INSTALL" == "WR" -o "$INSTALL" == "MY" ]; then
 
             cyanMessage " "
-            cyanMessage "Il pannello Easy-Wi è installato su un server diverso da questo?."
+            cyanMessage "Il pannello Easy-Wi Ã¨ installato su un server diverso da questo?."
 
             OPTIONS=("Si" "No" "Esci")
             select EXTERNAL_INSTALL in "${OPTIONS[@]}"; do
@@ -666,12 +666,12 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" -o "$INSTALL" == "MY" ]; then
 
     if [ "$INSTALL" == "EW" -a "`ps ax | grep mysql | grep -v grep`" == "" ]; then
         cyanMessage " "
-        errorAndExit "Errore: nessun server SQL è attualemte in esecuzione, tuttavia questo è richiesto dal pannello web."
+        errorAndExit "Errore: nessun server SQL Ã¨ attualemte in esecuzione, tuttavia questo Ã¨ richiesto dal pannello web."
     fi
 
     if [ "$INSTALL" == "EW" ]; then
 
-        okAndSleep "Perfavore, prendere nota del fatto che l'Easy-Wi installerà i pacchetti PHP richiesti."
+        okAndSleep "Perfavore, prendere nota del fatto che l'Easy-Wi installerÃ  i pacchetti PHP richiesti."
         PHPINSTALL="Si"
 
     elif [ "$INSTALL" != "MY" ]; then
@@ -863,8 +863,8 @@ if [ "$INSTALL" != "VS" -a "$INSTALL" != "EW" -a "$INSTALL" != "MY" ]; then
     </Limit>
 </Directory>
 <Directory ~/*/*/>
-    HideFiles (^\..+|srcds_run|srcds_linux|hlds_run|hlds_amd|hlds_i686|\.rc|\.sh|\.zip|\.rar|\.7z|\.dll)$
-    PathDenyFilter (^\..+|srcds_run|srcds_linux|hlds_run|hlds_amd|hlds_i686|\.rc|\.sh|\.zip|\.rar|\.7z|\.dll)$
+    HideFiles (^\..+|srcds_run|srcds_linux|hlds_run|hlds_amd|hlds_i686|\.rc|\.sh|\.7z|\.dll)$
+    PathDenyFilter (^\..+|srcds_run|srcds_linux|hlds_run|hlds_amd|hlds_i686|\.rc|\.sh|\.7z|\.dll)$
     HideNoAccess on
 </Directory>" >> /etc/proftpd/conf.d/easy-wi.conf
 
@@ -953,7 +953,7 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
 
         cyanMessage " "
         cyanMessage " "
-        cyanMessage "perfavore, controlla l'output sovrestante ed assicurati che sia corretto. Alla conferma, il file /etc/fstab sarà sostituito per poter attivare Quotas!"
+        cyanMessage "perfavore, controlla l'output sovrestante ed assicurati che sia corretto. Alla conferma, il file /etc/fstab sarÃ  sostituito per poter attivare Quotas!"
 
         OPTIONS=("Si" "No" "Esci")
         select QUOTAFSTAB in "${OPTIONS[@]}"; do
@@ -1097,33 +1097,33 @@ if [ "$INSTALL" == "WR" ]; then
 
     greenMessage "I seguenti dati devono essere inseriti nel pannello Easy-Wi:"
 
-    greenMessage "Il percorso alla cartella \"sites-enabled\" è:"
+    greenMessage "Il percorso alla cartella \"sites-enabled\" Ã¨:"
     greenMessage "/home/$MASTERUSER/sites-enabled/"
 
-    greenMessage "Il comando per aggiungere un utente è:"
+    greenMessage "Il comando per aggiungere un utente Ã¨:"
     greenMessage "sudo $USERADD %cmd%"
 
-    greenMessage "Il comando usermod è:"
+    greenMessage "Il comando usermod Ã¨:"
     greenMessage "sudo $USERMOD %cmd%"
 
-    greenMessage "Il comando userdel è:"
+    greenMessage "Il comando userdel Ã¨:"
     greenMessage "sudo $USERDEL %cmd%"
 
-    greenMessage "Il comando per riavviare HTTPD è:"
+    greenMessage "Il comando per riavviare HTTPD Ã¨:"
     greenMessage "sudo $HTTPDSCRIPT reload"
 fi
 
 if ([ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ] && [ "$QUOTAINSTALL" == "Si" ]); then
-    greenMessage "Il comapndo per impostare i quota è:"
+    greenMessage "Il comapndo per impostare i quota Ã¨:"
     greenMessage "sudo `which setquota` %cmd%"
-    greenMessage "Il comando per soostituire i quota è:"
+    greenMessage "Il comando per soostituire i quota Ã¨:"
     greenMessage "sudo `which repquota` %cmd%"
 fi
 
 if [ "$INSTALL" == "GS" ]; then
 
     cyanMessage " "
-    cyanMessage "Java JRE è richiesto per eseguire Minecraft e le sue mod. Dovrebbe essere installato?"
+    cyanMessage "Java JRE Ã¨ richiesto per eseguire Minecraft e le sue mod. Dovrebbe essere installato?"
     OPTIONS=("Si" "No" "Esci")
     select OPTION in "${OPTIONS[@]}"; do
         case "$REPLY" in
@@ -1229,7 +1229,7 @@ if [ "$INSTALL" == "EW" ]; then
     if [ -f /home/easywi_web/htdocs/serverallocation.php ]; then
 
         cyanMessage " "
-        cyanMessage "È già presente una installazione eistente. Dovrebbe essere rimossa?"
+        cyanMessage "Ãˆ giÃ  presente una installazione eistente. Dovrebbe essere rimossa?"
         OPTIONS=("Si" "Esci")
         select OPTION in "${OPTIONS[@]}"; do
             case "$REPLY" in
@@ -1575,19 +1575,19 @@ if [ "$INSTALL" == "EW" ]; then
         PROTOCOL="http"
     fi
 
-    greenMessage "L'intallazione del pannello Easy-WI è terminata per quanto riguarda l'architettura. perfavore vai al link $PROTOCOL://$IP_DOMAIN/install/install.php per completare il processo di installazione."
-    greenMessage "Nome utente e password per il DB sono rispettivamente, Username:\"easy_wi\". La password è:\"$DB_PASSWORD\"."
+    greenMessage "L'intallazione del pannello Easy-WI Ã¨ terminata per quanto riguarda l'architettura. perfavore vai al link $PROTOCOL://$IP_DOMAIN/install/install.php per completare il processo di installazione."
+    greenMessage "Nome utente e password per il DB sono rispettivamente, Username:\"easy_wi\". La password Ã¨:\"$DB_PASSWORD\"."
 
 elif [ "$INSTALL" == "GS" ]; then
-    greenMessage "L'installazione del server princiaple per i server di gioco è termniata. Perfavore immetti i dati sovrastanti nel pannello al percorso \"Server Master > Panoramica > Aggiungi\"."
+    greenMessage "L'installazione del server princiaple per i server di gioco Ã¨ termniata. Perfavore immetti i dati sovrastanti nel pannello al percorso \"Server Master > Panoramica > Aggiungi\"."
 elif [ "$INSTALL" == "VS" ]; then
-    greenMessage "L'installazione del server princiaple per i server voce è termniata. Perfavore immetti i dati sovrastanti nel pannello al percorso \"Servers Voce > Server princiapli > Aggiungi\"."
+    greenMessage "L'installazione del server princiaple per i server voce Ã¨ termniata. Perfavore immetti i dati sovrastanti nel pannello al percorso \"Servers Voce > Server princiapli > Aggiungi\"."
 elif [ "$INSTALL" == "WR" ]; then
-    greenMessage "L'installazione del server princiaple per i server web è termniata. Perfavore immetti i dati sovrastanti nel pannello al percorso \"Spazio Web > Server Principali > Aggiungi\"."
+    greenMessage "L'installazione del server princiaple per i server web Ã¨ termniata. Perfavore immetti i dati sovrastanti nel pannello al percorso \"Spazio Web > Server Principali > Aggiungi\"."
 fi
 
 if ([ "$INSTALL" == "MY" ] || [ "$INSTALL" == "WR" -a "$SQL" != "Nessuno" ]); then
-    greenMessage "L'installazione del server principale MySQL è stata effettuata. Perfavore immetti i dati sovrastanti nel pannello al percorso \"MySQL > Server Principali > Aggiungi\"."
+    greenMessage "L'installazione del server principale MySQL Ã¨ stata effettuata. Perfavore immetti i dati sovrastanti nel pannello al percorso \"MySQL > Server Principali > Aggiungi\"."
 fi
 
 exit 0
