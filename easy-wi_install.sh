@@ -314,6 +314,7 @@ if [ "$INSTALL" == "VS" ]; then
 		errorAndExit "$MACHINE is not supported!"
 	fi
 
+	cyanMessage " "
 	okAndSleep "Searching latest build for hardware type $MACHINE with arch $ARCH."
 
 	for VERSION in `curl -s "http://dl.4players.de/ts/releases/?C=M;O=D" | grep -Po '(?<=href=")[0-9]+(\.[0-9]+){2,3}(?=/")' | sort -Vr`; do
@@ -995,9 +996,7 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
 		if [ -f /root/tempmountpoints ]; then
 			cat /root/tempmountpoints | while read LINE; do
 				quotaoff -ugv $LINE
-				if [ ! "$LINE" ==  "/" ]; then
-					removeIfExists $LINE/aquota.user
-				fi
+				removeIfExists $LINE/aquota.user
 				okAndSleep "Remounting $LINE"
 				mount -o remount $LINE
 
@@ -1157,16 +1156,21 @@ if [ "$INSTALL" == "GS" ]; then
 	done
 
 	if [ "$OPTION" == "Yes" ]; then
-		if [ "$OSBRANCH" == "jessie" -a "`grep jessie-backports /etc/apt/sources.list`" == "" ]; then
-			okAndSleep "Adding jessie backports"
-			echo "deb http://ftp.de.debian.org/debian jessie-backports main" >> /etc/apt/sources.list
-			$INSTALLER update
-		fi
+		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
+			if [ "$OSBRANCH" == "jessie" -a "`grep jessie-backports /etc/apt/sources.list`" == "" ]; then
+				okAndSleep "Adding jessie backports"
+				echo "deb http://ftp.de.debian.org/debian jessie-backports main" >> /etc/apt/sources.list
+				$INSTALLER update
+			fi
 
-		if [ "$OSBRANCH" == "jessie" ]; then
-			apt install -t jessie-backports openjdk-8-jre-headless ca-certificates-java -y
+			if [ "$OSBRANCH" == "jessie" ]; then
+				apt install -t jessie-backports openjdk-8-jre-headless ca-certificates-java -y
+			fi
+
+			checkInstall openjdk-8-jdk
+		elif [ "$OS" == "centos" ]; then
+			checkInstall java-1.8.0-openjdk
 		fi
-		checkInstall openjdk-8-jdk
 	fi
 
 	okAndSleep "Creating folders and files"
@@ -1186,8 +1190,10 @@ if [ "$INSTALL" == "GS" ]; then
 	chmod -R 750 /home/$MASTERUSER/
 	chmod -R 770 /home/$MASTERUSER/logs/ /home/$MASTERUSER/temp/ /home/$MASTERUSER/fdl_data/
 
-	if [ "$OS" == "debian" -a "`uname -m`" == "x86_64" -a "`cat /etc/debian_version | grep '6.'`" == "" ]; then
-		dpkg --add-architecture i386
+	if [ "$OS" == "debian" ]; then
+		if [ "`uname -m`" == "x86_64" -a "`cat /etc/debian_version | grep '6.'`" == "" ]; then
+			dpkg --add-architecture i386
+		fi
 	fi
 
 	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
@@ -1216,10 +1222,19 @@ if [ "$INSTALL" == "GS" ]; then
 		else
 			$INSTALLER install libreadline5 libncursesw5 -y
 		fi
+	elif [ "$OS" == "centos" ]; then
+		okAndSleep "Installing required packages screen bzip2 sudo rsync zip unzip"
+		$INSTALLER install screen bzip2 sudo rsync zip unzip -y -q
+
+		if [ "`uname -m`" == "x86_64" ]; then
+			okAndSleep "Installing 32bit support for 64bit systems."
+			$INSTALLER install glibc.i686 -y -q
+			$INSTALLER install libstdc++.i686 -y -q
+		fi
+		$INSTALLER install libgcc -y -q
 	fi
 
 	okAndSleep "Downloading SteamCmd"
-
 	cd /home/$MASTERUSER/masterserver
 	makeDir /home/$MASTERUSER/masterserver/steamCMD/
 	cd /home/$MASTERUSER/masterserver/steamCMD/
