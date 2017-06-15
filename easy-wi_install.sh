@@ -968,6 +968,7 @@ if [ "$INSTALL" != "VS" -a "$INSTALL" != "EW" -a "$INSTALL" != "MY" ]; then
 			$INSTALLER update -y -q
 		fi
 
+		cyanMessage " "
 		checkInstall proftpd
 
 		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
@@ -1115,6 +1116,7 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
 	done
 
 	if [ "$QUOTAINSTALL" == "Yes" ]; then
+		cyanMessage " "
 		checkInstall quota
 
 		cyanMessage " "
@@ -1137,6 +1139,7 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
 		cyanMessage " "
 		cyanMessage " "
 		cyanMessage "Please check above output and confirm it is correct. On confirmation the current /etc/fstab will be replaced in order to activate Quotas!"
+		cyanMessage " "
 
 		OPTIONS=("Yes" "No" "Quit")
 		select QUOTAFSTAB in "${OPTIONS[@]}"; do
@@ -1377,6 +1380,7 @@ if [ "$INSTALL" == "GS" ]; then
 	done
 
 	if [ "$OPTION" == "Yes" ]; then
+		cyanMessage " "
 		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 			if [ "$OSBRANCH" == "jessie" -a "`grep jessie-backports /etc/apt/sources.list`" == "" ]; then
 				okAndSleep "Adding jessie backports"
@@ -1448,19 +1452,24 @@ if [ "$INSTALL" == "GS" ]; then
 	elif [ "$OS" == "centos" ]; then
 		cyanMessage " "
 		okAndSleep "Installing required packages screen bzip2 sudo rsync zip unzip"
-		$INSTALLER install screen bzip2 sudo rsync zip unzip -y -q
+		checkInstall screen
+		checkInstall bzip2
+		checkInstall sudo
+		checkInstall rsync
+		checkInstall zip
+		checkInstall unzip
 
 #		#WPut from rpmforge
 #		wget http://ftp.tu-chemnitz.de/pub/linux/dag/redhat/el7/en/x86_64/rpmforge/RPMS/
 #		rpm -Uvh rpmforge-release*rpm
-#		$INSTALLER install wput -y -q
+#		checkInstall wput
 
 		if [ "`uname -m`" == "x86_64" ]; then
 			okAndSleep "Installing 32bit support for 64bit systems."
-			$INSTALLER install glibc.i686 -y -q
-			$INSTALLER install libstdc++.i686 -y -q
+			checkInstall glibc.i686
+			checkInstall libstdc++.i686
 		fi
-		$INSTALLER install libgcc -y -q
+		checkInstall libgcc
 	fi
 
 	okAndSleep "Downloading SteamCmd"
@@ -1496,7 +1505,11 @@ if [ "$INSTALL" == "GS" ]; then
 		echo "*/5 * * * * root nice -n +19 $IONICE find /home/*/fdl_data/ /home/*/temp/ /tmp/ /var/run/screen/ -nouser -print0 | xargs -0 rm -rf" >> /etc/crontab
 		echo "*/5 * * * * root nice -n +19 $IONICE find /var/run/screen/ -maxdepth 1 -type d -nouser -print0 | xargs -0 rm -rf" >> /etc/crontab
 
-		service cron restart
+		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
+			service cron restart
+		elif [ "$OS" == "centos" ]; then
+			systemctl restart crond.service
+		fi
 	fi
 fi
 
