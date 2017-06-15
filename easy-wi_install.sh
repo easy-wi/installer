@@ -2001,19 +2001,21 @@ if ([ "$INSTALL" == "MY" ] || [ "$INSTALL" == "WR" -a "$SQL" != "None" ]); then
 fi
 
 if [ "$OS" == "centos" ]; then
-	backUpFile /etc/selinux/config
-	sed -i "s/SELINUX=enforcing/SELINUX=disabled/g" /etc/selinux/config
-	systemctl disable firewalld >/dev/null 2>&1
-	systemctl stop firewalld >/dev/null 2>&1
+	if [ ! "`grep 'SELINUX=' /etc/selinux/config | sed -n '2 p'`" == "SELINUX=disabled" ]; then
+		backUpFile /etc/selinux/config
+		sed -i "s/SELINUX=enforcing/SELINUX=disabled/g" /etc/selinux/config
+		systemctl disable firewalld >/dev/null 2>&1
+		systemctl stop firewalld >/dev/null 2>&1
 
-	redMessage " "
-	redMessage " "
-	redMessage "!! WARNING !!"
-	redMessage "Firewall is disabled"
-	redMessage " "
-	redMessage "Please reboot your Root/Vserver to disable SELinux Security Function!"
-	redMessage "Otherwise, the WebInterface can not work."
-	redMessage " "
+		redMessage " "
+		redMessage " "
+		redMessage "!! WARNING !!"
+		redMessage "Firewall is disabled"
+		redMessage " "
+		redMessage "Please reboot your Root/Vserver to disable SELinux Security Function!"
+		redMessage "Otherwise, the WebInterface can not work."
+		redMessage " "
+	fi
 fi
 
 exit 0
