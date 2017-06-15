@@ -1912,6 +1912,7 @@ if [ "$INSTALL" == "VS" ]; then
 
 	cd /home/$MASTERUSER/
 
+	cyanMessage " "
 	okAndSleep "Downloading TS3 server files."
 	su -c "curl $DOWNLOAD_URL -o teamspeak3-server.tar.bz2" $MASTERUSER
 
@@ -1956,11 +1957,13 @@ if [ "$INSTALL" == "VS" ]; then
 
 	QUERY_PASSWORD=`< /dev/urandom tr -dc A-Za-z0-9 | head -c12`
 
+	cyanMessage " "
 	greenMessage "Starting the TS3 server for the first time and shutting it down again as the password will be visible in the process tree."
 	su -c "./ts3server_startscript.sh start serveradmin_password=$QUERY_PASSWORD createinifile=1 inifile=ts3server.ini" $MASTERUSER
 	runSpinner 25
 	su -c "./ts3server_startscript.sh stop" $MASTERUSER
 
+	cyanMessage " "
 	greenMessage "Starting the TS3 server permanently."
 	su -c "./ts3server_startscript.sh start inifile=ts3server.ini" $MASTERUSER
 fi
