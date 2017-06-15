@@ -475,10 +475,7 @@ fi
 # only in case we want to manage webspace we need the additional skel dir
 if [ "$INSTALL" == "WR" -o "$INSTALL" == "EW" ]; then
 	makeDir /home/$MASTERUSER/sites-enabled/
-	makeDir /home/$MASTERUSER/skel/htdocs
-	makeDir /home/$MASTERUSER/skel/logs
-	makeDir /home/$MASTERUSER/skel/session
-	makeDir /home/$MASTERUSER/skel/tmp
+	makeDir /home/$MASTERUSER/skel/{htdocs,logs,session,tmp}
 	chown -cR $MASTERUSER:$WEBGROUPNAME /home/$MASTERUSER >/dev/null 2>&1
 fi
 
