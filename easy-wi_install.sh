@@ -1197,9 +1197,9 @@ if [ "$INSTALL" == "WR" -o "$INSTALL" == "EW" ]; then
 		fi
 
 		if [ "$OS" == "centos" ]; then
-			if [ "`grep '<IfModule mpm_itk_module>' $APACHE_CONFIG`" ]; then
-				echo " " $APACHE_CONFIG
-				cat > $APACHE_CONFIG <<EOF
+			if [ "`grep '<IfModule mpm_itk_module>' $APACHE_CONFIG`" == "" ]; then
+				echo " " >> $APACHE_CONFIG
+				cat >> $APACHE_CONFIG <<_EOF_
 <IfModule mpm_itk_module>
   AssignUserId $WEBGROUPNAME $WEBGROUPNAME
   MaxClientsVHost 50
@@ -1207,7 +1207,7 @@ if [ "$INSTALL" == "WR" -o "$INSTALL" == "EW" ]; then
   LimitUIDRange 0 10000
   LimitGIDRange 0 10000
 </IfModule>
-EOF
+_EOF_
 			fi
 		fi
 
@@ -1632,8 +1632,10 @@ if [ "$INSTALL" == "EW" ]; then
 			fi
 
 			if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
+				cyanMessage " "
 				checkInstall openssl
 			elif [ "$OS" == "centos" ]; then
+				cyanMessage " "
 				checkInstall openssl
 				checkInstall mod_ssl
 			fi
@@ -1709,8 +1711,8 @@ if [ "$INSTALL" == "EW" ]; then
 			else
 				echo 'server {' >> $FILE_NAME_VHOST
 				echo '    listen 443 ssl;' >> $FILE_NAME_VHOST
-				echo "    ssl_certificate /etc/nginx/ssl/$FILE_NAME.crt;" >> $FILE_NAME_VHOST
-				echo "    ssl_certificate_key /etc/nginx/ssl/$FILE_NAME.key;" >> $FILE_NAME_VHOST
+				echo "    ssl_certificate $SSL_DIR/$FILE_NAME.crt;" >> $FILE_NAME_VHOST
+				echo "    ssl_certificate_key $SSL_DIR/$FILE_NAME.key;" >> $FILE_NAME_VHOST
 			fi
 		fi
 
@@ -1766,8 +1768,8 @@ if [ "$INSTALL" == "EW" ]; then
 				echo '<VirtualHost *:443>' >> $FILE_NAME_VHOST
 				echo "    ServerName $IP_DOMAIN" >> $FILE_NAME_VHOST
 				echo '    SSLEngine on' >> $FILE_NAME_VHOST
-				echo "    SSLCertificateFile /etc/apache2/ssl/$FILE_NAME.crt" >> $FILE_NAME_VHOST
-				echo "    SSLCertificateKeyFile /etc/apache2/ssl/$FILE_NAME.key" >> $FILE_NAME_VHOST
+				echo "    SSLCertificateFile $SSL_DIR/$FILE_NAME.crt" >> $FILE_NAME_VHOST
+				echo "    SSLCertificateKeyFile $SSL_DIR/$FILE_NAME.key" >> $FILE_NAME_VHOST
 			fi
 		fi
 
@@ -1844,10 +1846,12 @@ if [ "$INSTALL" == "EW" ]; then
 	#(re)start Webserver
 	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 		if [ "$WEBSERVER" == "Nginx" ]; then
+			cyanMessage " "
 			okAndSleep "Restarting PHP-FPM and Nginx."
 			service php${USE_PHP_VERSION}-fpm restart
 			service nginx restart
 		elif [ "$WEBSERVER" == "Apache" ]; then
+			cyanMessage " "
 			okAndSleep "Restarting PHP-FPM and Apache2."
 			service apache2 restart
 		fi
@@ -1948,6 +1952,7 @@ if [ "$INSTALL" == "VS" ]; then
 	su -c "./ts3server_startscript.sh start inifile=ts3server.ini" $MASTERUSER
 fi
 
+cyanMessage " "
 okAndSleep "Removing not needed packages."
 $INSTALLER autoremove -y
 
@@ -1958,6 +1963,9 @@ if [ "$INSTALL" == "EW" ]; then
 		PROTOCOL="http"
 	fi
 
+	yellowMessage " "
+	yellowMessage "Don't forget to change date.timezone (your Timezone) inside your php.ini."
+	yellowMessage " "
 	greenMessage "Easy-WI Webpanel setup is done regarding architecture. Please open $PROTOCOL://$IP_DOMAIN/install/install.php and complete the installation dialog."
 	greenMessage "DB user and table name are \"easy_wi\". The password is \"$DB_PASSWORD\"."
 
@@ -1966,6 +1974,9 @@ elif [ "$INSTALL" == "GS" ]; then
 elif [ "$INSTALL" == "VS" ]; then
 	greenMessage "Teamspeak 3 setup is done. TS3 Query password is $QUERY_PASSWORD. Please enter this server at the webpanel at \"Voiceserver > Master > Add\"."
 elif [ "$INSTALL" == "WR" ]; then
+	yellowMessage " "
+	yellowMessage "Don't forget to change date.timezone (your Timezone) inside your php.ini."
+	yellowMessage " "
 	greenMessage "Webspace Root setup is done. Please enter the above data at the webpanel at \"Webspace > Master > Add\"."
 fi
 
