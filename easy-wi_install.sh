@@ -48,12 +48,18 @@ function yellowMessage {
 	echo -e "\\033[33;1m${@}\033[0m"
 }
 
+function greenOneLineMessage {
+	echo -en "\\033[32;1m${@}\033[0m"
+}
+
 function errorAndQuit {
 	errorAndExit "Exit now!"
 }
 
 function errorAndExit {
+	cyanMessage " "
 	redMessage ${@}
+	cyanMessage " "
 	exit 0
 }
 
@@ -110,6 +116,48 @@ function checkInstall {
 	fi
 }
 
+function RestartWebserver {
+	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
+		if [ "$WEBSERVER" == "Nginx" ]; then
+			cyanMessage " "
+			okAndSleep "Restarting PHP-FPM and Nginx."
+			service php${USE_PHP_VERSION}-fpm restart
+			service nginx restart
+		elif [ "$WEBSERVER" == "Apache" ]; then
+			cyanMessage " "
+			okAndSleep "Restarting PHP-FPM and Apache2."
+			service apache2 restart
+		elif [ "$WEBSERVER" == "Lighttpd" ]; then
+			cyanMessage " "
+			okAndSleep "Restarting PHP-FPM and Lighttpd."
+			service lighttpd restart
+		fi
+	elif [ "$OS" == "centos" ]; then
+		if [ "$WEBSERVER" == "Nginx" ]; then
+			cyanMessage " "
+			okAndSleep "Restarting PHP-FPM and Nginx."
+			if [ -f /etc/php-fpm.conf ]; then
+				systemctl restart php-fpm.service
+			fi
+			systemctl restart nginx.service
+		elif [ "$WEBSERVER" == "Apache" ]; then
+			cyanMessage " "
+			okAndSleep "Restarting PHP-FPM and Apache2."
+			if [ -f /etc/php-fpm.conf ]; then
+				systemctl restart php-fpm.service
+			fi
+			systemctl restart httpd.service
+		elif [ "$WEBSERVER" == "Lighttpd" ]; then
+			cyanMessage " "
+			okAndSleep "Restarting PHP-FPM and Lighttpd."
+			if [ -f /etc/php-fpm.conf ]; then
+				systemctl restart php-fpm.service
+			fi
+			systemctl restart lighttpd.service
+		fi
+	fi
+}
+
 INSTALLER_VERSION="2.2"
 OS=""
 SYS_REBOOT="No"
@@ -132,7 +180,7 @@ if [ -f /etc/debian_version ]; then
 elif [ -f /etc/centos-release ]; then
 	INSTALLER="yum"
 	OS="centos"
-	setenforce 0
+	setenforce 0 >/dev/null 2>&1
 	cyanMessage " "
 	$INSTALLER install -y -q wget >/dev/null 2
 fi
@@ -186,13 +234,25 @@ checkInstall curl
 
 cyanMessage " "
 OS=`lsb_release -i 2> /dev/null | grep 'Distributor' | awk '{print tolower($3)}'`
-OSVERSION=`lsb_release -r 2> /dev/null | grep 'Release' | awk '{print $2}'`
+OSVERSION=`lsb_release -r 2> /dev/null | grep 'Release' | awk '{print $2}' | cut -c 1-3`
 OSBRANCH=`lsb_release -c 2> /dev/null | grep 'Codename' | awk '{print $2}'`
+
+if [ "$MACHINE" == "x86_64" ]; then
+	ARCH="amd64"
+elif [ "$MACHINE" == "i386" ]||[ "$MACHINE" == "i686" ]; then
+	ARCH="x86"
+fi
 
 if [ "$OS" == "" ]; then
 	errorAndExit "Error: Could not detect OS. Currently only Debian, Ubuntu and CentOS are supported. Aborting!"
 else
 	okAndSleep "Detected OS: $OS"
+fi
+
+if [ "$OSBRANCH" == "" ]; then
+	errorAndExit "Error: Could not detect branch of OS. Aborting"
+else
+	okAndSleep "Detected branch: $OSBRANCH"
 fi
 
 if [ "$OSVERSION" == "" ]; then
@@ -201,10 +261,10 @@ else
 	okAndSleep "Detected version: $OSVERSION"
 fi
 
-if [ "$OSBRANCH" == "" ]; then
-	errorAndExit "Error: Could not detect branch of OS. Aborting"
+if [ "$ARCH" == "" ]; then
+	errorAndExit "Error: $MACHINE is not supported! Aborting"
 else
-	okAndSleep "Detected branch: $OSBRANCH"
+	okAndSleep "Detected architecture: $ARCH"
 fi
 
 cyanMessage " "
@@ -315,14 +375,6 @@ fi
 
 # Run the TS3 server version detect up front to avoid user executing steps first and fail at download last.
 if [ "$INSTALL" == "VS" ]; then
-	if [ "$MACHINE" == "x86_64" ]; then
-		ARCH="amd64"
-	elif [ "$MACHINE" == "i386" ]||[ "$MACHINE" == "i686" ]; then
-		ARCH="x86"
-	else
-		errorAndExit "$MACHINE is not supported!"
-	fi
-
 	cyanMessage " "
 	okAndSleep "Searching latest build for hardware type $MACHINE with arch $ARCH."
 
@@ -475,7 +527,10 @@ fi
 # only in case we want to manage webspace we need the additional skel dir
 if [ "$INSTALL" == "WR" -o "$INSTALL" == "EW" ]; then
 	makeDir /home/$MASTERUSER/sites-enabled/
-	makeDir /home/$MASTERUSER/skel/{htdocs,logs,session,tmp}
+	makeDir /home/$MASTERUSER/skel/htdocs
+	makeDir /home/$MASTERUSER/skel/logs
+	makeDir /home/$MASTERUSER/skel/session
+	makeDir /home/$MASTERUSER/skel/tmp
 	chown -cR $MASTERUSER:$WEBGROUPNAME /home/$MASTERUSER >/dev/null 2>&1
 fi
 
@@ -579,38 +634,43 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" -o "$INSTALL" == "MY" ]; then
 			SQL=""
 		fi
 	else
-		cyanMessage " "
-		cyanMessage "Please select if an which database server to install."
-		cyanMessage "Select \"None\" in case this server should host only Fastdownload webspace."
+		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
+			cyanMessage " "
+			cyanMessage "Please select if an which database server to install."
+			cyanMessage "Select \"None\" in case this server should host only Fastdownload webspace."
 
-		if [ "$OS" == "debian" -o "$OS" == "ubuntu" -o "$OS" == "centos" ]; then
-			OPTIONS=("MySQL" "MariaDB" "None" "Quit")
-			select SQL in "${OPTIONS[@]}"; do
-				case "$REPLY" in
-					1|2|3 ) break;;
-					4 ) errorAndQuit;;
-					*) errorAndContinue;;
-				esac
-			done
-
-			if [ "$OS" == "centos" -a "$SQL" == "MySQL" -o "$SQL" == "MariaDB" ]; then
-				cyanMessage " "
-				cyanMessage "Please select which "$SQL" Version to install."
-
-				OPTIONS=("5.5" "10" "Quit")
-				select SQL_VERSION in "${OPTIONS[@]}"; do
+			if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
+				OPTIONS=("MySQL" "MariaDB" "None" "Quit")
+				select SQL in "${OPTIONS[@]}"; do
 					case "$REPLY" in
-						1|2 ) break;;
-						3 ) errorAndQuit;;
+						1|2|3 ) break;;
+						4 ) errorAndQuit;;
 						*) errorAndContinue;;
 					esac
 				done
 			fi
+		elif [ "$OS" == "centos" ]; then
+			SQL="MariaDB"
+			SQL_VERSION="5.5"
+		fi
+
+		if [ "$OS" == "centos" -a "$SQL" == "MariaDB" -a "$INSTALL" == "WR" ]; then
+			cyanMessage " "
+			cyanMessage "Please select which "$SQL" Version to install."
+
+			OPTIONS=("5.5" "10" "Quit")
+			select SQL_VERSION in "${OPTIONS[@]}"; do
+				case "$REPLY" in
+					1|2 ) break;;
+					3 ) errorAndQuit;;
+					*) errorAndContinue;;
+				esac
+			done
 		fi
 	fi
 
 	if [ "$SQL" == "MySQL" -o "$SQL" == "MariaDB" ]; then
-		if [ "`ps fax | grep 'mysqld' | grep -v 'grep'`" ]; then
+		if [ "`ps fax | grep 'mysqld' | grep -v 'grep'`" != "" ]; then
 			cyanMessage " "
 			cyanMessage "Please provide the root password for the MySQL Database."
 			read MYSQL_ROOT_PASSWORD
@@ -626,6 +686,7 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" -o "$INSTALL" == "MY" ]; then
 				ERROR_CODE=$?
 			done
 		else
+			SQL_FIRST_INSTALLATION="Yes"
 			until [ "$MYSQL_ROOT_PASSWORD" != "" ]; do
 				cyanMessage " "
 				cyanMessage "Please provide the root password for the MySQL Database."
@@ -640,55 +701,34 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" -o "$INSTALL" == "MY" ]; then
 		fi
 	fi
 
-	if [ "$SQL" == "MySQL" ]; then
-		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
-			$INSTALLER install mysql-server mysql-client mysql-common -y
-#		elif [ "$OS" == "centos" ]; then
-#			if [ "SQL_VERSION" == "5.5" ]; then
-#
-#			elif [ "$SQL_VERSION" == "10" ]; then
-#
-#			fi
-		fi
-	elif [ "$SQL" == "MariaDB" ]; then
+	if [ "$SQL" == "MariaDB" ]; then
 		RUNUPDATE=0
-
 		if [ "$OS" == "ubuntu" -o "$OS" == "debian" ]; then
 			if ([ "`printf "${OSVERSION}\n8.0" | sort -V | tail -n 1`" == "8.0" -o "$OS" == "ubuntu" ] && [ "`grep '/mariadb/' /etc/apt/sources.list`" == "" ]); then
 				checkInstall python-software-properties
 				apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 0xcbcb082a1bb943db
 
 				if [ "$SQL" == "MariaDB" -a "`apt-cache search mariadb-server-10.0`" == "" ]; then
-					if [ "$OS" == "debian" ]; then
-						add-apt-repository "deb http://mirror.netcologne.de/mariadb/repo/10.0/debian $OSBRANCH main"
-						RUNUPDATE=1
-					elif [ "$OS" == "ubuntu" ]; then
-						add-apt-repository "deb http://mirror.netcologne.de/mariadb/repo/10.0/ubuntu $OSBRANCH main"
-						RUNUPDATE=1
-					fi
+					add-apt-repository "deb http://mirror.netcologne.de/mariadb/repo/10.0/$OS $OSBRANCH main"
+					RUNUPDATE=1
 				fi
 			fi
-		elif [ "$OS" == "centos" ]; then
-#			elif [ "$SQL" == "MySQL" -a "SQL_VERSION" == "5.5" ]; then
-#
-#			elif [ "$SQL" == "MySQL" -a "SQL_VERSION" == "10" ]; then
-#
-			if [ "$SQL" == "MariaDB" -a "$SQL_VERSION" == "10" ]; then
-				if [ ! -f /etc/yum.repos.d/mariadb.repo ]; then
-					MARIADB_FILE="${ls /etc/yum.repos.d/}"
-					for search_mariadb in "${MARIADB_FILE[@]}"; do
-						if [ ! "`grep '/MariaDB/' "$search_mariadb"`" ]; then
-							echo "# MariaDB 10.2 CentOS repository list - created 2017-06-11 18:20 UTC
+		elif [ "$OS" == "centos" -a "$SQL_VERSION" == "10" ]; then
+			if [ ! -f /etc/yum.repos.d/MariaDB.repo ]; then
+				MARIADB_FILE=$(ls /etc/yum.repos.d/)
+				for search_mariadb in "${MARIADB_FILE[@]}"; do
+					if [ "`grep '/MariaDB/' "$search_mariadb"`" == "" -a ! -f /etc/yum.repos.d/MariaDB.repo ]; then
+						echo '# MariaDB 10.0 CentOS repository list - created 2017-06-15 22:41 UTC
 # http://downloads.mariadb.org/mariadb/repositories/
 [mariadb]
 name = MariaDB
-baseurl = http://yum.mariadb.org/10.2/centos7-amd64
+baseurl = http://yum.mariadb.org/10.0/centos7-amd64
 gpgkey=https://yum.mariadb.org/RPM-GPG-KEY-MariaDB
-gpgcheck=1" > /etc/yum.repos.d/MariaDB.repo
-						fi
-					done
-					RUNUPDATE=1
-				fi
+gpgcheck=1' > /etc/yum.repos.d/MariaDB.repo
+					fi
+				done
+				rpm --import https://yum.mariadb.org/RPM-GPG-KEY-MariaDB
+				RUNUPDATE=1
 			fi
 		fi
 
@@ -698,31 +738,45 @@ gpgcheck=1" > /etc/yum.repos.d/MariaDB.repo
 			echo "Pin-Priority: 1000" >> /etc/apt/preferences.d/mariadb.pref
 			RUNUPDATE=1
 		fi
+	fi
 
-		if [ "$RUNUPDATE" == "1" ]; then
-			$INSTALLER update
-		fi
-
+	if [ "$RUNUPDATE" == "1" ]; then
 		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
+			$INSTALLER update
+		elif [ "$OS" == "centos" ]; then
+			$INSTALLER update -y -q
+		fi
+	fi
+
+	if [ "$SQL" == "MySQL" ]; then
+		cyanMessage " "
+		checkInstall mysql-server
+		checkInstall mysql-client
+		checkInstall mysql-common
+	elif [ "$SQL" == "MariaDB" ]; then
+		cyanMessage " "
+		checkInstall mariadb-server
+		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
+			checkInstall mariadb-client
 			if ([ "`printf "${OSVERSION}\n8.0" | sort -V | tail -n 1`" == "8.0" -o "$OS" == "ubuntu" ] && [ "`grep '/mariadb/' /etc/apt/sources.list`" == "" ]); then
-				$INSTALLER install mariadb-server mariadb-client mysql-common -y
+				checkInstall mysql-common
 			else
-				$INSTALLER install mariadb-server mariadb-client mariadb-common -y
+				checkInstall mariadb-common
 			fi
 		elif [ "$OS" == "centos" ]; then
-			cyanMessage " "
-			checkInstall mariadb-server
 			checkInstall mariadb
 			systemctl enable mariadb.service >/dev/null 2>&1
 			systemctl restart mariadb.service
 		fi
 	fi
 
-	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ] && [ -f /etc/mysql/my.cnf ]; then
-		backUpFile /etc/mysql/my.cnf
-	elif [ "$OS" == "centos" -a -f /etc/my.cnf ]; then
-		backUpFile /etc/my.cnf
-		cp /usr/share/mysql/my-medium.cnf -R /etc/my.cnf
+	if [ "$SQL" != "None" ]; then
+		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ] && [ -f /etc/mysql/my.cnf ]; then
+			backUpFile /etc/mysql/my.cnf
+		elif [ "$OS" == "centos" -a -f /etc/my.cnf ]; then
+			backUpFile /etc/my.cnf
+			cp /usr/share/mysql/my-medium.cnf -R /etc/my.cnf
+		fi
 	fi
 
 	if [ "$SQL" == "MySQL" -o "$SQL" == "MariaDB" ]; then
@@ -742,7 +796,9 @@ gpgcheck=1" > /etc/yum.repos.d/MariaDB.repo
 
 		cyanMessage " "
 		okAndSleep "Securing MySQL by running \"mysql_secure_installation\" commands."
-		mysqladmin password "$MYSQL_ROOT_PASSWORD"
+		if [ "$OS" == "centos" -a "$SQL_FIRST_INSTALLATION" == "Yes" ]; then
+			mysqladmin password "$MYSQL_ROOT_PASSWORD"
+		fi
 		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "DELETE FROM mysql.user WHERE User='';" 2> /dev/null
 		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');" 2> /dev/null
 		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "DROP DATABASE test;" 2> /dev/null
@@ -779,19 +835,23 @@ gpgcheck=1" > /etc/yum.repos.d/MariaDB.repo
 		fi
 	fi
 
-	MYSQL_VERSION=`mysql -V | awk {'print $5'} | tr -d ,`
+	if [ "$SQL" != "None" ]; then
+		MYSQL_VERSION=`mysql -V | awk {'print $5'} | tr -d ,`
+	fi
 
-	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
+	if [ "$SQL" != "None" -a "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 		if [ "`grep -E 'key_buffer[[:space:]]*=' /etc/mysql/my.cnf`" != "" -a "printf "${MYSQL_VERSION}\n5.5" | sort -V | tail -n 1" != 5.5 ]; then
 			sed -i -e "51s/key_buffer[[:space:]]*=/key_buffer_size = /g" /etc/mysql/my.cnf
 			sed -i -e "57s/myisam-recover[[:space:]]*=/myisam-recover-options = /g" /etc/mysql/my.cnf
 		fi
 	fi
 
-	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
-		/etc/init.d/mysql restart
-	elif [ "$OS" == "centos" ]; then
-		systemctl restart mariadb.service
+	if [ "$SQL" != "None" ]; then
+		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
+			/etc/init.d/mysql restart
+		elif [ "$OS" == "centos" ]; then
+			systemctl restart mariadb.service
+		fi
 	fi
 
 	if [ "$INSTALL" == "EW" -a "`ps ax | grep mysql | grep -v grep`" == "" ]; then
@@ -887,21 +947,21 @@ gpgcheck=1" > /etc/yum.repos.d/MariaDB.repo
 					lighttpd-enable-mod fastcgi
 					lighttpd-enable-mod fastcgi-php
 				fi
-#			elif [ "$OS" == "centos" ]; then
-#				checkInstall php-fpm
-#				systemctl enable php-fpm.service >/dev/null 2>&1
-#
-#				backUpFile /etc/php.ini
-#				backUpFile /etc/php-fpm.conf
-#				backUpFile /etc/php-fpm.d/www.conf
-#
-#				if [ "$WEBSERVER" == "Lighttpd" ]; then
-#					sed -i "s/user = apache/user = lighttpd/g" /etc/php-fpm.d/www.conf
-#					sed -i "s/group = apache/group = lighttpd/g" /etc/php-fpm.d/www.conf
-#				elif [ "$WEBSERVER" == "Nginx" ]; then
-#					sed -i "s/user = apache/user = nginx/g" /etc/php-fpm.d/www.conf
-#					sed -i "s/group = apache/group = nginx/g" /etc/php-fpm.d/www.conf
-#				fi
+			elif [ "$OS" == "centos" ]; then
+				checkInstall php-fpm
+				systemctl enable php-fpm.service >/dev/null 2>&1
+
+				backUpFile /etc/php.ini
+				backUpFile /etc/php-fpm.conf
+				backUpFile /etc/php-fpm.d/www.conf
+
+				if [ "$WEBSERVER" == "Lighttpd" ]; then
+					sed -i "s/user = apache/user = lighttpd/g" /etc/php-fpm.d/www.conf
+					sed -i "s/group = apache/group = lighttpd/g" /etc/php-fpm.d/www.conf
+				elif [ "$WEBSERVER" == "Nginx" ]; then
+					sed -i "s/user = apache/user = nginx/g" /etc/php-fpm.d/www.conf
+					sed -i "s/group = apache/group = nginx/g" /etc/php-fpm.d/www.conf
+				fi
 			fi
 
 			makeDir /home/$MASTERUSER/fpm-pool.d/
@@ -912,8 +972,8 @@ gpgcheck=1" > /etc/yum.repos.d/MariaDB.repo
 				elif [ -f /etc/php/7.0/fpm/php-fpm.conf ]; then
 					sed -i "s/include=\/etc\/php\/7.0\/fpm\/pool.d\/\*.conf/include=\/home\/$MASTERUSER\/fpm-pool.d\/\*.conf/g" /etc/php/7.0/fpm/php-fpm.conf
 				fi
-#			elif [ "$OS" == "centos" -a -f /etc/php-fpm.conf ]; then
-#				sed -i "s/include=\/etc\/php-fpm.d\/\*.conf/include=\/home\/$MASTERUSER\/fpm-pool.d\/\*.conf/g" /etc/php-fpm.conf
+			elif [ "$OS" == "centos" -a -f /etc/php-fpm.conf ]; then
+				sed -i "s/include=\/etc\/php-fpm.d\/\*.conf/include=\/home\/$MASTERUSER\/fpm-pool.d\/\*.conf/g" /etc/php-fpm.conf
 			fi
 		elif [ "$WEBSERVER" == "Apache" ]; then
 			if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
@@ -939,6 +999,8 @@ gpgcheck=1" > /etc/yum.repos.d/MariaDB.repo
 			PHP_SOCKET="/var/run/php-fpm/php-fpm.sock"
 		fi
 	fi
+
+	RestartWebserver
 fi
 
 if ([ "$INSTALL" == "WR" -o "$INSTALL" == "EW" ] && [ "`grep '/bin/false' /etc/shells`" == "" ]); then
@@ -1175,26 +1237,21 @@ fi
 
 if [ "$INSTALL" == "WR" -o "$INSTALL" == "EW" ]; then
 	if [ "$WEBSERVER" == "Nginx" ]; then
-		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
-			backUpFile /etc/nginx/nginx.conf
-			if [ "`grep '/home/$MASTERUSER/sites-enabled/' /etc/nginx/nginx.conf`" == "" ]; then
-				sed -i "\/etc\/nginx\/sites-enabled\/\*;/a \ \ \include \/home\/$MASTERUSER\/sites-enabled\/\*;" /etc/nginx/nginx.conf
-			fi
+		backUpFile /etc/nginx/nginx.conf
+		if [ "`grep '/home/$MASTERUSER/sites-enabled/' /etc/nginx/nginx.conf`" == "" ]; then
+			sed -i "\/etc\/nginx\/sites-enabled\/\*;/a \ \ \include \/home\/$MASTERUSER\/sites-enabled\/\*;" /etc/nginx/nginx.conf
 		fi
 	elif [ "$WEBSERVER" == "Lighttpd" ]; then
-		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
-			LIGHTTPD_CONFIG="/etc/lighttpd/lighttpd.conf"
-			backUpFile $LIGHTTPD_CONFIG
-			echo "include_shell \"find /home/$MASTERUSER/sites-enabled/ -maxdepth 1 -type f -exec cat {} \;\"" >> $LIGHTTPD_CONFIG
-		fi
+		backUpFile /etc/lighttpd/lighttpd.conf
+		echo "include_shell \"find /home/$MASTERUSER/sites-enabled/ -maxdepth 1 -type f -exec cat {} \;\"" >> /etc/lighttpd/lighttpd.conf
 	elif [ "$WEBSERVER" == "Apache" ]; then
 		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 			APACHE_CONFIG="/etc/apache2/apache2.conf"
-			backUpFile $APACHE_CONFIG
 		elif [ "$OS" == "centos" ]; then
 			APACHE_CONFIG="/etc/httpd/conf/httpd.conf"
-			backUpFile $APACHE_CONFIG
 		fi
+
+		backUpFile $APACHE_CONFIG
 
 		if [ "$OS" == "centos" ]; then
 			if [ "`grep '<IfModule mpm_itk_module>' $APACHE_CONFIG`" == "" ]; then
@@ -1326,34 +1383,41 @@ fi
 if [ "$INSTALL" == "WR" ]; then
 	chown -cR $MASTERUSER:$WEBGROUPNAME /home/$MASTERUSER/ >/dev/null 2>&1
 
+	cyanMessage " "
 	greenMessage "Following data need to be configured at the easy-wi.com panel:"
 
-	greenMessage "The path to the folder \"sites-enabled\" is:"
-	greenMessage "/home/$MASTERUSER/sites-enabled/"
+	cyanMessage " "
+	greenOneLineMessage "The path to the folder \"sites-enabled\" is: "
+	cyanMessage "/home/$MASTERUSER/sites-enabled/"
 
-	greenMessage "The useradd command is:"
-	greenMessage "sudo $USERADD %cmd%"
+	greenOneLineMessage "The useradd command is: "
+	cyanMessage "sudo $USERADD %cmd%"
 
-	greenMessage "The usermod command is:"
-	greenMessage "sudo $USERMOD %cmd%"
+	greenOneLineMessage "The usermod command is: "
+	cyanMessage "sudo $USERMOD %cmd%"
 
-	greenMessage "The userdel command is:"
-	greenMessage "sudo $USERDEL %cmd%"
+	greenOneLineMessage "The userdel command is: "
+	cyanMessage "sudo $USERDEL %cmd%"
 
-	greenMessage "The HTTPD restart command is:"
-	greenMessage "sudo $HTTPDSCRIPT reload"
+	if [ "$HTTPDSCRIPT" != "" ]; then
+		greenOneLineMessage "The HTTPD restart command is: "
+		cyanMessage "sudo $HTTPDSCRIPT reload"
+	fi
 
 	if [ "$PHPINSTALL" == "Yes" -a "$WEBSERVER" == "Nginx" ]; then
-		greenMessage "The PHP FPM restart command is:"
-		greenMessage "sudo $FPM_BIN reload"
+		cyanMessage " "
+		greenOneLineMessage "The PHP FPM restart command is: "
+		cyanMessage "sudo $FPM_BIN reload"
 	fi
 fi
 
 if ([ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ] && [ "$QUOTAINSTALL" == "Yes" ]); then
-	greenMessage "The setquota command is:"
-	greenMessage "sudo `which setquota` %cmd%"
-	greenMessage "The repquota command is:"
-	greenMessage "sudo `which repquota` %cmd%"
+	cyanMessage " "
+	greenOneLineMessage "The setquota command is: "
+	cyanMessage "sudo `which setquota` %cmd%"
+
+	greenOneLineMessage "The repquota command is: "
+	cyanMessage "sudo `which repquota` %cmd%"
 fi
 
 if [ "$INSTALL" == "GS" ]; then
@@ -1533,7 +1597,10 @@ if [ "$INSTALL" == "EW" ]; then
 		$USERADD -d /home/easywi_web -g $WEBGROUPNAME -s /bin/bash easywi_web
 	fi
 
-	makeDir /home/easywi_web/{htdocs,logs,tmp,session}
+	makeDir /home/easywi_web/htdocs
+	makeDir /home/easywi_web/logs
+	makeDir /home/easywi_web/tmp
+	makeDir /home/easywi_web/session
 	chown -cR easywi_web:$WEBGROUPNAME /home/easywi_web >/dev/null 2>&1
 
 	if [ "`id easywi_web 2> /dev/null`" == "" ]; then
@@ -1577,6 +1644,7 @@ if [ "$INSTALL" == "EW" ]; then
 	chown -cR easywi_web:$WEBGROUPNAME /home/easywi_web >/dev/null 2>&1
 
 	DB_PASSWORD=`< /dev/urandom tr -dc A-Za-z0-9 | head -c18`
+	cyanMessage " "
 	okAndSleep "Creating database easy_wi and connected user easy_wi"
 	mysql -uroot -p$MYSQL_ROOT_PASSWORD -Bse "CREATE DATABASE IF NOT EXISTS easy_wi; GRANT ALL ON easy_wi.* TO 'easy_wi'@'localhost' IDENTIFIED BY '$DB_PASSWORD'; FLUSH PRIVILEGES;"
 
@@ -1844,38 +1912,18 @@ if [ "$INSTALL" == "EW" ]; then
 		elif [ "$OS" == "centos" ]; then
 			if [ "$WEBSERVER" == " Ngingx" ]; then
 				okAndSleep "Stopping PHP-FPM and Nginx."
+				systemctl stop php-fpm.service
 				systemctl stop nginx.service
 			elif [ "$WEBSERVER" == "Apache" ]; then
 				okAndSleep "Stopping PHP-FPM and Apache2."
+				systemctl stop php-fpm.service
 				systemctl stop httpd.service
 			fi
 			certbot certonly --standalone -d "$IP_DOMAIN" -d www."$IP_DOMAIN"
 		fi
 	fi
 
-	#(re)start Webserver
-	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
-		if [ "$WEBSERVER" == "Nginx" ]; then
-			cyanMessage " "
-			okAndSleep "Restarting PHP-FPM and Nginx."
-			service php${USE_PHP_VERSION}-fpm restart
-			service nginx restart
-		elif [ "$WEBSERVER" == "Apache" ]; then
-			cyanMessage " "
-			okAndSleep "Restarting PHP-FPM and Apache2."
-			service apache2 restart
-		fi
-	elif [ "$OS" == "centos" ]; then
-		if [ "$WEBSERVER" == "Ngingx" ]; then
-			cyanMessage " "
-			okAndSleep "Restarting PHP-FPM and Nginx."
-			systemctl restart nginx.service
-		elif [ "$WEBSERVER" == "Apache" ]; then
-			cyanMessage " "
-			okAndSleep "Restarting PHP-FPM and Apache2."
-			systemctl restart httpd.service
-		fi
-	fi
+	RestartWebserver
 
 	chown $MASTERUSER:$WEBGROUPNAME $FILE_NAME_VHOST
 
@@ -1967,7 +2015,11 @@ fi
 
 cyanMessage " "
 okAndSleep "Removing not needed packages."
-$INSTALLER autoremove -y
+if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
+	$INSTALLER autoremove -y
+elif [ "$OS" == "centos" ]; then
+	$INSTALLER autoremove -y -q
+fi
 
 if [ "$INSTALL" == "EW" ]; then
 	if [ "$SSL" == "Yes" ]; then
@@ -1976,9 +2028,9 @@ if [ "$INSTALL" == "EW" ]; then
 		PROTOCOL="http"
 	fi
 
-	yellowMessage " "
+	cyanMessage " "
 	yellowMessage "Don't forget to change date.timezone (your Timezone) inside your php.ini."
-	yellowMessage " "
+	cyanMessage " "
 	greenMessage "Easy-WI Webpanel setup is done regarding architecture. Please open $PROTOCOL://$IP_DOMAIN/install/install.php and complete the installation dialog."
 	greenMessage "DB user and table name are \"easy_wi\". The password is \"$DB_PASSWORD\"."
 
@@ -1987,14 +2039,18 @@ elif [ "$INSTALL" == "GS" ]; then
 elif [ "$INSTALL" == "VS" ]; then
 	greenMessage "Teamspeak 3 setup is done. TS3 Query password is $QUERY_PASSWORD. Please enter this server at the webpanel at \"Voiceserver > Master > Add\"."
 elif [ "$INSTALL" == "WR" ]; then
-	yellowMessage " "
-	yellowMessage "Don't forget to change date.timezone (your Timezone) inside your php.ini."
-	yellowMessage " "
+	if [ "$PHPINSTALL" == "Yes" ]; then
+		cyanMessage " "
+		yellowMessage "Don't forget to change date.timezone (your Timezone) inside your php.ini."
+	fi
+	cyanMessage " "
 	greenMessage "Webspace Root setup is done. Please enter the above data at the webpanel at \"Webspace > Master > Add\"."
+	cyanMessage " "
 fi
 
 if ([ "$INSTALL" == "MY" ] || [ "$INSTALL" == "WR" -a "$SQL" != "None" ]); then
 	greenMessage "MySQL Root setup is done. Please enter the server at the webpanel at \"MySQL > Master > Add\"."
+	cyanMessage " "
 fi
 
 if [ "$OS" == "centos" ]; then
