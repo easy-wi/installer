@@ -112,14 +112,13 @@ backUpFile() {
 
 checkInstall() {
 	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
+		okAndSleep "Installing package $1"
 		if [ "`dpkg-query -s $1 2>/dev/null`" == "" ]; then
-			okAndSleep "Installing package $1"
-			$INSTALLER install -y $1
+			$INSTALLER -y install $1  >/dev/null 2>&1
 		fi
 	elif [ "$OS" == "centos" ]; then
 		if [ "`rpm -qa $1 2>/dev/null`" == "" ]; then
-			okAndSleep "Installing package $1"
-			$INSTALLER install -y -q $1
+			$INSTALLER -y -q install $1
 		fi
 	fi
 }
@@ -248,7 +247,9 @@ select UPDATE_UPGRADE_SYSTEM in "${OPTIONS[@]}"; do
 done
 
 if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
-	$INSTALLER update && $INSTALLER upgrade -y && $INSTALLER dist-upgrade -y
+	$INSTALLER -q update >/dev/null 2>&1
+	$INSTALLER -q -y upgrade >/dev/null 2>&1
+	$INSTALLER -q -y dist-upgrade >/dev/null 2>&1
 	checkInstall debconf-utils
 	checkInstall lsb-release
 elif [ "$OS" == "centos" ]; then
@@ -264,7 +265,7 @@ checkInstall curl
 
 cyanMessage " "
 OS=`lsb_release -i 2> /dev/null | grep 'Distributor' | awk '{print tolower($3)}'`
-OSVERSION=`lsb_release -r 2> /dev/null | grep 'Release' | awk '{print $2}' | cut -c 1-3`
+OSVERSION=`lsb_release -r 2> /dev/null | grep 'Release' | awk '{print $2}'`
 OSBRANCH=`lsb_release -c 2> /dev/null | grep 'Codename' | awk '{print $2}'`
 
 if [ "$MACHINE" == "x86_64" ]; then
@@ -472,9 +473,9 @@ fi
 
 # If we need to install and configure a webspace than we need to identify the groupID
 if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" ]; then
-	if [ "$OS" == "debian" -o "OS" == "ubuntu" ]; then
+	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 		WEBGROUPNAME="www-data"
-		WEBGROUPTMPID="1000"
+		WEBGROUPTMPID="33"
 		WEBGROUPPATH="/var/www"
 		WEBGROUPCOMMENT="Webserver"
 	elif [ "$OS" == "centos" ]; then
@@ -538,6 +539,8 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" ]; then
 
 	if [ "$WEBGROUPID" == "" ]; then
 		errorAndExit "Fatal Error: missing webservergroup ID"
+	elif [ "$WEBGROUPID" != "$WEBGROUPTMPID" ]; then
+		errorAndExit "Fatal Error: wrong webservergroup ID"
 	fi
 fi
 
