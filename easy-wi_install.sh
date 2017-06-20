@@ -806,7 +806,7 @@ gpgcheck=1' > /etc/yum.repos.d/MariaDB.repo
 			fi
 		elif [ "$OS" == "centos" ]; then
 			if [ "$SQL_VERSION" == "5.5" ]; then
-				checkInstall mariadb
+				checkInstall mariadb-server
 				systemctl enable mariadb.service >/dev/null 2>&1
 				systemctl restart mariadb.service
 			elif [ "$SQL_VERSION" == "10" ]; then
@@ -819,11 +819,13 @@ gpgcheck=1' > /etc/yum.repos.d/MariaDB.repo
 	fi
 
 	if [ "$SQL" != "None" ]; then
-		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ] && [ -f /etc/mysql/my.cnf ]; then
+		if [ "$OS" == "debian" -o "$OS" == "ubuntu" -a -f /etc/mysql/my.cnf ]; then
 			backUpFile /etc/mysql/my.cnf
-		elif [ "$OS" == "centos" -a -f /etc/my.cnf ]; then
+		elif [ "$OS" == "centos" -a -f /etc/my.cnf -a -f /usr/share/mysql/my-medium.cnf ]; then
 			backUpFile /etc/my.cnf
 			cp /usr/share/mysql/my-medium.cnf -R /etc/my.cnf
+		else
+			errorAndExit "$SQL Database not fully installed!"
 		fi
 	fi
 
