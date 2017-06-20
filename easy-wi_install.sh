@@ -32,49 +32,57 @@
 #    Sie sollten eine Kopie der GNU General Public License zusammen mit diesem
 #    Programm erhalten haben. Wenn nicht, siehe <http://www.gnu.org/licenses/>.
 
-function greenMessage {
+greenMessage() {
 	echo -e "\\033[32;1m${@}\033[0m"
 }
 
-function cyanMessage {
+cyanMessage() {
 	echo -e "\\033[36;1m${@}\033[0m"
 }
 
-function redMessage {
+redMessage() {
 	echo -e "\\033[31;1m${@}\033[0m"
 }
 
-function yellowMessage {
+yellowMessage() {
 	echo -e "\\033[33;1m${@}\033[0m"
 }
 
-function greenOneLineMessage {
+greenOneLineMessage() {
 	echo -en "\\033[32;1m${@}\033[0m"
 }
 
-function errorAndQuit {
+cyanOneLineMessage() {
+	echo -en "\\033[36;1m${@}\033[0m"
+}
+
+yellowOneLineMessage() {
+	echo -en "\\033[33;1m${@}\033[0m"
+}
+
+errorAndQuit() {
 	errorAndExit "Exit now!"
 }
 
-function errorAndExit {
+errorAndExit() {
 	cyanMessage " "
 	redMessage ${@}
 	cyanMessage " "
 	exit 0
 }
 
-function errorAndContinue {
+errorAndContinue() {
 	redMessage "Invalid option."
 	continue
 }
 
-function removeIfExists {
+removeIfExists() {
 	if [ "$1" != "" -a -f "$1" ]; then
 		rm -f $1
 	fi
 }
 
-function runSpinner {
+runSpinner() {
 	SPINNER=("-" "\\" "|" "/")
 
 	for SEQUENCE in `seq 1 $1`; do
@@ -85,24 +93,24 @@ function runSpinner {
 	done
 }
 
-function okAndSleep {
+okAndSleep() {
 	greenMessage $1
 	sleep 1
 }
 
-function makeDir {
+makeDir() {
 	if [ "$1" != "" -a ! -d $1 ]; then
 		mkdir -p $1
 	fi
 }
 
-function backUpFile {
+backUpFile() {
 	if [ ! -f "$1.easy-install.backup" ]; then
 		cp "$1" "$1.easy-install.backup"
 	fi
 }
 
-function checkInstall {
+checkInstall() {
 	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 		if [ "`dpkg-query -s $1 2>/dev/null`" == "" ]; then
 			okAndSleep "Installing package $1"
@@ -116,12 +124,28 @@ function checkInstall {
 	fi
 }
 
-function RestartWebserver {
+checkUser() {
+	if [ "$1" == "" ]; then
+		redMessage "Error: No masteruser specified"
+	elif [ "$1" == "root" ]; then
+		redMessage "Error: Using root as masteruser is a security hazard and not allowed."
+	elif [ "`id $1 2> /dev/null`" != "" ] && ([ "$INSTALL" != "EW" -a "$INSTALL" != "WR" ] || [ ! -d "/home/$1/sites-enabled" ]); then
+		redMessage "Error: User \"$1\" already exists. Please name a not yet existing user"
+	else
+		echo 1
+	fi
+}
+
+RestartWebserver() {
 	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 		if [ "$WEBSERVER" == "Nginx" ]; then
 			cyanMessage " "
-			okAndSleep "Restarting PHP-FPM and Nginx."
-			service php${USE_PHP_VERSION}-fpm restart
+			if [ "$PHPINSTALL" == "Yes" ]; then
+				okAndSleep "Restarting PHP-FPM and Nginx."
+				service php${USE_PHP_VERSION}-fpm restart
+			else
+				okAndSleep "Restarting Nginx."
+			fi
 			service nginx restart
 		elif [ "$WEBSERVER" == "Apache" ]; then
 			cyanMessage " "
@@ -135,23 +159,29 @@ function RestartWebserver {
 	elif [ "$OS" == "centos" ]; then
 		if [ "$WEBSERVER" == "Nginx" ]; then
 			cyanMessage " "
-			okAndSleep "Restarting PHP-FPM and Nginx."
 			if [ -f /etc/php-fpm.conf ]; then
+				okAndSleep "Restarting PHP-FPM and Nginx."
 				systemctl restart php-fpm.service
+			else
+				okAndSleep "Restarting Nginx."
 			fi
 			systemctl restart nginx.service
 		elif [ "$WEBSERVER" == "Apache" ]; then
 			cyanMessage " "
-			okAndSleep "Restarting PHP-FPM and Apache2."
 			if [ -f /etc/php-fpm.conf ]; then
+				okAndSleep "Restarting PHP-FPM and Apache2."
 				systemctl restart php-fpm.service
+			else
+				okAndSleep "Restarting Apache2."
 			fi
 			systemctl restart httpd.service
 		elif [ "$WEBSERVER" == "Lighttpd" ]; then
 			cyanMessage " "
-			okAndSleep "Restarting PHP-FPM and Lighttpd."
 			if [ -f /etc/php-fpm.conf ]; then
+				okAndSleep "Restarting PHP-FPM and Lighttpd."
 				systemctl restart php-fpm.service
+			else
+				okAndSleep "Restarting Lighttpd."
 			fi
 			systemctl restart lighttpd.service
 		fi
@@ -373,25 +403,70 @@ if [ "$INSTALL" == "EW" ]; then
 	RELEASE_TYPE=$OPTION
 fi
 
-# Run the TS3 server version detect up front to avoid user executing steps first and fail at download last.
-if [ "$INSTALL" == "VS" ]; then
-	cyanMessage " "
-	okAndSleep "Searching latest build for hardware type $MACHINE with arch $ARCH."
+if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" -o "$INSTALL" == "MY" ]; then
+	if [ "$OS" == "debian" -a "$INSTALL" != "MY" ]; then
+		cyanMessage " "
+		cyanMessage "Use dotdeb.org repository for more up to date server and PHP versions?"
 
-	for VERSION in `curl -s "http://dl.4players.de/ts/releases/?C=M;O=D" | grep -Po '(?<=href=")[0-9]+(\.[0-9]+){2,3}(?=/")' | sort -Vr`; do
-		DOWNLOAD_URL_VERSION="http://dl.4players.de/ts/releases/$VERSION/teamspeak3-server_linux_$ARCH-$VERSION.tar.bz2"
-		STATUS=`curl -I $DOWNLOAD_URL_VERSION 2>&1 | grep "HTTP/" | awk '{print $2}'`
+		OPTIONS=("Yes" "No" "Quit")
+		select DOTDEB in "${OPTIONS[@]}"; do
+			case "$REPLY" in
+				1|2 ) break;;
+				3 ) errorAndQuit;;
+				*) errorAndContinue;;
+			esac
+		done
 
-		if [ "$STATUS" == "200" ]; then
-			DOWNLOAD_URL=$DOWNLOAD_URL_VERSION
-			break
+		if [ "$DOTDEB" == "Yes" ]; then
+			if [ "`grep 'packages.dotdeb.org' /etc/apt/sources.list`" == "" ]; then
+				okAndSleep "Adding entries to /etc/apt/sources.list"
+
+				if [ "$OSBRANCH" == "squeeze" -o "$OSBRANCH" == "wheezy" ]; then
+					checkInstall python-software-properties
+				elif [ "$OSBRANCH" == "jessie" ]; then
+					checkInstall software-properties-common
+				fi
+
+				add-apt-repository "deb http://packages.dotdeb.org $OSBRANCH all"
+				add-apt-repository "deb-src http://packages.dotdeb.org $OSBRANCH all"
+				curl --remote-name https://www.dotdeb.org/dotdeb.gpg
+				apt-key add dotdeb.gpg
+				removeIfExists dotdeb.gpg
+				$INSTALLER update
+			fi
 		fi
-	done
+	fi
 
-	if [ "$STATUS" == "200" -a "$DOWNLOAD_URL" != "" ]; then
-		okAndSleep "Detected latest server version as $VERSION with download URL $DOWNLOAD_URL"
-	else
-		errorAndExit "Could not detect latest server version"
+	if [ "$INSTALL" != "MY" ]; then
+		cyanMessage " "
+		cyanMessage "Please select the webserver you would like to use"
+	fi
+
+	if [ "$INSTALL" == "EW" ]; then
+		cyanMessage "Apache is recommended in case you want to run additional sites on this host."
+		cyanMessage "Nginx is recommended if the server should only run the Easy-WI Web Panel."
+
+		OPTIONS=("Nginx" "Apache" "Quit")
+		select WEBSERVER in "${OPTIONS[@]}"; do
+			case "$REPLY" in
+				1|2 ) break;;
+				3 ) errorAndQuit;;
+				*) errorAndContinue;;
+			esac
+		done
+
+	elif [ "$INSTALL" != "MY" ]; then
+		cyanMessage "Nginx is recommended for FastDL and few but high efficient vhosts"
+		cyanMessage "Apache is recommended in case you want to run many PHP supporting Vhosts aka mass web hosting"
+
+		OPTIONS=("Nginx" "Apache" "Lighttpd" "None" "Quit")
+		select WEBSERVER in "${OPTIONS[@]}"; do
+			case "$REPLY" in
+				1|2|3|4 ) break;;
+				5 ) errorAndQuit;;
+				*) errorAndContinue;;
+			esac
+		done
 	fi
 fi
 
@@ -399,23 +474,46 @@ fi
 if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" ]; then
 	if [ "$OS" == "debian" -o "OS" == "ubuntu" ]; then
 		WEBGROUPNAME="www-data"
-		WEBGROUPID=`getent group $WEBGROUP | awk -F ':' '{print $3}'`
+		WEBGROUPTMPID="1000"
+		WEBGROUPPATH="/var/www"
+		WEBGROUPCOMMENT="Webserver"
 	elif [ "$OS" == "centos" ]; then
-		WEBGROUPNAME="apache"
-
-		WEBGROUPID=`getent group $WEBGROUPNAME | awk -F ':' '{print $3}'`
-		if [ "$WEBGROUPID" == "" ]; then
-			$GROUPADD -g 48 $WEBGROUPNAME >/dev/null 2>&1
-			$USERADD -c "Apache" -u 48 -g 48 -s /sbin/nologin -r -d /usr/share/httpd $WEBGROUPNAME
-			WEBGROUPID=`getent group $WEBGROUPNAME | awk -F ':' '{print $3}'`
+		if [ "$WEBSERVER" == "Nginx" ]; then
+			WEBGROUPNAME="nginx"
+			WEBGROUPTMPID="994"
+			WEBGROUPPATH="/var/lib/nginx"
+			WEBGROUPCOMMENT="Nginx web server"
+		elif [ "$WEBSERVER" == "Lighttpd" ]; then
+			WEBGROUPNAME="lighttpd"
+			WEBGROUPTMPID="993"
+			WEBGROUPPATH="/var/www/lighttpd"
+			WEBGROUPCOMMENT="lighttpd web server"
+		elif [ "$WEBSERVER" == "Apache" ]; then
+			WEBGROUPNAME="apache"
+			WEBGROUPTMPID="48"
+			WEBGROUPPATH="/usr/share/httpd"
+			WEBGROUPCOMMENT="Apache"
 		fi
+	fi
+
+	WEBGROUPID=`getent group $WEBGROUPNAME | awk -F ':' '{print $3}'`
+	if [ "$WEBGROUPID" != "$WEBGROUPTMPID" ]; then
+		$GROUPADD -g $WEBGROUPTMPID $WEBGROUPNAME >/dev/null 2>&1
+		if [ "$WEBSERVER" == "Lighttpd" -o "$WEBSERVER" == "Nginx" ]; then
+			$USERADD -c "$WEBGROUPCOMMENT" -u $WEBGROUPTMPID -g $WEBGROUPTMPID -s /sbin/nologin -r -d $WEBGROUPPATH $WEBGROUPNAME
+		fi
+		WEBGROUPID=`getent group $WEBGROUPNAME | awk -F ':' '{print $3}'`
 	fi
 
 	if [ "$INSTALL" == "EW" ]; then
 		OPTION="Yes"
 	else
 		cyanMessage " "
-		cyanMessage "Found group $WEBGROUPNAME with group ID $WEBGROUPID. Use as webservergroup?"
+		cyanOneLineMessage 'Found group "'
+		yellowOneLineMessage "$WEBGROUPNAME"
+		cyanOneLineMessage '" with group ID "'
+		yellowOneLineMessage "$WEBGROUPID"
+		cyanMessage '". Use as webservergroup?'
 
 		OPTIONS=("Yes" "No" "Quit")
 		select OPTION in "${OPTIONS[@]}"; do
@@ -443,17 +541,27 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" ]; then
 	fi
 fi
 
-function checkUser {
-	if [ "$1" == "" ]; then
-		redMessage "Error: No masteruser specified"
-	elif [ "$1" == "root" ]; then
-		redMessage "Error: Using root as masteruser is a security hazard and not allowed."
-	elif [ "`id $1 2> /dev/null`" != "" ] && ([ "$INSTALL" != "EW" -a "$INSTALL" != "WR" ] || [ ! -d "/home/$1/sites-enabled" ]); then
-		redMessage "Error: User \"$1\" already exists. Please name a not yet existing user"
+# Run the TS3 server version detect up front to avoid user executing steps first and fail at download last.
+if [ "$INSTALL" == "VS" ]; then
+	cyanMessage " "
+	okAndSleep "Searching latest build for hardware type $MACHINE with arch $ARCH."
+
+	for VERSION in `curl -s "http://dl.4players.de/ts/releases/?C=M;O=D" | grep -Po '(?<=href=")[0-9]+(\.[0-9]+){2,3}(?=/")' | sort -Vr`; do
+		DOWNLOAD_URL_VERSION="http://dl.4players.de/ts/releases/$VERSION/teamspeak3-server_linux_$ARCH-$VERSION.tar.bz2"
+		STATUS=`curl -I $DOWNLOAD_URL_VERSION 2>&1 | grep "HTTP/" | awk '{print $2}'`
+
+		if [ "$STATUS" == "200" ]; then
+			DOWNLOAD_URL=$DOWNLOAD_URL_VERSION
+			break
+		fi
+	done
+
+	if [ "$STATUS" == "200" -a "$DOWNLOAD_URL" != "" ]; then
+		okAndSleep "Detected latest server version as $VERSION with download URL $DOWNLOAD_URL"
 	else
-		echo 1
+		errorAndExit "Could not detect latest server version"
 	fi
-}
+fi
 
 if [ "$INSTALL" != "MY" ]; then
 	cyanMessage " "
@@ -535,71 +643,6 @@ if [ "$INSTALL" == "WR" -o "$INSTALL" == "EW" ]; then
 fi
 
 if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" -o "$INSTALL" == "MY" ]; then
-	if [ "$OS" == "debian" -a "$INSTALL" != "MY" ]; then
-		cyanMessage " "
-		cyanMessage "Use dotdeb.org repository for more up to date server and PHP versions?"
-
-		OPTIONS=("Yes" "No" "Quit")
-		select DOTDEB in "${OPTIONS[@]}"; do
-			case "$REPLY" in
-				1|2 ) break;;
-				3 ) errorAndQuit;;
-				*) errorAndContinue;;
-			esac
-		done
-
-		if [ "$DOTDEB" == "Yes" ]; then
-			if [ "`grep 'packages.dotdeb.org' /etc/apt/sources.list`" == "" ]; then
-				okAndSleep "Adding entries to /etc/apt/sources.list"
-
-				if [ "$OSBRANCH" == "squeeze" -o "$OSBRANCH" == "wheezy" ]; then
-					checkInstall python-software-properties
-				elif [ "$OSBRANCH" == "jessie" ]; then
-					checkInstall software-properties-common
-				fi
-
-				add-apt-repository "deb http://packages.dotdeb.org $OSBRANCH all"
-				add-apt-repository "deb-src http://packages.dotdeb.org $OSBRANCH all"
-				curl --remote-name https://www.dotdeb.org/dotdeb.gpg
-				apt-key add dotdeb.gpg
-				removeIfExists dotdeb.gpg
-				$INSTALLER update
-			fi
-		fi
-	fi
-
-	if [ "$INSTALL" != "MY" ]; then
-		cyanMessage " "
-		cyanMessage "Please select the webserver you would like to use"
-	fi
-
-	if [ "$INSTALL" == "EW" ]; then
-		cyanMessage "Apache is recommended in case you want to run additional sites on this host."
-		cyanMessage "Nginx is recommended if the server should only run the Easy-WI Web Panel."
-
-		OPTIONS=("Nginx" "Apache" "Quit")
-		select WEBSERVER in "${OPTIONS[@]}"; do
-			case "$REPLY" in
-				1|2 ) break;;
-				3 ) errorAndQuit;;
-				*) errorAndContinue;;
-			esac
-		done
-
-	elif [ "$INSTALL" != "MY" ]; then
-		cyanMessage "Nginx is recommended for FastDL and few but high efficient vhosts"
-		cyanMessage "Apache is recommended in case you want to run many PHP supporting Vhosts aka mass web hosting"
-
-		OPTIONS=("Nginx" "Apache" "Lighttpd" "None" "Quit")
-		select WEBSERVER in "${OPTIONS[@]}"; do
-			case "$REPLY" in
-				1|2|3|4 ) break;;
-				5 ) errorAndQuit;;
-				*) errorAndContinue;;
-			esac
-		done
-	fi
-
 	cyanMessage " "
 	if [ "$WEBSERVER" == "Nginx" -a "$INSTALL" != "MY" ]; then
 		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
@@ -639,22 +682,20 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" -o "$INSTALL" == "MY" ]; then
 			cyanMessage "Please select if an which database server to install."
 			cyanMessage "Select \"None\" in case this server should host only Fastdownload webspace."
 
-			if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
-				OPTIONS=("MySQL" "MariaDB" "None" "Quit")
-				select SQL in "${OPTIONS[@]}"; do
-					case "$REPLY" in
-						1|2|3 ) break;;
-						4 ) errorAndQuit;;
-						*) errorAndContinue;;
-					esac
-				done
-			fi
+			OPTIONS=("MySQL" "MariaDB" "None" "Quit")
+			select SQL in "${OPTIONS[@]}"; do
+				case "$REPLY" in
+					1|2|3 ) break;;
+					4 ) errorAndQuit;;
+					*) errorAndContinue;;
+				esac
+			done
 		elif [ "$OS" == "centos" ]; then
 			SQL="MariaDB"
 			SQL_VERSION="5.5"
 		fi
 
-		if [ "$OS" == "centos" -a "$SQL" == "MariaDB" -a "$INSTALL" == "WR" ]; then
+		if [ "$OS" == "centos" -a "$SQL" == "MariaDB" -a "$INSTALL" == "WR" -o "$INSTALL" == "MY" ]; then
 			cyanMessage " "
 			cyanMessage "Please select which "$SQL" Version to install."
 
@@ -717,7 +758,7 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" -o "$INSTALL" == "MY" ]; then
 			if [ ! -f /etc/yum.repos.d/MariaDB.repo ]; then
 				MARIADB_FILE=$(ls /etc/yum.repos.d/)
 				for search_mariadb in "${MARIADB_FILE[@]}"; do
-					if [ "`grep '/MariaDB/' "$search_mariadb"`" == "" -a ! -f /etc/yum.repos.d/MariaDB.repo ]; then
+					if [ "`grep '/MariaDB/' $search_mariadb >/dev/null 2>&1`" == "" -a ! -f /etc/yum.repos.d/MariaDB.repo ]; then
 						echo '# MariaDB 10.0 CentOS repository list - created 2017-06-15 22:41 UTC
 # http://downloads.mariadb.org/mariadb/repositories/
 [mariadb]
@@ -755,8 +796,8 @@ gpgcheck=1' > /etc/yum.repos.d/MariaDB.repo
 		checkInstall mysql-common
 	elif [ "$SQL" == "MariaDB" ]; then
 		cyanMessage " "
-		checkInstall mariadb-server
 		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
+			checkInstall mariadb-server
 			checkInstall mariadb-client
 			if ([ "`printf "${OSVERSION}\n8.0" | sort -V | tail -n 1`" == "8.0" -o "$OS" == "ubuntu" ] && [ "`grep '/mariadb/' /etc/apt/sources.list`" == "" ]); then
 				checkInstall mysql-common
@@ -764,9 +805,16 @@ gpgcheck=1' > /etc/yum.repos.d/MariaDB.repo
 				checkInstall mariadb-common
 			fi
 		elif [ "$OS" == "centos" ]; then
-			checkInstall mariadb
-			systemctl enable mariadb.service >/dev/null 2>&1
-			systemctl restart mariadb.service
+			if [ "$SQL_VERSION" == "5.5" ]; then
+				checkInstall mariadb
+				systemctl enable mariadb.service >/dev/null 2>&1
+				systemctl restart mariadb.service
+			elif [ "$SQL_VERSION" == "10" ]; then
+				checkInstall MariaDB-server
+				systemctl enable mysql.service >/dev/null 2>&1
+				systemctl restart mysql.service
+			fi
+
 		fi
 	fi
 
@@ -850,7 +898,11 @@ gpgcheck=1' > /etc/yum.repos.d/MariaDB.repo
 		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 			/etc/init.d/mysql restart
 		elif [ "$OS" == "centos" ]; then
-			systemctl restart mariadb.service
+			if [ "$SQL_VERSION" == "5.5" ]; then
+				systemctl restart mariadb.service
+			elif [ "$SQL_VERSION" == "10" ]; then
+				systemctl restart mysql.service
+			fi
 		fi
 	fi
 
@@ -920,6 +972,7 @@ gpgcheck=1' > /etc/yum.repos.d/MariaDB.repo
 			fi
 		fi
 
+		cyanMessage " "
 		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 			checkInstall php${USE_PHP_VERSION}-common
 			checkInstall php${USE_PHP_VERSION}-curl
@@ -1239,7 +1292,11 @@ if [ "$INSTALL" == "WR" -o "$INSTALL" == "EW" ]; then
 	if [ "$WEBSERVER" == "Nginx" ]; then
 		backUpFile /etc/nginx/nginx.conf
 		if [ "`grep '/home/$MASTERUSER/sites-enabled/' /etc/nginx/nginx.conf`" == "" ]; then
-			sed -i "\/etc\/nginx\/sites-enabled\/\*;/a \ \ \include \/home\/$MASTERUSER\/sites-enabled\/\*;" /etc/nginx/nginx.conf
+			if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
+				sed -i "\/etc\/nginx\/sites-enabled\/\*;/a \ \ \include \/home\/$MASTERUSER\/sites-enabled\/\*;" /etc/nginx/nginx.conf
+#			elif [ "$OS" == "centos" ]; then
+#				sed -i -e "45s/\/etc\/nginx\/default.d\/\*.conf/\/home\/$MASTERUSER\/sites-enabled\/*/g" /etc/nginx/nginx.conf
+			fi
 		fi
 	elif [ "$WEBSERVER" == "Lighttpd" ]; then
 		backUpFile /etc/lighttpd/lighttpd.conf
@@ -1370,7 +1427,7 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
 		if [ "`grep $MASTERUSER /etc/sudoers | grep $HTTPDSCRIPT`" == "" ]; then
 			echo "$MASTERUSER ALL = NOPASSWD: $HTTPDSCRIPT" >> /etc/sudoers
 		fi
-
+#########################################################################################################################################################################################################
 		if [ "$PHPINSTALL" == "Yes" -a "$WEBSERVER" == "Nginx" -a "`grep $MASTERUSER /etc/sudoers | grep 'php${USE_PHP_VERSION}-fpm'`" == "" ]; then
 			FPM_BIN=`which php${USE_PHP_VERSION}-fpm`
 
@@ -1489,6 +1546,7 @@ if [ "$INSTALL" == "GS" ]; then
 		$INSTALLER install wput screen bzip2 sudo rsync zip unzip -y
 
 		if [ "`uname -m`" == "x86_64" ]; then
+			cyanMessage " "
 			okAndSleep "Installing 32bit support for 64bit systems."
 
 			if ([ "$OS" == "ubuntu" ] || [ "$OS" == "debian" -a "`printf "${OSVERSION}\n8.0" | sort -V | tail -n 1`" == "$OSVERSION" ]); then
