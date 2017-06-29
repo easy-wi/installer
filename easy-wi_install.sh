@@ -191,7 +191,7 @@ RestartWebserver() {
 RestartDatabase() {
 	if [ "$SQL" != "None" ]; then
 		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
-			/etc/init.d/mysql restart
+			/etc/init.d/mysql restart 1>/dev/null
 		elif [ "$OS" == "centos" ]; then
 			if [ "$SQL_VERSION" == "5.5" ]; then
 				systemctl restart mariadb.service 1>/dev/null
@@ -308,7 +308,7 @@ else
 	okAndSleep "Detected version: $OSVERSION"
 
 	if [ "$OS" == "ubuntu" ]; then
-		OSVERSION=`echo "$OSVERSION" | tr -d .`
+		OSVERSION_TMP=`echo "$OSVERSION" | tr -d .`
 	fi
 fi
 
@@ -316,6 +316,14 @@ if [ "$ARCH" == "" ]; then
 	errorAndExit "Error: $MACHINE is not supported! Aborting"
 else
 	okAndSleep "Detected architecture: $ARCH"
+fi
+
+if [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -le "1510" -o "$OS" == "debian" -a "$OSVERSION_TMP" -lt "7" -o "$OS" == "centos" -a "$OSVERSION_TMP" -lt "7"  ]; then
+	echo; echo
+	redMessage "Error: Your OS \"$OS - $OSVERSION\"  is not more supported from Easy-WI Installer."
+	redMessage "Please Upgrade to a newer OS Version!"
+	echo
+	exit 0
 fi
 
 cyanMessage " "
@@ -755,7 +763,6 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" -o "$INSTALL" == "MY" ]; then
 				ERROR_CODE=$?
 			done
 		else
-			SQL_FIRST_INSTALLATION="Yes"
 			until [ "$MYSQL_ROOT_PASSWORD" != "" ]; do
 				cyanMessage " "
 				cyanMessage "Please provide the root password for the MySQL Database."
@@ -772,7 +779,7 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" -o "$INSTALL" == "MY" ]; then
 
 	if [ "$SQL" == "MariaDB" ]; then
 		RUNUPDATE=0
-		if ([ "$OS" == "debian" -a "`printf "${OSVERSION}\n8.0" | sort -V | tail -n 1`" == "8.0" -o "$OS" == "ubuntu" ] && [ "`grep '/mariadb/' /etc/apt/sources.list`" == "" ]); then
+		if ([ "$OS" == "debian" -a "`printf "${OSVERSION_TMP}\n8.0" | sort -V | tail -n 1`" == "8.0" -o "$OS" == "ubuntu" ] && [ "`grep '/mariadb/' /etc/apt/sources.list`" == "" ]); then
 			checkInstall python-software-properties
 			apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 0xcbcb082a1bb943db
 
@@ -825,7 +832,7 @@ gpgcheck=1' > /etc/yum.repos.d/MariaDB.repo
 		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 			checkInstall mariadb-server
 			checkInstall mariadb-client
-			if ([ "`printf "${OSVERSION}\n8.0" | sort -V | tail -n 1`" == "8.0" -o "$OS" == "ubuntu" ] && [ "`grep '/mariadb/' /etc/apt/sources.list`" == "" ]); then
+			if ([ "`printf "${OSVERSION_TMP}\n8.0" | sort -V | tail -n 1`" == "8.0" -o "$OS" == "ubuntu" ] && [ "`grep '/mariadb/' /etc/apt/sources.list`" == "" ]); then
 				checkInstall mysql-common
 			else
 				checkInstall mariadb-common
@@ -872,20 +879,20 @@ gpgcheck=1' > /etc/yum.repos.d/MariaDB.repo
 
 		cyanMessage " "
 		okAndSleep "Securing MySQL by running \"mysql_secure_installation\" commands."
-		if [ "$OS" == "centos" -o "$OS" == "ubuntu" -a "$OSVERSION" -ge "1603" ] && [ "$SQL_FIRST_INSTALLATION" == "Yes" ]; then
-			RestartDatabase
+		RestartDatabase
+		if [ "$OS" == "centos" -o "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1603" ] && [ "$MYSQL_ROOT_PASSWORD" == "" ]; then
 			mysqladmin password "$MYSQL_ROOT_PASSWORD"
 		fi
-		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "DELETE FROM mysql.user WHERE User='';" 2> /dev/null
-		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');" 2> /dev/null
-		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "DROP DATABASE test;" 2> /dev/null
-		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "DELETE FROM mysql.db WHERE Db='test' OR Db='test\_%';" 2> /dev/null
-		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "FLUSH PRIVILEGES;" 2> /dev/null
+		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -BSe "DELETE FROM mysql.user WHERE User='';"
+		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -BSe "DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');"
+		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -BSe "DROP DATABASE test;"
+		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -BSe "DELETE FROM mysql.db WHERE Db='test' OR Db='test\_%';"
+		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -BSe "FLUSH PRIVILEGES;"
 	fi
 
 	if [ "$EXTERNAL_INSTALL" == "Yes" ]; then
-		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "GRANT USAGE ON *.* TO 'root'@'' IDENTIFIED BY '$MYSQL_ROOT_PASSWORD' WITH MAX_QUERIES_PER_HOUR 0 MAX_CONNECTIONS_PER_HOUR 0 MAX_UPDATES_PER_HOUR 0 MAX_USER_CONNECTIONS 0;" 2> /dev/null
-		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "UPDATE mysql.user SET Select_priv='Y',Insert_priv='Y',Update_priv='Y',Delete_priv='Y',Create_priv='Y',Drop_priv='Y',Reload_priv='Y',Shutdown_priv='Y',Process_priv='Y',File_priv='Y',Grant_priv='Y',References_priv='Y',Index_priv='Y',Alter_priv='Y',Show_db_priv='Y',Super_priv='Y',Create_tmp_table_priv='Y',Lock_tables_priv='Y',Execute_priv='Y',Repl_slave_priv='Y',Repl_client_priv='Y',Create_view_priv='Y',Show_view_priv='Y',Create_routine_priv='Y',Alter_routine_priv='Y',Create_user_priv='Y',Event_priv='Y',Trigger_priv='Y',Create_tablespace_priv='Y' WHERE User='root' AND Host='';" 2> /dev/null
+		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -BSe "GRANT USAGE ON *.* TO 'root'@'' IDENTIFIED BY '$MYSQL_ROOT_PASSWORD' WITH MAX_QUERIES_PER_HOUR 0 MAX_CONNECTIONS_PER_HOUR 0 MAX_UPDATES_PER_HOUR 0 MAX_USER_CONNECTIONS 0;" 2> /dev/null
+		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -BSe "UPDATE mysql.user SET Select_priv='Y',Insert_priv='Y',Update_priv='Y',Delete_priv='Y',Create_priv='Y',Drop_priv='Y',Reload_priv='Y',Shutdown_priv='Y',Process_priv='Y',File_priv='Y',Grant_priv='Y',References_priv='Y',Index_priv='Y',Alter_priv='Y',Show_db_priv='Y',Super_priv='Y',Create_tmp_table_priv='Y',Lock_tables_priv='Y',Execute_priv='Y',Repl_slave_priv='Y',Repl_client_priv='Y',Create_view_priv='Y',Show_view_priv='Y',Create_routine_priv='Y',Alter_routine_priv='Y',Create_user_priv='Y',Event_priv='Y',Trigger_priv='Y',Create_tablespace_priv='Y' WHERE User='root' AND Host='';" 2> /dev/null
 
 		if [ "$LOCAL_IP" == "" ]; then
 			cyanMessage " "
@@ -921,7 +928,7 @@ gpgcheck=1' > /etc/yum.repos.d/MariaDB.repo
 			sed -i -e "51s/key_buffer[[:space:]]*=/key_buffer_size = /g" /etc/mysql/my.cnf
 			sed -i -e "57s/myisam-recover[[:space:]]*=/myisam-recover-options = /g" /etc/mysql/my.cnf
 		fi
-		if [ "$SQL" != "None" -a "$OS" == "ubuntu" -a "$OSVERSION" -ge "1603" -a ! -f /etc/mysql/conf.d/disable_strict_mode.cnf ]; then
+		if [ "$SQL" != "None" -a "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1603" -a ! -f /etc/mysql/conf.d/disable_strict_mode.cnf ]; then
 			echo '[mysqld]' > /etc/mysql/conf.d/disable_strict_mode.cnf
 			echo 'sql_mode=IGNORE_SPACE,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION' >> /etc/mysql/conf.d/disable_strict_mode.cnf
 		fi
@@ -956,7 +963,7 @@ gpgcheck=1' > /etc/yum.repos.d/MariaDB.repo
 	if [ "$PHPINSTALL" == "Yes" ]; then
 		USE_PHP_VERSION='5'
 
-		if [ "$OS" == "ubuntu" -a "$OSVERSION" -ge "1603" ]; then
+		if [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1603" ]; then
 			USE_PHP_VERSION='7.0'
 		fi
 
@@ -1585,7 +1592,7 @@ if [ "$INSTALL" == "GS" ]; then
 			cyanMessage " "
 			okAndSleep "Installing 32bit support for 64bit systems."
 
-			if ([ "$OS" == "ubuntu" ] || [ "$OS" == "debian" -a "`printf "${OSVERSION}\n8.0" | sort -V | tail -n 1`" == "$OSVERSION" ]); then
+			if ([ "$OS" == "ubuntu" ] || [ "$OS" == "debian" -a "`printf "${OSVERSION_TMP}\n8.0" | sort -V | tail -n 1`" == "$OSVERSION" ]); then
 				$INSTALLER install zlib1g -y
 				$INSTALLER install lib32z1 -y
 				$INSTALLER install lib32gcc1 -y
@@ -1687,9 +1694,9 @@ if [ "$INSTALL" == "EW" ]; then
 		cyanMessage " "
 		cyanMessage "Please provide the root password for the MySQL Database, to remove the old easywi database."
 		read MYSQL_ROOT_PASSWORD
-		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "DROP DATABASE easy_wi;" 2> /dev/null
-		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "DROP USER easy_wi@localhost;" 2> /dev/null
-		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "FLUSH PRIVILEGES;" 2> /dev/null
+		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -BSe "DROP DATABASE easy_wi;"
+		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -BSe "DROP USER easy_wi@localhost;"
+		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -BSe "FLUSH PRIVILEGES;"
 	fi
 
 	if [ "`id easywi_web 2> /dev/null`" == "" -a ! -d /home/easywi_web ]; then
