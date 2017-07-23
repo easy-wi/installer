@@ -675,7 +675,7 @@ if [ "$INSTALL" != "MY" ]; then
 		cyanMessage "It is recommended but not required to set a password"
 		su -c "ssh-keygen -t rsa" $MASTERUSER
 
-		KEYNAME=`find -maxdepth 1 -name "*.pub" | head -n 1`
+		KEYNAME=`find /home/$MASTERUSER/.ssh/ -maxdepth 1 -name "*.pub" | head -n 1`
 
 		if [ "$KEYNAME" != "" ]; then
 			su -c "cat $KEYNAME >> authorized_keys" $MASTERUSER
