@@ -32,6 +32,13 @@
 #    Sie sollten eine Kopie der GNU General Public License zusammen mit diesem
 #    Programm erhalten haben. Wenn nicht, siehe <http://www.gnu.org/licenses/>.
 
+
+DEBUGGER="OFF"
+
+if [ "$DEBUGGER" = "ON" ]; then
+	set -x
+fi
+
 greenMessage() {
 	echo -e "\\033[32;1m${@}\033[0m"
 }
@@ -74,6 +81,14 @@ errorAndExit() {
 errorAndContinue() {
 	redMessage "Invalid option."
 	continue
+}
+
+errorOSVersion() {
+	echo; echo
+	redMessage "Error: Your OS \"$OS - $OSVERSION\"  is not more supported from Easy-WI Installer."
+	redMessage "Please Upgrade to a newer OS Version!"
+	echo
+	exit 0
 }
 
 removeIfExists() {
@@ -309,6 +324,10 @@ else
 
 	if [ "$OS" == "ubuntu" ]; then
 		OSVERSION_TMP=`echo "$OSVERSION" | tr -d .`
+	elif [ "$OS" == "debian" ]; then
+		OSVERSION_TMP=`echo "$OSVERSION" | cut -c 1`
+	else
+		OSVERSION_TMP="$OSVERSION"
 	fi
 fi
 
@@ -318,12 +337,12 @@ else
 	okAndSleep "Detected architecture: $ARCH"
 fi
 
-if [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -le "1510" -o "$OS" == "debian" -a "$OSVERSION_TMP" -lt "7" -o "$OS" == "centos" -a "$OSVERSION_TMP" -lt "7"  ]; then
-	echo; echo
-	redMessage "Error: Your OS \"$OS - $OSVERSION\"  is not more supported from Easy-WI Installer."
-	redMessage "Please Upgrade to a newer OS Version!"
-	echo
-	exit 0
+if [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -le "1510" ]; then
+	errorOSVersion
+elif [ "$OS" == "debian" -a "$OSVERSION_TMP" -lt "8" ]; then
+	errorOSVersion
+elif [ "$OS" == "centos" -a "$OSVERSION_TMP" -lt "7" ]; then
+	errorOSVersion
 fi
 
 cyanMessage " "
@@ -616,7 +635,9 @@ if [ "$INSTALL" != "MY" ]; then
 		if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" ]; then
 			$USERADD -m -b /home -s /bin/bash -g $WEBGROUPNAME $MASTERUSER
 		else
-			$GROUPADD $MASTERUSER
+			if [ "`egrep -i "^$MASTERUSER" /etc/group`" == "" ]; then
+				$GROUPADD $MASTERUSER
+			fi
 			$USERADD -m -b /home -s /bin/bash -g $MASTERUSER $MASTERUSER
 		fi
 	fi
@@ -2185,5 +2206,9 @@ if [ "$OS" == "centos" ]; then
 	fi
 fi
 cyanMessage " "
+
+if [ "$DEBUGGER" = "ON" ]; then
+	set +x
+fi
 
 exit 0
