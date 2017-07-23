@@ -276,6 +276,9 @@ select UPDATE_UPGRADE_SYSTEM in "${OPTIONS[@]}"; do
 	esac
 done
 
+cyanMessage " "
+yellowMessage "Please wait... Update is currently running."
+
 if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 	cyanMessage " "
 	$INSTALLER update >/dev/null 2>&1
