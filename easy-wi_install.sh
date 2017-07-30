@@ -129,12 +129,12 @@ checkInstall() {
 	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 		if [ "`dpkg-query -s $1 2>/dev/null`" == "" ]; then
 			okAndSleep "Installing package $1"
-			$INSTALLER -y install $1  >/dev/null 2>&1
+			$INSTALLER -y install $1
 		fi
 	elif [ "$OS" == "centos" ]; then
 		if [ "`rpm -qa $1 2>/dev/null`" == "" ]; then
 			okAndSleep "Installing package $1"
-			$INSTALLER -y -q install $1
+			$INSTALLER -y install $1
 		fi
 	fi
 }
@@ -281,15 +281,15 @@ yellowMessage "Please wait... Update is currently running."
 
 if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 	cyanMessage " "
-	$INSTALLER update >/dev/null 2>&1
-	$INSTALLER upgrade >/dev/null 2>&1
-	$INSTALLER dist-upgrade >/dev/null 2>&1
+	$INSTALLER update
+	$INSTALLER upgrade
+	$INSTALLER dist-upgrade
 	checkInstall debconf-utils
 	checkInstall lsb-release
 elif [ "$OS" == "centos" ]; then
 	cyanMessage " "
 	cyanMessage "Update all obsolete packages."
-	$INSTALLER update -y -q
+	$INSTALLER update -y
 	checkInstall redhat-lsb
 	checkInstall epel-release
 	rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY*
@@ -1570,7 +1570,7 @@ if [ "$INSTALL" == "GS" ]; then
 			if [ "$OSBRANCH" == "jessie" -a "`grep jessie-backports /etc/apt/sources.list`" == "" ]; then
 				okAndSleep "Adding jessie backports"
 				echo "deb http://ftp.de.debian.org/debian jessie-backports main" >> /etc/apt/sources.list
-				$INSTALLER update >/dev/null 2>&1
+				$INSTALLER update
 			fi
 
 			if [ "$OSBRANCH" == "jessie" ]; then
@@ -2153,9 +2153,9 @@ fi
 cyanMessage " "
 okAndSleep "Removing not needed packages."
 if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
-	$INSTALLER autoremove -y >/dev/null 2>&1
+	$INSTALLER autoremove -y
 elif [ "$OS" == "centos" ]; then
-	$INSTALLER autoremove -y -q
+	$INSTALLER autoremove -y
 fi
 
 if [ "$INSTALL" == "EW" ]; then
@@ -2195,8 +2195,8 @@ if [ "$OS" == "centos" ]; then
 	if [ ! "`grep 'SELINUX=' /etc/selinux/config | sed -n '2 p'`" == "SELINUX=disabled" ]; then
 		backUpFile /etc/selinux/config
 		sed -i "s/SELINUX=enforcing/SELINUX=disabled/g" /etc/selinux/config
-		systemctl disable firewalld >/dev/null 2>&1
-		systemctl stop firewalld >/dev/null 2>&1
+		systemctl disable firewalld
+		systemctl stop firewalld
 
 		redMessage " "
 		redMessage " "
