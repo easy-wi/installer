@@ -1,5 +1,7 @@
 #!/bin/bash
 
+DEBUG="ON"
+
 #    Author:     Ulrich Block <ulrich.block@easy-wi.com>
 #
 #    This file is part of Easy-WI.
@@ -32,10 +34,7 @@
 #    Sie sollten eine Kopie der GNU General Public License zusammen mit diesem
 #    Programm erhalten haben. Wenn nicht, siehe <http://www.gnu.org/licenses/>.
 
-
-DEBUGGER="OFF"
-
-if [ "$DEBUGGER" = "ON" ]; then
+if [ "$DEBUG" = "ON" ]; then
 	set -x
 fi
 
@@ -81,14 +80,6 @@ errorAndExit() {
 errorAndContinue() {
 	redMessage "Invalid option."
 	continue
-}
-
-errorOSVersion() {
-	echo; echo
-	redMessage "Error: Your OS \"$OS - $OSVERSION\"  is not more supported from Easy-WI Installer."
-	redMessage "Please Upgrade to a newer OS Version!"
-	echo
-	exit 0
 }
 
 removeIfExists() {
@@ -278,7 +269,6 @@ done
 
 cyanMessage " "
 yellowMessage "Please wait... Update is currently running."
-
 if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 	cyanMessage " "
 	$INSTALLER update
@@ -325,12 +315,8 @@ if [ "$OSVERSION" == "" ]; then
 else
 	okAndSleep "Detected version: $OSVERSION"
 
-	if [ "$OS" == "ubuntu" ]; then
+	if [ "$OS" == "ubuntu" -o "$OS" == "debian" ]; then
 		OSVERSION_TMP=`echo "$OSVERSION" | tr -d .`
-	elif [ "$OS" == "debian" ]; then
-		OSVERSION_TMP=`echo "$OSVERSION" | cut -c 1`
-	else
-		OSVERSION_TMP="$OSVERSION"
 	fi
 fi
 
@@ -340,12 +326,12 @@ else
 	okAndSleep "Detected architecture: $ARCH"
 fi
 
-if [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -le "1510" ]; then
-	errorOSVersion
-elif [ "$OS" == "debian" -a "$OSVERSION_TMP" -lt "8" ]; then
-	errorOSVersion
-elif [ "$OS" == "centos" -a "$OSVERSION_TMP" -lt "7" ]; then
-	errorOSVersion
+if [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -le "1510" -o "$OS" == "debian" -a "$OSVERSION_TMP" -lt "70" -o "$OS" == "centos" -a "$OSVERSION_TMP" -lt "70"  ]; then
+	echo; echo
+	redMessage "Error: Your OS \"$OS - $OSVERSION\"  is not more supported from Easy-WI Installer."
+	redMessage "Please Upgrade to a newer OS Version!"
+	echo
+	exit 0
 fi
 
 cyanMessage " "
@@ -474,7 +460,7 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" -o "$INSTALL" == "MY" ]; then
 
 				if [ "$OSBRANCH" == "squeeze" -o "$OSBRANCH" == "wheezy" ]; then
 					checkInstall python-software-properties
-				elif [ "$OSBRANCH" == "jessie" ]; then
+				elif [ "$OSBRANCH" == "jessie" -o "$OSBRANCH" == "stretch" ]; then
 					checkInstall software-properties-common
 				fi
 
@@ -638,9 +624,7 @@ if [ "$INSTALL" != "MY" ]; then
 		if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" ]; then
 			$USERADD -m -b /home -s /bin/bash -g $WEBGROUPNAME $MASTERUSER
 		else
-			if [ "`egrep -i "^$MASTERUSER" /etc/group`" == "" ]; then
-				$GROUPADD $MASTERUSER
-			fi
+			$GROUPADD $MASTERUSER
 			$USERADD -m -b /home -s /bin/bash -g $MASTERUSER $MASTERUSER
 		fi
 	fi
@@ -675,7 +659,7 @@ if [ "$INSTALL" != "MY" ]; then
 		cyanMessage "It is recommended but not required to set a password"
 		su -c "ssh-keygen -t rsa" $MASTERUSER
 
-		KEYNAME=`find /home/$MASTERUSER/.ssh/ -maxdepth 1 -name "*.pub" | head -n 1`
+		KEYNAME=`find -maxdepth 1 -name "*.pub" | head -n 1`
 
 		if [ "$KEYNAME" != "" ]; then
 			su -c "cat $KEYNAME >> authorized_keys" $MASTERUSER
@@ -727,10 +711,14 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" -o "$INSTALL" == "MY" ]; then
 	if [ "$INSTALL" == "EW" -a "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 		cyanMessage " "
 		okAndSleep "Please note that Easy-Wi requires a MySQL or MariaDB installed and will install MySQL if no DB is installed"
-		if [ "`ps ax | grep mysql | grep -v grep`" == "" ]; then
-			SQL="MySQL"
+		if [ "$OS" == "debian" -a "$OSVERSION_TMP" -ge "90" ]; then
+			SQL="MariaDB"
 		else
-			SQL=""
+			if [ "`ps ax | grep mysql | grep -v grep`" == "" ]; then
+				SQL="MySQL"
+			else
+				SQL=""
+			fi
 		fi
 	else
 		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
@@ -904,7 +892,7 @@ gpgcheck=1' > /etc/yum.repos.d/MariaDB.repo
 		cyanMessage " "
 		okAndSleep "Securing MySQL by running \"mysql_secure_installation\" commands."
 		RestartDatabase
-		if [ "$OS" == "centos" -o "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1603" ] && [ "$MYSQL_ROOT_PASSWORD" == "" ]; then
+		if [ "$OS" == "centos" -o "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1603" -o "$OS" == "debian" -a "OSVERSION_TMP" -ge "90" ] && [ "$MYSQL_ROOT_PASSWORD" == "" ]; then
 			mysqladmin password "$MYSQL_ROOT_PASSWORD"
 		fi
 		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -BSe "DELETE FROM mysql.user WHERE User='';"
@@ -987,7 +975,7 @@ gpgcheck=1' > /etc/yum.repos.d/MariaDB.repo
 	if [ "$PHPINSTALL" == "Yes" ]; then
 		USE_PHP_VERSION='5'
 
-		if [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1603" ]; then
+		if [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1603" -o "$OS" == "debian" -a "$OSVERSION_TMP" -ge "85" ]; then
 			USE_PHP_VERSION='7.0'
 		fi
 
@@ -1601,7 +1589,7 @@ if [ "$INSTALL" == "GS" ]; then
 	chmod -R 750 /home/$MASTERUSER/
 	chmod -R 770 /home/$MASTERUSER/logs/ /home/$MASTERUSER/temp/ /home/$MASTERUSER/fdl_data/
 
-	if [ "$OS" == "debian" ]; then
+	if [ "$OS" == "debian" -a "$OSVERSION_TMP" -lt "9" ]; then
 		if [ "`uname -m`" == "x86_64" -a "`cat /etc/debian_version | grep '6.'`" == "" ]; then
 			dpkg --add-architecture i386
 		fi
@@ -1616,22 +1604,18 @@ if [ "$INSTALL" == "GS" ]; then
 			cyanMessage " "
 			okAndSleep "Installing 32bit support for 64bit systems."
 
-			if ([ "$OS" == "ubuntu" ] || [ "$OS" == "debian" -a "`printf "${OSVERSION_TMP}\n8.0" | sort -V | tail -n 1`" == "$OSVERSION" ]); then
-				$INSTALLER install zlib1g -y
-				$INSTALLER install lib32z1 -y
-				$INSTALLER install lib32gcc1 -y
-				$INSTALLER install lib32readline5 -y
-				$INSTALLER install lib32ncursesw5 -y
-				$INSTALLER install lib32stdc++6 -y
-				$INSTALLER install lib64stdc++6 -y
-				$INSTALLER install libstdc++6 -y
-				$INSTALLER install libgcc1:i386 -y
-				$INSTALLER install libreadline5:i386 -y
-				$INSTALLER install libncursesw5:i386 -y
-				$INSTALLER install zlib1g:i386 -y
-			else
-				$INSTALLER install ia32-libs lib32readline5 lib32ncursesw5 lib32stdc++6 -y
-			fi
+			$INSTALLER install zlib1g -y
+			$INSTALLER install lib32z1 -y
+			$INSTALLER install lib32gcc1 -y
+			$INSTALLER install lib32readline5 -y
+			$INSTALLER install lib32ncursesw5 -y
+			$INSTALLER install lib32stdc++6 -y
+			$INSTALLER install lib64stdc++6 -y
+			$INSTALLER install libstdc++6 -y
+			$INSTALLER install libgcc1:i386 -y
+			$INSTALLER install libreadline5:i386 -y
+			$INSTALLER install libncursesw5:i386 -y
+			$INSTALLER install zlib1g:i386 -y
 		else
 			$INSTALLER install libreadline5 libncursesw5 -y
 		fi
@@ -2210,7 +2194,7 @@ if [ "$OS" == "centos" ]; then
 fi
 cyanMessage " "
 
-if [ "$DEBUGGER" = "ON" ]; then
+if [ "$DEBUG" = "ON" ]; then
 	set +x
 fi
 
