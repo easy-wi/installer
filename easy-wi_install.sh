@@ -710,6 +710,8 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" -o "$INSTALL" == "MY" ]; then
 
         if [ "$OS" == "ubuntu" -a "`printf "${OSVERSION}\n16.03" | sort -V | tail -n 1`" != "16.03" ]; then
             USE_PHP_VERSION='7.0'
+        elif [ "$OS" == "debian" -a "`printf "${OSVERSION}\n9.0" | sort -V | tail -n 1`" != "9.0" ]; then
+            USE_PHP_VERSION='7.0'
         fi 
 
         if [ "$OS" == "debian" -a "$DOTDEB" == "Yes" ]; then
