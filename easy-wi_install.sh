@@ -761,6 +761,7 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" -o "$INSTALL" == "MY" ]; then
         checkInstall php${USE_PHP_VERSION}-cli
         checkInstall php${USE_PHP_VERSION}-xml
         checkInstall php${USE_PHP_VERSION}-mbstring
+        checkInstall php${USE_PHP_VERSION}-zip
 
         if [ "$WEBSERVER" == "Nginx" -o "$WEBSERVER" == "Lighttpd" ]; then
 
