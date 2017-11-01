@@ -104,7 +104,7 @@ function checkInstall {
     fi
 }
 
-INSTALLER_VERSION="2.1"
+INSTALLER_VERSION="2.2"
 OS=""
 USERADD=`which useradd`
 USERMOD=`which usermod`
