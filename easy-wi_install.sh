@@ -104,7 +104,7 @@ function checkInstall {
     fi
 }
 
-INSTALLER_VERSION="2.2"
+INSTALLER_VERSION="2.3"
 OS=""
 USERADD=`which useradd`
 USERMOD=`which usermod`
@@ -1090,6 +1090,7 @@ if [ "$INSTALL" == "GS" -o  "$INSTALL" == "WR" ]; then
 
     if [ "$INSTALL" == "GS" -a -f /etc/sudoers -a "`grep $MASTERUSER /etc/sudoers | grep temp`" == "" ]; then
         echo "$MASTERUSER ALL = (ALL, !root:easywi) NOPASSWD: /home/$MASTERUSER/temp/*.sh" >> /etc/sudoers
+        echo "$MASTERUSER ALL = (ALL, !root:easywi) NOPASSWD: /bin/bash /home/$MASTERUSER/temp/*.sh" >> /etc/sudoers
     fi
 
     if [ "$WEBSERVER" == "Nginx" ]; then
