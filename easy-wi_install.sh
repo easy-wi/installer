@@ -894,14 +894,23 @@ gpgcheck=1' > /etc/yum.repos.d/MariaDB.repo
 		cyanMessage " "
 		okAndSleep "Securing MySQL by running \"mysql_secure_installation\" commands."
 		RestartDatabase
-		if [ "$OS" == "centos" -o "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1603" -o "$OS" == "debian" -a "$OSVERSION_TMP" -ge "90" ] && [ "$MYSQL_ROOT_PASSWORD" == "" ]; then
+		if [ "$OS" == "centos" -o "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1603" -o "$OS" == "debian" -a "$OSVERSION_TMP" -ge "90" ] && [ "$MYSQL_ROOT_PASSWORD" != "" ]; then
 			mysqladmin password "$MYSQL_ROOT_PASSWORD"
+		else
+			cyanMessage " "
+			errorAndExit "Error: Password for MySQL Server not found!"
 		fi
 		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -BSe "DELETE FROM mysql.user WHERE User='';"
 		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -BSe "DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');"
 		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -BSe "DROP DATABASE test;"
 		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -BSe "DELETE FROM mysql.db WHERE Db='test' OR Db='test\_%';"
 		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -BSe "FLUSH PRIVILEGES;"
+	fi
+
+	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
+		MYSQL_CONF="/etc/mysql/my.cnf"
+	elif [ "$OS" == "centos" ]; then
+		MYSQL_CONF="/etc/my.cnf"
 	fi
 
 	if [ "$EXTERNAL_INSTALL" == "Yes" ]; then
@@ -914,12 +923,6 @@ gpgcheck=1' > /etc/yum.repos.d/MariaDB.repo
 			read LOCAL_IP
 		fi
 
-		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
-			MYSQL_CONF="/etc/mysql/my.cnf"
-		elif [ "$OS" == "centos" ]; then
-			MYSQL_CONF="/etc/my.cnf"
-		fi
-
 		if [ "$LOCAL_IP" != "" -a -f "$MYSQL_CONF" ]; then
 			if [ "`grep 'bind-address' $MYSQL_CONF`" ]; then
 				sed -i "s/bind-address.*/bind-address = 0.0.0.0/g" $MYSQL_CONF
@@ -929,7 +932,7 @@ gpgcheck=1' > /etc/yum.repos.d/MariaDB.repo
 		fi
 	elif [ "$EXTERNAL_INSTALL" == "No" ]; then
 		if [ "$OS" == "centos" ]; then
-			sed -i "/\[mysqld\]/abind-address = 127.0.0.1" /etc/my.cnf
+			sed -i "/\[mysqld\]/abind-address = 127.0.0.1" $MYSQL_CONF
 		fi
 	fi
 
@@ -939,8 +942,8 @@ gpgcheck=1' > /etc/yum.repos.d/MariaDB.repo
 
 	if [ "$SQL" != "None" -a "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 		if [ "`grep -E 'key_buffer[[:space:]]*=' /etc/mysql/my.cnf`" != "" -a "printf "${MYSQL_VERSION}\n5.5" | sort -V | tail -n 1" != "5.5" ]; then
-			sed -i -e "51s/key_buffer[[:space:]]*=/key_buffer_size = /g" /etc/mysql/my.cnf
-			sed -i -e "57s/myisam-recover[[:space:]]*=/myisam-recover-options = /g" /etc/mysql/my.cnf
+			sed -i -e "51s/key_buffer[[:space:]]*=/key_buffer_size = /g" $MYSQL_CONF
+			sed -i -e "57s/myisam-recover[[:space:]]*=/myisam-recover-options = /g" $MYSQL_CONF
 		fi
 		if [ "$SQL" != "None" -a "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1603" -a ! -f /etc/mysql/conf.d/disable_strict_mode.cnf ]; then
 			echo '[mysqld]' > /etc/mysql/conf.d/disable_strict_mode.cnf
