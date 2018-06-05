@@ -1447,7 +1447,8 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
 	fi
 
 	if [ "$INSTALL" == "GS" -a -f /etc/sudoers -a "`grep $MASTERUSER /etc/sudoers | grep temp`" == "" ]; then
-		echo "$MASTERUSER ALL = (ALL, !root:easywi) NOPASSWD: /home/$MASTERUSER/temp/*.sh" >> /etc/sudoers
+		echo "$MASTERUSER ALL = (ALL, !root:$MASTERUSER) NOPASSWD: /home/$MASTERUSER/temp/*.sh" >> /etc/sudoers
+		echo "$MASTERUSER ALL = (ALL, !root:$MASTERUSER) NOPASSWD: /bin/bash /home/$MASTERUSER/temp/*.sh" >> /etc/sudoers
 	fi
 
 	if [ "$WEBSERVER" == "Nginx" ]; then
