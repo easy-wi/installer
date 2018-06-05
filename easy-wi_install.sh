@@ -317,6 +317,8 @@ else
 
 	if [ "$OS" == "ubuntu" -o "$OS" == "debian" ]; then
 		OSVERSION_TMP=`echo "$OSVERSION" | tr -d .`
+	elif [ "$OS" == "centos" ]; then
+		OSVERSION_TMP=`echo "$OSVERSION" | tr -d . | cut -c 1-2`
 	fi
 fi
 
@@ -326,7 +328,7 @@ else
 	okAndSleep "Detected architecture: $ARCH"
 fi
 
-if [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -le "1510" -o "$OS" == "debian" -a "$OSVERSION_TMP" -lt "70" -o "$OS" == "centos" -a "$OSVERSION_TMP" -lt "70"  ]; then
+if [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -le "1510" -o "$OS" == "debian" -a "$OSVERSION_TMP" -lt "70" -o "$OS" == "centos" -a "$OSVERSION_TMP" -lt "70" ]; then
 	echo; echo
 	redMessage "Error: Your OS \"$OS - $OSVERSION\"  is not more supported from Easy-WI Installer."
 	redMessage "Please Upgrade to a newer OS Version!"
