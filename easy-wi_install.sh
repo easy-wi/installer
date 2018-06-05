@@ -894,7 +894,7 @@ gpgcheck=1' > /etc/yum.repos.d/MariaDB.repo
 		cyanMessage " "
 		okAndSleep "Securing MySQL by running \"mysql_secure_installation\" commands."
 		RestartDatabase
-		if [ "$OS" == "centos" -o "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1603" -o "$OS" == "debian" -a "OSVERSION_TMP" -ge "90" ] && [ "$MYSQL_ROOT_PASSWORD" == "" ]; then
+		if [ "$OS" == "centos" -o "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1603" -o "$OS" == "debian" -a "$OSVERSION_TMP" -ge "90" ] && [ "$MYSQL_ROOT_PASSWORD" == "" ]; then
 			mysqladmin password "$MYSQL_ROOT_PASSWORD"
 		fi
 		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -BSe "DELETE FROM mysql.user WHERE User='';"
