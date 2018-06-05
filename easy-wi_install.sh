@@ -1025,6 +1025,7 @@ gpgcheck=1' > /etc/yum.repos.d/MariaDB.repo
 			checkInstall php${USE_PHP_VERSION}-cli
 			checkInstall php${USE_PHP_VERSION}-xml
 			checkInstall php${USE_PHP_VERSION}-mbstring
+			checkInstall php${USE_PHP_VERSION}-zip
 		elif [ "$OS" == "centos" ]; then
 			checkInstall php
 			checkInstall php-common
@@ -1034,6 +1035,7 @@ gpgcheck=1' > /etc/yum.repos.d/MariaDB.repo
 			checkInstall php-cli
 			checkInstall php-xml
 			checkInstall php-mbstring
+			checkInstall php-zip
 		fi
 
 		if [ "$WEBSERVER" == "Nginx" -o "$WEBSERVER" == "Lighttpd" ]; then
