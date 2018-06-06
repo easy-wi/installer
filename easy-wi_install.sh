@@ -896,6 +896,7 @@ gpgcheck=1' > /etc/yum.repos.d/MariaDB.repo
 		RestartDatabase
 		if [ "$OS" == "centos" -o "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1603" -o "$OS" == "debian" -a "$OSVERSION_TMP" -ge "90" ] && [ "$MYSQL_ROOT_PASSWORD" != "" ]; then
 			mysqladmin password "$MYSQL_ROOT_PASSWORD"
+			RestartDatabase
 		else
 			cyanMessage " "
 			errorAndExit "Error: Password for MySQL Server not found!"
@@ -1629,13 +1630,14 @@ if [ "$INSTALL" == "GS" ]; then
 		fi
 	elif [ "$OS" == "centos" ]; then
 		cyanMessage " "
-		okAndSleep "Installing required packages screen bzip2 sudo rsync zip unzip"
+		okAndSleep "Installing required packages screen bzip2 sudo rsync zip unzip ncurses"
 		checkInstall screen
 		checkInstall bzip2
 		checkInstall sudo
 		checkInstall rsync
 		checkInstall zip
 		checkInstall unzip
+		checkInstall ncurses-libs.i686
 
 #		#WPut from rpmforge
 #		wget http://ftp.tu-chemnitz.de/pub/linux/dag/redhat/el7/en/x86_64/rpmforge/RPMS/
