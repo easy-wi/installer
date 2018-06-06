@@ -896,7 +896,6 @@ gpgcheck=1' > /etc/yum.repos.d/MariaDB.repo
 		RestartDatabase
 		if [ "$OS" == "centos" -o "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1603" -o "$OS" == "debian" -a "$OSVERSION_TMP" -ge "90" ] && [ "$MYSQL_ROOT_PASSWORD" != "" ]; then
 			mysqladmin password "$MYSQL_ROOT_PASSWORD"
-			RestartDatabase
 		else
 			cyanMessage " "
 			errorAndExit "Error: Password for MySQL Server not found!"
@@ -1639,10 +1638,14 @@ if [ "$INSTALL" == "GS" ]; then
 		checkInstall unzip
 		checkInstall ncurses-libs.i686
 
-#		#WPut from rpmforge
-#		wget http://ftp.tu-chemnitz.de/pub/linux/dag/redhat/el7/en/x86_64/rpmforge/RPMS/
-#		rpm -Uvh rpmforge-release*rpm
-#		checkInstall wput
+		# wput from rpmforge
+		LASTEST_RPMFORGE_VERSION=$(curl -s http://ftp.tu-chemnitz.de/pub/linux/dag/redhat/el7/en/x86_64/rpmforge/RPMS/ | grep -o rpmforge-release-[0-9].[0-9].[0-9]-[0-9].el[0-9].rf.x86_64.rpm | head -n1)
+		if [ "$LASTEST_RPMFORGE_VERSION" != "" ]; then
+			okAndSleep "Installing required packages rpmforge-release wput"
+			wget -q --timeout=60 -P /tmp/ http://ftp.tu-chemnitz.de/pub/linux/dag/redhat/el7/en/x86_64/rpmforge/RPMS/"$LASTEST_RPMFORGE_VERSION"
+			rpm -Uvh /tmp/"$LASTEST_RPMFORGE_VERSION"
+			checkInstall wput
+		fi
 
 		if [ "`uname -m`" == "x86_64" ]; then
 			okAndSleep "Installing 32bit support for 64bit systems."
@@ -2152,6 +2155,59 @@ elif [ "$OS" == "centos" ]; then
 	$INSTALLER autoremove -y
 fi
 
+#FIREWALL
+if [ "$OS" == "centos" ]; then
+	cyanMessage " "
+	okAndSleep "Activate firewall rules for dhcp ssh"
+	firewall-cmd --zone=public --permanent --add-service=dhcp
+	firewall-cmd --zone=public --permanent --add-service=ssh
+	firewall-cmd --reload
+
+	if ([ "$INSTALL" == "EW" ] || [ "$INSTALL" == "WR" ]); then
+		cyanMessage " "
+		okAndSleep "Activate firewall rules for ftp http https"
+		firewall-cmd --zone=public --permanent --add-service=ftp
+		firewall-cmd --zone=public --permanent --add-service=http
+		firewall-cmd --zone=public --permanent --add-service=https
+		firewall-cmd --reload
+	elif ([ "$INSTALL" == "MY" ] && [ "$EXTERNAL_INSTALL" == "Yes" ]); then
+		cyanMessage " "
+		okAndSleep "Activate firewall rules for mysql"
+		firewall-cmd --zone=public --permanent --add-service=mysql
+		firewall-cmd --reload
+	elif [ "$INSTALL" == "GS" ]; then
+		cyanMessage " "
+		okAndSleep "Activate firewall rules for ftp rsyncd steam"
+		firewall-cmd --zone=public --permanent --add-service=ftp
+		firewall-cmd --zone=public --permanent --add-service=rsyncd
+		firewall-cmd --zone=public --permanent --add-port=4380/udp
+		firewall-cmd --zone=public --permanent --add-port=27000-27030/udp
+		firewall-cmd --reload
+	elif [ "$INSTALL" == "VS" ]; then
+		cyanMessage " "
+		okAndSleep "Activate firewall rules for ftp teamspeak"
+		firewall-cmd --zone=public --permanent --add-service=ftp
+		firewall-cmd --zone=public --permanent --add-port=2008/tcp
+		firewall-cmd --zone=public --permanent --add-port=2010-2110/udp
+		firewall-cmd --zone=public --permanent --add-port=10011/tcp
+		firewall-cmd --zone=public --permanent --add-port=30033/tcp
+		firewall-cmd --zone=public --permanent --add-port=41144/tcp
+		firewall-cmd --reload
+	fi
+
+	if [ ! "`grep 'SELINUX=' /etc/selinux/config | sed -n '2 p'`" == "SELINUX=disabled" ]; then
+		backUpFile /etc/selinux/config
+		sed -i "s/SELINUX=enforcing/SELINUX=disabled/g" /etc/selinux/config
+		redMessage " "
+		redMessage " "
+		redMessage "!! WARNING !!"
+		redMessage " "
+		redMessage "Please reboot your Root/Vserver to disabled SELinux Security Function!"
+		redMessage "Otherwise, the WebInterface can not work."
+		redMessage " "
+	fi
+fi
+
 if [ "$INSTALL" == "EW" ]; then
 	if [ "$SSL" == "Yes" ]; then
 		PROTOCOL="https"
@@ -2185,23 +2241,6 @@ if ([ "$INSTALL" == "MY" ] || [ "$INSTALL" == "WR" -a "$SQL" != "None" ]); then
 	cyanMessage " "
 fi
 
-if [ "$OS" == "centos" ]; then
-	if [ ! "`grep 'SELINUX=' /etc/selinux/config | sed -n '2 p'`" == "SELINUX=disabled" ]; then
-		backUpFile /etc/selinux/config
-		sed -i "s/SELINUX=enforcing/SELINUX=disabled/g" /etc/selinux/config
-		systemctl disable firewalld
-		systemctl stop firewalld
-
-		redMessage " "
-		redMessage " "
-		redMessage "!! WARNING !!"
-		redMessage "Firewall is disabled"
-		redMessage " "
-		redMessage "Please reboot your Root/Vserver to disable SELinux Security Function!"
-		redMessage "Otherwise, the WebInterface can not work."
-		redMessage " "
-	fi
-fi
 cyanMessage " "
 
 if [ "$DEBUG" = "ON" ]; then
