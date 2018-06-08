@@ -208,7 +208,7 @@ RestartDatabase() {
 	fi
 }
 
-INSTALLER_VERSION="2.2"
+INSTALLER_VERSION="2.3"
 OS=""
 SYS_REBOOT="No"
 USERADD=`which useradd`
