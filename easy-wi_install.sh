@@ -2134,6 +2134,11 @@ if [ "$INSTALL" == "VS" ]; then
 		redMessage "Cannot edit the file $QUERY_WHITLIST_TXT, please maintain it manually."
 	fi
 
+	#TS license accepted
+	if [ ! -f .ts3server_license_accepted ]; then
+		echo "" > .ts3server_license_accepted
+	fi
+
 	QUERY_PASSWORD=`< /dev/urandom tr -dc A-Za-z0-9 | head -c12`
 
 	greenMessage " "
@@ -2157,51 +2162,19 @@ fi
 
 #FIREWALL
 if [ "$OS" == "centos" ]; then
-	cyanMessage " "
-	okAndSleep "Activate firewall rules for dhcp ssh"
-	firewall-cmd --zone=public --permanent --add-service=dhcp
-	firewall-cmd --zone=public --permanent --add-service=ssh
-	firewall-cmd --reload
-
-	if ([ "$INSTALL" == "EW" ] || [ "$INSTALL" == "WR" ]); then
-		cyanMessage " "
-		okAndSleep "Activate firewall rules for ftp http https"
-		firewall-cmd --zone=public --permanent --add-service=ftp
-		firewall-cmd --zone=public --permanent --add-service=http
-		firewall-cmd --zone=public --permanent --add-service=https
-		firewall-cmd --reload
-	elif ([ "$INSTALL" == "MY" ] && [ "$EXTERNAL_INSTALL" == "Yes" ]); then
-		cyanMessage " "
-		okAndSleep "Activate firewall rules for mysql"
-		firewall-cmd --zone=public --permanent --add-service=mysql
-		firewall-cmd --reload
-	elif [ "$INSTALL" == "GS" ]; then
-		cyanMessage " "
-		okAndSleep "Activate firewall rules for ftp rsyncd steam"
-		firewall-cmd --zone=public --permanent --add-service=ftp
-		firewall-cmd --zone=public --permanent --add-service=rsyncd
-		firewall-cmd --zone=public --permanent --add-port=4380/udp
-		firewall-cmd --zone=public --permanent --add-port=27000-27030/udp
-		firewall-cmd --reload
-	elif [ "$INSTALL" == "VS" ]; then
-		cyanMessage " "
-		okAndSleep "Activate firewall rules for ftp teamspeak"
-		firewall-cmd --zone=public --permanent --add-service=ftp
-		firewall-cmd --zone=public --permanent --add-port=2008/tcp
-		firewall-cmd --zone=public --permanent --add-port=2010-2110/udp
-		firewall-cmd --zone=public --permanent --add-port=10011/tcp
-		firewall-cmd --zone=public --permanent --add-port=30033/tcp
-		firewall-cmd --zone=public --permanent --add-port=41144/tcp
-		firewall-cmd --reload
-	fi
+	systemctl stop firewalld 2>/dev/null
+	systemctl disable firewalld 2>/dev/null
+	redMessage " "
+	redMessage " "
+	redMessage "!! WARNING !!"
+	redMessage " "
+	redMessage "Firewall is disabled!"
+	redMessage "Create your own Firewall Rules or use a predefined Firewall to protect your System!"
+	redMessage " "
 
 	if [ ! "`grep 'SELINUX=' /etc/selinux/config | sed -n '2 p'`" == "SELINUX=disabled" ]; then
 		backUpFile /etc/selinux/config
 		sed -i "s/SELINUX=enforcing/SELINUX=disabled/g" /etc/selinux/config
-		redMessage " "
-		redMessage " "
-		redMessage "!! WARNING !!"
-		redMessage " "
 		redMessage "Please reboot your Root/Vserver to disabled SELinux Security Function!"
 		redMessage "Otherwise, the WebInterface can not work."
 		redMessage " "
@@ -2224,6 +2197,7 @@ if [ "$INSTALL" == "EW" ]; then
 elif [ "$INSTALL" == "GS" ]; then
 	greenOneLineMessage "Gameserver Root setup is done. Please enter the above data at the webpanel at "; cyanOneLineMessage "\"App/Game Master > Overview > Add\""; greenMessage "."
 elif [ "$INSTALL" == "VS" ]; then
+	greenMessage " "
 	greenOneLineMessage "Teamspeak 3 setup is done. TS3 Query password is "; cyanMessage "$QUERY_PASSWORD"
 	greenOneLineMessage "Please enter this server at the webpanel at "; cyanOneLineMessage "\"Voiceserver > Master > Add\""; greenMessage "."
 elif [ "$INSTALL" == "WR" ]; then
@@ -2237,8 +2211,9 @@ elif [ "$INSTALL" == "WR" ]; then
 fi
 
 if ([ "$INSTALL" == "MY" ] || [ "$INSTALL" == "WR" -a "$SQL" != "None" ]); then
-	greenPneLineMessage "MySQL Root setup is done. Please enter the server at the webpanel at "; cyanOneLineMessage "\"MySQL > Master > Add\""; greenMessage "."
-	cyanMessage " "
+	greenMessage " "
+	greenOneLineMessage "MySQL Root setup is done. Please enter the server at the webpanel at "; cyanOneLineMessage "\"MySQL > Master > Add\""; greenMessage "."
+	greenMessage " "
 fi
 
 cyanMessage " "
