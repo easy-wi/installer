@@ -2162,15 +2162,71 @@ fi
 
 #FIREWALL
 if [ "$OS" == "centos" ]; then
-	systemctl stop firewalld 2>/dev/null
-	systemctl disable firewalld 2>/dev/null
-	redMessage " "
-	redMessage " "
-	redMessage "!! WARNING !!"
-	redMessage " "
-	redMessage "Firewall is disabled!"
-	redMessage "Create your own Firewall Rules or use a predefined Firewall to protect your System!"
-	redMessage " "
+	cyanMessage " "
+	cyanMessage "Are you Linux/Unix beginner or expert?"
+	OPTIONS=("Beginner" "Expert")
+	select MODE in "${OPTIONS[@]}"; do
+		case "$REPLY" in
+			1|2 ) break;;
+			*) errorAndContinue;;
+		esac
+	done
+
+	if [ "$MODE" == "Expert" ]; then
+		cyanMessage " "
+		okAndSleep "Activate firewall rules for dhcp ssh"
+		firewall-cmd --zone=public --permanent --add-service=dhcp
+		firewall-cmd --zone=public --permanent --add-service=ssh
+		firewall-cmd --reload
+
+		if ([ "$INSTALL" == "EW" ] || [ "$INSTALL" == "WR" ]); then
+			cyanMessage " "
+			okAndSleep "Activate firewall rules for ftp http https"
+			firewall-cmd --zone=public --permanent --add-service=ftp
+			firewall-cmd --zone=public --permanent --add-service=http
+			firewall-cmd --zone=public --permanent --add-service=https
+			firewall-cmd --reload
+		elif ([ "$INSTALL" == "MY" ] && [ "$EXTERNAL_INSTALL" == "Yes" ]); then
+			cyanMessage " "
+			okAndSleep "Activate firewall rules for mysql"
+			firewall-cmd --zone=public --permanent --add-service=mysql
+			firewall-cmd --reload
+		elif [ "$INSTALL" == "GS" ]; then
+			cyanMessage " "
+			okAndSleep "Activate firewall rules for ftp rsyncd steam"
+			firewall-cmd --zone=public --permanent --add-service=ftp
+			firewall-cmd --zone=public --permanent --add-service=rsyncd
+			firewall-cmd --zone=public --permanent --add-port=4380/udp
+			firewall-cmd --zone=public --permanent --add-port=27000-27030/udp
+			firewall-cmd --reload
+		elif [ "$INSTALL" == "VS" ]; then
+			cyanMessage " "
+			okAndSleep "Activate firewall rules for ftp teamspeak"
+			firewall-cmd --zone=public --permanent --add-service=ftp
+			firewall-cmd --zone=public --permanent --add-port=2008/tcp
+			firewall-cmd --zone=public --permanent --add-port=2010-2110/udp
+			firewall-cmd --zone=public --permanent --add-port=10011/tcp
+			firewall-cmd --zone=public --permanent --add-port=30033/tcp
+			firewall-cmd --zone=public --permanent --add-port=41144/tcp
+			firewall-cmd --reload
+		fi
+		redMessage " "
+		redMessage " "
+		redMessage "!! WARNING !!"
+		redMessage " "
+		redMessage "Don\´t forget to open Ports for your Services/Gameservers self!"
+		redMessage " "
+	elif ([ "$MODE" == "Beginner" -a "systemctl is-enabled firewalld" == "enabled" ]); then
+		systemctl stop firewalld 2>/dev/null
+		systemctl disable firewalld 2>/dev/null
+		redMessage " "
+		redMessage " "
+		redMessage "!! WARNING !!"
+		redMessage " "
+		redMessage "Firewall is disabled!"
+		redMessage "Create your own Firewall Rules or use a predefined Firewall to protect your System!"
+		redMessage " "
+	fi
 
 	if [ ! "`grep 'SELINUX=' /etc/selinux/config | sed -n '2 p'`" == "SELINUX=disabled" ]; then
 		backUpFile /etc/selinux/config
