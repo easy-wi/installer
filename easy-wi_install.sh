@@ -1623,6 +1623,10 @@ if [ "$INSTALL" == "VS" ]; then
         redMessage "Cannot edit the file $QUERY_WHITLIST_TXT, please maintain it manually."
     fi
 
+    if [ ! -f .ts3server_license_accepted ]; then
+        touch .ts3server_license_accepted
+    fi
+
     QUERY_PASSWORD=`< /dev/urandom tr -dc A-Za-z0-9 | head -c12`
 
     greenMessage "Starting the TS3 server for the first time and shutting it down again as the password will be visible in the process tree."
