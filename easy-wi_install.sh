@@ -2136,7 +2136,7 @@ if [ "$INSTALL" == "VS" ]; then
 
 	#TS license accepted
 	if [ ! -f .ts3server_license_accepted ]; then
-		echo "" > .ts3server_license_accepted
+		touch .ts3server_license_accepted
 	fi
 
 	QUERY_PASSWORD=`< /dev/urandom tr -dc A-Za-z0-9 | head -c12`
@@ -2154,9 +2154,7 @@ fi
 
 cyanMessage " "
 okAndSleep "Removing not needed packages."
-if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
-	$INSTALLER autoremove -y
-elif [ "$OS" == "centos" ]; then
+if [ "$OS" == "debian" -o "$OS" == "ubuntu" -o "$OS" == "centos" ]; then
 	$INSTALLER autoremove -y
 fi
 
