@@ -2,7 +2,8 @@
 
 DEBUG="OFF"
 
-#    Author:     Ulrich Block <ulrich.block@easy-wi.com>
+#    Author:     Ulrich Block <ulrich.block@easy-wi.com>,
+#                Alexander Dörwald <lacrimosa99@devil-hunter-multigaming.de>
 #
 #    This file is part of Easy-WI.
 #
@@ -1623,7 +1624,11 @@ if [ "$INSTALL" == "GS" ]; then
 			$INSTALLER install libgcc1:i386 -y
 			$INSTALLER install libreadline5:i386 -y
 			$INSTALLER install libncursesw5:i386 -y
-			$INSTALLER install zlib1g:i386 -y
+			if [ "$OS" == "debian" -a "$OSVERSION_TMP" -gt "8" ]; then
+				$INSTALLER install zlib1g-dev -y
+			else
+				$INSTALLER install zlib1g:i386 -y
+			fi
 		else
 			$INSTALLER install libreadline5 libncursesw5 -y
 		fi
@@ -2134,7 +2139,6 @@ if [ "$INSTALL" == "VS" ]; then
 		redMessage "Cannot edit the file $QUERY_WHITLIST_TXT, please maintain it manually."
 	fi
 
-	#TS license accepted
 	if [ ! -f .ts3server_license_accepted ]; then
 		touch .ts3server_license_accepted
 	fi
