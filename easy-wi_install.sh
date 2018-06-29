@@ -980,10 +980,12 @@ gpgcheck=1' > /etc/yum.repos.d/MariaDB.repo
 	if [ "$PHPINSTALL" == "Yes" ]; then
 		USE_PHP_VERSION='5'
 
-		if [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1603" -a "$OSVERSION_TMP" -lt "1803" -o "$OS" == "debian" -a "$OSVERSION_TMP" -ge "85" ]; then
+		if [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1603" -a "$OSVERSION_TMP" -lt "1803" ]; then
 			USE_PHP_VERSION='7.1'
 		elif [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1803" ]; then
 			USE_PHP_VERSION='7.2'
+		elif [ "$OS" == "debian" -a "$OSVERSION_TMP" -ge "85" ]; then
+			USE_PHP_VERSION='7.0'
 		fi
 
 		if [ "$OS" == "debian" -a "$DOTDEB" == "Yes" ]; then
