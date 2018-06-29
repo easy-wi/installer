@@ -1875,7 +1875,11 @@ if [ "$INSTALL" == "EW" ]; then
 
 			cyanMessage " "
 			okAndSleep "Creating a self-signed SSL certificate."
-			openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout $SSL_DIR/$FILE_NAME.key -out $SSL_DIR/$FILE_NAME.crt -subj "/C=/ST=/L=/O=/OU=/CN=$IP_DOMAIN"
+			if [ "$OS" == "debian" -a "$OSVERSION_TMP" -ge "85" ]; then
+				openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout $SSL_DIR/$FILE_NAME.key -out $SSL_DIR/$FILE_NAME.crt -subj "/CN=$IP_DOMAIN"
+			else
+				openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout $SSL_DIR/$FILE_NAME.key -out $SSL_DIR/$FILE_NAME.crt -subj "/C=/ST=/L=/O=/OU=/CN=$IP_DOMAIN"
+			fi
 		fi
 	fi
 
