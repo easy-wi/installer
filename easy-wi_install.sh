@@ -209,7 +209,7 @@ RestartDatabase() {
 	fi
 }
 
-INSTALLER_VERSION="2.3"
+INSTALLER_VERSION="2.4"
 OS=""
 SYS_REBOOT="No"
 USERADD=`which useradd`
@@ -273,8 +273,7 @@ yellowMessage "Please wait... Update is currently running."
 if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 	cyanMessage " "
 	$INSTALLER update
-	$INSTALLER upgrade
-	$INSTALLER dist-upgrade
+	$INSTALLER upgrade -y
 	checkInstall debconf-utils
 	checkInstall lsb-release
 elif [ "$OS" == "centos" ]; then
@@ -981,8 +980,10 @@ gpgcheck=1' > /etc/yum.repos.d/MariaDB.repo
 	if [ "$PHPINSTALL" == "Yes" ]; then
 		USE_PHP_VERSION='5'
 
-		if [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1603" -o "$OS" == "debian" -a "$OSVERSION_TMP" -ge "85" ]; then
+		if [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1603" -a "$OSVERSION_TMP" -lt "1803" -o "$OS" == "debian" -a "$OSVERSION_TMP" -ge "85" ]; then
 			USE_PHP_VERSION='7.0'
+		elif [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1803" ]; then
+			USE_PHP_VERSION='7.2'
 		fi
 
 		if [ "$OS" == "debian" -a "$DOTDEB" == "Yes" ]; then
@@ -1026,7 +1027,11 @@ gpgcheck=1' > /etc/yum.repos.d/MariaDB.repo
 			checkInstall php${USE_PHP_VERSION}-common
 			checkInstall php${USE_PHP_VERSION}-curl
 			checkInstall php${USE_PHP_VERSION}-gd
-			checkInstall php${USE_PHP_VERSION}-mcrypt
+			if [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -lt "1803" -o "$OS" == "debian" ]; then
+				checkInstall php${USE_PHP_VERSION}-mcrypt
+			elif [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1804" ]; then
+				checkInstall libsodium-dev
+			fi
 			checkInstall php${USE_PHP_VERSION}-mysql
 			checkInstall php${USE_PHP_VERSION}-cli
 			checkInstall php${USE_PHP_VERSION}-xml
@@ -1036,7 +1041,11 @@ gpgcheck=1' > /etc/yum.repos.d/MariaDB.repo
 			checkInstall php
 			checkInstall php-common
 			checkInstall php-gd
-			checkInstall php-mcrypt
+			if [ "$OS" == "centos" -a "$OSVERSION_TMP" -ge "7" ]; then
+				checkInstall libsodium-devel
+			else
+				checkInstall php-mcrypt
+			fi
 			checkInstall php-mysql
 			checkInstall php-cli
 			checkInstall php-xml
@@ -1073,15 +1082,17 @@ gpgcheck=1' > /etc/yum.repos.d/MariaDB.repo
 			if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 				if [ -f /etc/php5/fpm/php-fpm.conf ]; then
 					sed -i "s/include=\/etc\/php5\/fpm\/pool.d\/\*.conf/include=\/home\/$MASTERUSER\/fpm-pool.d\/\*.conf/g" /etc/php5/fpm/php-fpm.conf
-				elif [ -f /etc/php/7.0/fpm/php-fpm.conf ]; then
-					sed -i "s/include=\/etc\/php\/7.0\/fpm\/pool.d\/\*.conf/include=\/home\/$MASTERUSER\/fpm-pool.d\/\*.conf/g" /etc/php/7.0/fpm/php-fpm.conf
+				elif [ -f /etc/php/"${USE_PHP_VERSION}"/fpm/php-fpm.conf ]; then
+					sed -i "s/include=\/etc\/php\/${USE_PHP_VERSION}\/fpm\/pool.d\/\*.conf/include=\/home\/$MASTERUSER\/fpm-pool.d\/\*.conf/g" /etc/php/"${USE_PHP_VERSION}"/fpm/php-fpm.conf
 				fi
 			elif [ "$OS" == "centos" -a -f /etc/php-fpm.conf ]; then
 				sed -i "s/include=\/etc\/php-fpm.d\/\*.conf/include=\/home\/$MASTERUSER\/fpm-pool.d\/\*.conf/g" /etc/php-fpm.conf
 			fi
 		elif [ "$WEBSERVER" == "Apache" ]; then
 			if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
-				checkInstall apache2-mpm-itk
+				if [ "$OS" == "debian" -o "$OS" == "ubuntu" -a "$OSVERSION_TMP" -lt "1803" ]; then
+					checkInstall apache2-mpm-itk
+				fi
 				checkInstall libapache2-mpm-itk
 				checkInstall libapache2-mod-php${USE_PHP_VERSION}
 				a2enmod php${USE_PHP_VERSION}
@@ -1094,7 +1105,7 @@ gpgcheck=1' > /etc/yum.repos.d/MariaDB.repo
 
 		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ] && [ -f /etc/php5/fpm/php-fpm.conf ]; then
 			PHP_SOCKET="/var/run/php${USE_PHP_VERSION}-fpm.sock"
-		elif [ "$OS" == "debian" -o "$OS" == "ubuntu" ] && [ -f /etc/php/7.0/fpm/php-fpm.conf ]; then
+		elif [ "$OS" == "debian" -o "$OS" == "ubuntu" ] && [ -f /etc/php/${USE_PHP_VERSION}/fpm/php-fpm.conf ]; then
 			#In case of php 7 the socket is different
 			PHP_SOCKET="/var/run/php/php${USE_PHP_VERSION}-fpm.sock"
 		elif [ "$OS" == "centos" -a -f /etc/php-fpm.conf ]; then
@@ -2200,7 +2211,8 @@ elif [ "$INSTALL" == "GS" ]; then
 	greenOneLineMessage "Gameserver Root setup is done. Please enter the above data at the webpanel at "; cyanOneLineMessage "\"App/Game Master > Overview > Add\""; greenMessage "."
 elif [ "$INSTALL" == "VS" ]; then
 	greenMessage " "
-	greenOneLineMessage "Teamspeak 3 setup is done. TS3 Query password is "; cyanMessage "$QUERY_PASSWORD"
+	greenOneLineMessage "Teamspeak 3 setup is done."
+	greenOneLineMessage "TS3 Query password is "; cyanMessage "$QUERY_PASSWORD"
 	greenOneLineMessage "Please enter this server at the webpanel at "; cyanOneLineMessage "\"Voiceserver > Master > Add\""; greenMessage "."
 elif [ "$INSTALL" == "WR" ]; then
 	if [ "$PHPINSTALL" == "Yes" ]; then
