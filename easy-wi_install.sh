@@ -981,7 +981,7 @@ gpgcheck=1' > /etc/yum.repos.d/MariaDB.repo
 		USE_PHP_VERSION='5'
 
 		if [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1603" -a "$OSVERSION_TMP" -lt "1803" -o "$OS" == "debian" -a "$OSVERSION_TMP" -ge "85" ]; then
-			USE_PHP_VERSION='7.0'
+			USE_PHP_VERSION='7.1'
 		elif [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1803" ]; then
 			USE_PHP_VERSION='7.2'
 		fi
@@ -1056,6 +1056,7 @@ gpgcheck=1' > /etc/yum.repos.d/MariaDB.repo
 		if [ "$WEBSERVER" == "Nginx" -o "$WEBSERVER" == "Lighttpd" ]; then
 			if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 				checkInstall php${USE_PHP_VERSION}-fpm
+
 				if [ "$WEBSERVER" == "Lighttpd" ]; then
 					lighttpd-enable-mod fastcgi
 					lighttpd-enable-mod fastcgi-php
