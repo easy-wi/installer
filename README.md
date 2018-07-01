@@ -1,6 +1,6 @@
 # installer
 
-Quality Code: [![Codacy Badge](https://api.codacy.com/project/badge/Grade/4ace942a9e3f4c5995bd5440b7dac3f0)](https://www.codacy.com/app/easy-wi/installer?utm_source=github.com&utm_medium=referral&utm_content=easy-wi/installer&utm_campaign=badger)
+Quality Code: [![Codacy Badge](https://api.codacy.com/project/badge/Grade/577d1ee61d234585968cc5acbfb2a726)](https://www.codacy.com/app/Lacrimosa99/installer_2?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=easy-wi/installer&amp;utm_campaign=Badge_Grade)
 
 Easy-Wi Installer
 
