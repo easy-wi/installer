@@ -3,7 +3,7 @@
 DEBUG="OFF"
 
 #    Author:     Ulrich Block <ulrich.block@easy-wi.com>,
-#                Alexander Dörwald <lacrimosa99@devil-hunter-multigaming.de>
+#                Alexander Doerwald <alexander.doerwald@easy-wi.com>
 #
 #    This file is part of Easy-WI.
 #
