@@ -35,7 +35,7 @@ DEBUG="OFF"
 #    Sie sollten eine Kopie der GNU General Public License zusammen mit diesem
 #    Programm erhalten haben. Wenn nicht, siehe <http://www.gnu.org/licenses/>.
 
-if [ "$DEBUG" = "ON" ]; then
+if [ "$DEBUG" == "ON" ]; then
 	set -x
 fi
 
@@ -1025,7 +1025,9 @@ gpgcheck=1' > /etc/yum.repos.d/MariaDB.repo
 
 		cyanMessage " "
 		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
-			checkInstall php${USE_PHP_VERSION}
+			if [ "$WEBSERVER" == "Apache" ]; then
+				checkInstall php${USE_PHP_VERSION}
+			fi
 			checkInstall php${USE_PHP_VERSION}-common
 			checkInstall php${USE_PHP_VERSION}-curl
 			checkInstall php${USE_PHP_VERSION}-gd
@@ -1836,11 +1838,13 @@ if [ "$INSTALL" == "EW" ]; then
 					chmod a+x certbot-auto
 				elif [ "$OSBRANCH" == "jessie" ]; then
 					if [ "`grep jessie-backports /etc/apt/sources.list`" == "" ]; then
-          	okAndSleep "Adding jessie backports"
-          	echo "deb http://ftp.de.debian.org/debian jessie-backports main" >> /etc/apt/sources.list
+						okAndSleep "Adding jessie backports"
+						echo "deb http://ftp.de.debian.org/debian jessie-backports main" >> /etc/apt/sources.list
 					fi
-          $INSTALLER update
+					$INSTALLER update
 					$INSTALLER install certbot -t jessie-backports -y
+				else
+					$INSTALLER certbot
 				fi
 			elif [ "$OS" == "ubuntu" ]; then
 				$INSTALLER install software-properties-common
@@ -2239,7 +2243,7 @@ fi
 
 cyanMessage " "
 
-if [ "$DEBUG" = "ON" ]; then
+if [ "$DEBUG" == "ON" ]; then
 	set +x
 fi
 
