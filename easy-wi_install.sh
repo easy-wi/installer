@@ -1844,7 +1844,7 @@ if [ "$INSTALL" == "EW" ]; then
 					$INSTALLER update
 					$INSTALLER install certbot -t jessie-backports -y
 				else
-					$INSTALLER install certbot
+					$INSTALLER install certbot -y
 				fi
 			elif [ "$OS" == "ubuntu" ]; then
 				$INSTALLER install software-properties-common
