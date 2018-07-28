@@ -1945,8 +1945,8 @@ if [ "$INSTALL" == "EW" ]; then
 			if [ "$SSL_KEY" == "Lets Encrypt" ]; then
 				echo 'server {' >> $FILE_NAME_VHOST
 				echo '    listen 443 ssl;' >> $FILE_NAME_VHOST
-				echo "    ssl_certificate /etc/letsencrypt/live/%domain%/fullchain.pem;" >> $FILE_NAME_VHOST
-				echo "    ssl_certificate_key /etc/letsencrypt/live/%domain%/privkey.pem;" >> $FILE_NAME_VHOST
+				echo "    ssl_certificate /etc/letsencrypt/live/$IP_DOMAIN/fullchain.pem;" >> $FILE_NAME_VHOST
+				echo "    ssl_certificate_key /etc/letsencrypt/live/$IP_DOMAIN/privkey.pem;" >> $FILE_NAME_VHOST
 			else
 				echo 'server {' >> $FILE_NAME_VHOST
 				echo '    listen 443 ssl;' >> $FILE_NAME_VHOST
