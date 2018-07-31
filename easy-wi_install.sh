@@ -1981,8 +1981,6 @@ if [ "$INSTALL" == "EW" ]; then
 
 		chown -cR $MASTERUSER:$WEBGROUPNAME /home/$MASTERUSER/ >/dev/null 2>&1
 	elif [ "$WEBSERVER" == "Apache" ]; then
-		FILE_NAME_VHOST="$FILE_NAME_VHOST.conf"
-
 		echo '<VirtualHost *:80>' > $FILE_NAME_VHOST
 		echo "    ServerName $IP_DOMAIN" >> $FILE_NAME_VHOST
 		echo "    ServerAdmin info@$IP_DOMAIN" >> $FILE_NAME_VHOST
