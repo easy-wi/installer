@@ -238,7 +238,7 @@ fi
 
 cyanMessage " "
 cyanMessage "Checking for the latest installer version"
-LATEST_VERSION=`wget -q --timeout=60 -O - https://api.github.com/repos/Lacrimosa99/installer/releases/latest | grep -Po '(?<="tag_name": ")([0-9]\.[0-9]+)'`
+LATEST_VERSION=`wget -q --timeout=60 -O - https://api.github.com/repos/easy-wi/installer/releases/latest | grep -Po '(?<="tag_name": ")([0-9]\.[0-9]+)'`
 
 if [ "`printf "${LATEST_VERSION}\n${INSTALLER_VERSION}" | sort -V | tail -n 1`" != "$INSTALLER_VERSION" ]; then
 	errorAndExit "You are using the old version ${INSTALLER_VERSION}. Please upgrade to version ${LATEST_VERSION} and retry."
@@ -1838,13 +1838,13 @@ if [ "$INSTALL" == "EW" ]; then
 					chmod a+x certbot-auto
 				elif [ "$OSBRANCH" == "jessie" ]; then
 					if [ "`grep jessie-backports /etc/apt/sources.list`" == "" ]; then
-          	okAndSleep "Adding jessie backports"
-          	echo "deb http://ftp.de.debian.org/debian jessie-backports main" >> /etc/apt/sources.list
+						okAndSleep "Adding jessie backports"
+						echo "deb http://ftp.de.debian.org/debian jessie-backports main" >> /etc/apt/sources.list
 					fi
-          $INSTALLER update
+					$INSTALLER update
 					$INSTALLER install certbot -t jessie-backports -y
 				else
-					$INSTALLER certbot
+					$INSTALLER install certbot -y
 				fi
 			elif [ "$OS" == "ubuntu" ]; then
 				$INSTALLER install software-properties-common
@@ -1945,8 +1945,8 @@ if [ "$INSTALL" == "EW" ]; then
 			if [ "$SSL_KEY" == "Lets Encrypt" ]; then
 				echo 'server {' >> $FILE_NAME_VHOST
 				echo '    listen 443 ssl;' >> $FILE_NAME_VHOST
-				echo "    ssl_certificate /etc/letsencrypt/live/%domain%/fullchain.pem;" >> $FILE_NAME_VHOST
-				echo "    ssl_certificate_key /etc/letsencrypt/live/%domain%/privkey.pem;" >> $FILE_NAME_VHOST
+				echo "    ssl_certificate /etc/letsencrypt/live/$IP_DOMAIN/fullchain.pem;" >> $FILE_NAME_VHOST
+				echo "    ssl_certificate_key /etc/letsencrypt/live/$IP_DOMAIN/privkey.pem;" >> $FILE_NAME_VHOST
 			else
 				echo 'server {' >> $FILE_NAME_VHOST
 				echo '    listen 443 ssl;' >> $FILE_NAME_VHOST
