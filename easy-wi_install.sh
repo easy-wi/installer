@@ -760,7 +760,7 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" -o "$INSTALL" == "MY" ]; then
 		fi
 	fi
 
-	if [ "$SQL" == "MySQL" -o "$SQL" == "MariaDB" ]; then
+	if [ "$SQL" == "MySQL" -o "$SQL" == "MariaDB" -o "$SQL" == "" ]; then
 		if [ "`ps fax | grep 'mysqld' | grep -v 'grep'`" != "" ]; then
 			cyanMessage " "
 			cyanMessage "Please provide the root password for the MySQL Database."
@@ -861,7 +861,6 @@ gpgcheck=1' > /etc/yum.repos.d/MariaDB.repo
 				systemctl enable mysql.service >/dev/null 2>&1
 				RestartDatabase
 			fi
-
 		fi
 	fi
 
@@ -893,18 +892,18 @@ gpgcheck=1' > /etc/yum.repos.d/MariaDB.repo
 
 		cyanMessage " "
 		okAndSleep "Securing MySQL by running \"mysql_secure_installation\" commands."
-		RestartDatabase
-		if [ "$OS" == "centos" -o "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1603" -o "$OS" == "debian" -a "$OSVERSION_TMP" -ge "90" ] && [ "$MYSQL_ROOT_PASSWORD" != "" ]; then
-			mysqladmin password "$MYSQL_ROOT_PASSWORD"
+		if [ "$MYSQL_ROOT_PASSWORD" != "" ]; then
+			mysql --user=root --password="$MYSQL_ROOT_PASSWORD" <<_EOF_
+DELETE FROM mysql.user WHERE User='';
+DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
+DROP DATABASE IF EXISTS test;
+DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';
+FLUSH PRIVILEGES;
+_EOF_
 		else
 			cyanMessage " "
 			errorAndExit "Error: Password for MySQL Server not found!"
 		fi
-		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -BSe "DELETE FROM mysql.user WHERE User='';"
-		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -BSe "DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');"
-		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -BSe "DROP DATABASE test;"
-		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -BSe "DELETE FROM mysql.db WHERE Db='test' OR Db='test\_%';"
-		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -BSe "FLUSH PRIVILEGES;"
 	fi
 
 	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
@@ -914,8 +913,8 @@ gpgcheck=1' > /etc/yum.repos.d/MariaDB.repo
 	fi
 
 	if [ "$EXTERNAL_INSTALL" == "Yes" ]; then
-		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -BSe "GRANT USAGE ON *.* TO 'root'@'' IDENTIFIED BY '$MYSQL_ROOT_PASSWORD' WITH MAX_QUERIES_PER_HOUR 0 MAX_CONNECTIONS_PER_HOUR 0 MAX_UPDATES_PER_HOUR 0 MAX_USER_CONNECTIONS 0;" 2> /dev/null
-		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -BSe "UPDATE mysql.user SET Select_priv='Y',Insert_priv='Y',Update_priv='Y',Delete_priv='Y',Create_priv='Y',Drop_priv='Y',Reload_priv='Y',Shutdown_priv='Y',Process_priv='Y',File_priv='Y',Grant_priv='Y',References_priv='Y',Index_priv='Y',Alter_priv='Y',Show_db_priv='Y',Super_priv='Y',Create_tmp_table_priv='Y',Lock_tables_priv='Y',Execute_priv='Y',Repl_slave_priv='Y',Repl_client_priv='Y',Create_view_priv='Y',Show_view_priv='Y',Create_routine_priv='Y',Alter_routine_priv='Y',Create_user_priv='Y',Event_priv='Y',Trigger_priv='Y',Create_tablespace_priv='Y' WHERE User='root' AND Host='';" 2> /dev/null
+		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "GRANT USAGE ON *.* TO 'root'@'' IDENTIFIED BY '$MYSQL_ROOT_PASSWORD' WITH MAX_QUERIES_PER_HOUR 0 MAX_CONNECTIONS_PER_HOUR 0 MAX_UPDATES_PER_HOUR 0 MAX_USER_CONNECTIONS 0;" 2> /dev/null
+		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "UPDATE mysql.user SET Select_priv='Y',Insert_priv='Y',Update_priv='Y',Delete_priv='Y',Create_priv='Y',Drop_priv='Y',Reload_priv='Y',Shutdown_priv='Y',Process_priv='Y',File_priv='Y',Grant_priv='Y',References_priv='Y',Index_priv='Y',Alter_priv='Y',Show_db_priv='Y',Super_priv='Y',Create_tmp_table_priv='Y',Lock_tables_priv='Y',Execute_priv='Y',Repl_slave_priv='Y',Repl_client_priv='Y',Create_view_priv='Y',Show_view_priv='Y',Create_routine_priv='Y',Alter_routine_priv='Y',Create_user_priv='Y',Event_priv='Y',Trigger_priv='Y',Create_tablespace_priv='Y' WHERE User='root' AND Host='';" 2> /dev/null
 
 		if [ "$LOCAL_IP" == "" ]; then
 			cyanMessage " "
@@ -980,12 +979,12 @@ gpgcheck=1' > /etc/yum.repos.d/MariaDB.repo
 	if [ "$PHPINSTALL" == "Yes" ]; then
 		USE_PHP_VERSION='5'
 
-		if [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1603" -a "$OSVERSION_TMP" -lt "1803" ]; then
+		if [ "$OS" == "debian" -a "$OSVERSION_TMP" -ge "85" -o "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1604" -a "$OSVERSION_TMP" -lt "1610" ]; then
+			USE_PHP_VERSION='7.0'
+		elif [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1610" -a "$OSVERSION_TMP" -lt "1803" ]; then
 			USE_PHP_VERSION='7.1'
 		elif [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1803" ]; then
 			USE_PHP_VERSION='7.2'
-		elif [ "$OS" == "debian" -a "$OSVERSION_TMP" -ge "85" ]; then
-			USE_PHP_VERSION='7.0'
 		fi
 
 		if [ "$OS" == "debian" -a "$DOTDEB" == "Yes" ]; then
@@ -1736,9 +1735,9 @@ if [ "$INSTALL" == "EW" ]; then
 		cyanMessage " "
 		cyanMessage "Please provide the root password for the MySQL Database, to remove the old easywi database."
 		read MYSQL_ROOT_PASSWORD
-		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -BSe "DROP DATABASE easy_wi;"
-		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -BSe "DROP USER easy_wi@localhost;"
-		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -BSe "FLUSH PRIVILEGES;"
+		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "DROP DATABASE easy_wi;"
+		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "DROP USER easy_wi@localhost;"
+		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "FLUSH PRIVILEGES;"
 	fi
 
 	if [ "`id easywi_web 2> /dev/null`" == "" -a ! -d /home/easywi_web ]; then
@@ -2240,6 +2239,9 @@ if ([ "$INSTALL" == "MY" ] || [ "$INSTALL" == "WR" -a "$SQL" != "None" ]); then
 	greenOneLineMessage "MySQL Root setup is done. Please enter the server at the webpanel at "; cyanOneLineMessage "\"MySQL > Master > Add\""; greenMessage "."
 	greenMessage " "
 fi
+
+# clear password variable
+unset MYSQL_ROOT_PASSWORD DB_PASSWORD QUERY_PASSWORD
 
 cyanMessage " "
 
