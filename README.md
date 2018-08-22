@@ -11,5 +11,7 @@ Supported OS:
   
   ## Unstable Installer (Developer Version)
   
-  ´´´wget https://raw.githubusercontent.com/easy-wi/installer/master/easy-wi_install.sh
-  chmod 700 ./easy-wi_installer.sh && bash easy-wi_installer.sh```
+```sh 
+wget https://raw.githubusercontent.com/easy-wi/installer/master/easy-wi_install.sh
+chmod 700 ./easy-wi_install.sh && bash ./easy-wi_install.sh
+```
