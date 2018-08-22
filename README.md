@@ -1,6 +1,6 @@
-# installer
+# Easy-WI Installer
 
-Quality Code: [![Codacy Badge](https://api.codacy.com/project/badge/Grade/4ace942a9e3f4c5995bd5440b7dac3f0)](https://www.codacy.com/app/Lacrimosa99/installer?utm_source=github.com&utm_medium=referral&utm_content=Lacrimosa99/installer&utm_campaign=badger)
+Quality Code: [![Codacy Badge](https://api.codacy.com/project/badge/Grade/577d1ee61d234585968cc5acbfb2a726)](https://www.codacy.com/app/Lacrimosa99/Easy-WI_Installer?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=easy-wi/installer&amp;utm_campaign=Badge_Grade)
 
 Easy-Wi Installer
 
@@ -8,3 +8,8 @@ Supported OS:
   - Debian
   - Ubuntu
   - CentOS
+  
+  ## Unstable Installer (Developer Version)
+  
+  ´´´wget https://raw.githubusercontent.com/easy-wi/installer/master/easy-wi_install.sh
+  chmod 700 ./easy-wi_installer.sh && bash easy-wi_installer.sh```
