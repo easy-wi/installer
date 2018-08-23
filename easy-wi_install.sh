@@ -216,6 +216,8 @@ USERADD=`which useradd`
 USERMOD=`which usermod`
 USERDEL=`which userdel`
 GROUPADD=`which groupadd`
+DIALOG=`which dialog`
+LOGGER=`which logger`
 MACHINE=`uname -m`
 LOCAL_IP=`ip route get 8.8.8.8 | awk '{print $NF; exit}'`
 
@@ -276,6 +278,12 @@ if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 	$INSTALLER upgrade -y
 	checkInstall debconf-utils
 	checkInstall lsb-release
+	if [ "$DIALOG" == "" ]; then
+		checkInstall dialog
+	fi
+	if [ "$LOGGER" == "" ]; then
+		apt-get --reinstall install bsdutils
+	fi
 elif [ "$OS" == "centos" ]; then
 	cyanMessage " "
 	cyanMessage "Update all obsolete packages."
@@ -1098,6 +1106,7 @@ _EOF_
 					checkInstall apache2-mpm-itk
 				fi
 				checkInstall libapache2-mpm-itk
+				checkInstall libapache2-mod-php
 				checkInstall libapache2-mod-php${USE_PHP_VERSION}
 				a2enmod php${USE_PHP_VERSION}
 			elif [ "$OS" == "centos" ]; then
@@ -1419,7 +1428,7 @@ _EOF_
 		if [ "`grep '/home/$MASTERUSER/sites-enabled/' $APACHE_CONFIG`" == "" ]; then
 			echo '# Load config files in the "/home/$MASTERUSER/sites-enabled" directory, if any.' >>  $APACHE_CONFIG
 			if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
-				if [[ $APACHE_VERSION =~ .*Apache/2.2.* ]]; then
+				if [[ "$APACHE_VERSION" =~ .*Apache/2.2.* ]]; then
 					sed -i "/Include sites-enabled\//a Include \/home\/$MASTERUSER\/sites-enabled\/" $APACHE_CONFIG
 					sed -i "/Include \/etc\/apache2\/sites-enabled\//a \/home\/$MASTERUSER\/sites-enabled\/" $APACHE_CONFIG
 				else
@@ -1827,6 +1836,17 @@ if [ "$INSTALL" == "EW" ]; then
 					*) errorAndContinue;;
 				esac
 			done
+
+			cyanMessage " "
+			cyanMessage "Do you use a Subdomain?"
+			OPTIONS=("Yes" "No" "Quit")
+			select SSL_KEY_SUBDOMAIN in "${OPTIONS[@]}"; do
+				case "$REPLY" in
+					1|2 ) break;;
+					3 ) errorAndQuit;;
+					*) errorAndContinue;;
+				esac
+			done
 		fi
 
 		if [ "$SSL_KEY" == "Lets Encrypt" ]; then
@@ -2063,9 +2083,17 @@ if [ "$INSTALL" == "EW" ]; then
 				service apache2 stop
 			fi
 			if [ "$OS" == "debian" -a "$OSBRANCH" == "wheezy" ]; then
-				/root/certbot-auto certonly --standalone -d "$IP_DOMAIN" -d www."$IP_DOMAIN"
+				if [ "$SSL_KEY_SUBDOMAIN" == "No" ]; then
+					/root/certbot-auto certonly --standalone -d "$IP_DOMAIN" -d www."$IP_DOMAIN"
+				else
+					/root/certbot-auto certonly --standalone -d "$IP_DOMAIN"
+				fi
 			else
-				certbot certonly --standalone -d "$IP_DOMAIN" -d www."$IP_DOMAIN"
+				if [ "$SSL_KEY_SUBDOMAIN" == "No" ]; then
+					certbot certonly --standalone -d "$IP_DOMAIN" -d www."$IP_DOMAIN"
+				else
+					certbot certonly --standalone -d "$IP_DOMAIN"
+				fi
 			fi
 		elif [ "$OS" == "centos" ]; then
 			if [ "$WEBSERVER" == " Ngingx" ]; then
@@ -2077,7 +2105,12 @@ if [ "$INSTALL" == "EW" ]; then
 				systemctl stop php-fpm.service
 				systemctl stop httpd.service
 			fi
-			certbot certonly --standalone -d "$IP_DOMAIN" -d www."$IP_DOMAIN"
+
+			if [ "$SSL_KEY_SUBDOMAIN" == "No" ]; then
+				certbot certonly --standalone -d "$IP_DOMAIN" -d www."$IP_DOMAIN"
+			else
+				certbot certonly --standalone -d "$IP_DOMAIN"
+			fi
 		fi
 	fi
 
