@@ -13,5 +13,5 @@ Supported OS:
   
 ```sh 
 wget https://raw.githubusercontent.com/easy-wi/installer/master/easy-wi_install.sh
-chmod 700 ./easy-wi_install.sh && bash ./easy-wi_install.sh
+bash ./easy-wi_install.sh
 ```
