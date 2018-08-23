@@ -466,6 +466,7 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" -o "$INSTALL" == "MY" ]; then
 
 		if [ "$DOTDEB" == "Yes" ]; then
 			if [ "`grep 'packages.dotdeb.org' /etc/apt/sources.list`" == "" ]; then
+				cyanMessage " "
 				okAndSleep "Adding entries to /etc/apt/sources.list"
 
 				if [ "$OSBRANCH" == "squeeze" -o "$OSBRANCH" == "wheezy" ]; then
@@ -1106,7 +1107,6 @@ _EOF_
 					checkInstall apache2-mpm-itk
 				fi
 				checkInstall libapache2-mpm-itk
-				checkInstall libapache2-mod-php
 				checkInstall libapache2-mod-php${USE_PHP_VERSION}
 				a2enmod php${USE_PHP_VERSION}
 			elif [ "$OS" == "centos" ]; then
