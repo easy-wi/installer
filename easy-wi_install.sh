@@ -2011,6 +2011,9 @@ if [ "$INSTALL" == "EW" ]; then
 			if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 				okAndSleep "Activating TLS/SSL related Apache modules."
 				a2enmod ssl
+				if [ ! -f /etc/apache2/mods-enabled/headers.load ]; then
+					a2enmod headers
+				fi
 			fi
 
 			if [ "$SSL_KEY" == "Lets Encrypt" ]; then
