@@ -1,6 +1,9 @@
 #!/bin/bash
 
-DEBUG="OFF"
+# Fehler im CentOS Webspace Root Modul (None)
+# Fehler im NGinx/PHP-FPM Modul
+
+DEBUG="ON"
 
 #    Author:     Ulrich Block <ulrich.block@easy-wi.com>,
 #                Alexander Doerwald <alexander.doerwald@easy-wi.com>
@@ -125,7 +128,7 @@ checkInstall() {
 			$INSTALLER -y install $1
 		fi
 	elif [ "$OS" == "centos" ]; then
-		if [ "`rpm -qa $1`" == "" ]; then
+		if [ "`rpm -qa $1 2>/dev/null`" == "" ]; then
 			cyanMessage " "
 			okAndSleep "Installing package $1"
 			$INSTALLER -y install $1
@@ -147,7 +150,16 @@ checkUser() {
 
 RestartWebserver() {
 	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
-		if [ "$WEBSERVER" == "Apache" ]; then
+		if [ "$WEBSERVER" == "Nginx" ]; then
+			cyanMessage " "
+			if [ "$PHPINSTALL" == "Yes" ]; then
+				okAndSleep "Restarting PHP-FPM and Nginx."
+				service php${USE_PHP_VERSION}-fpm restart 1>/dev/null
+			else
+				okAndSleep "Restarting Nginx."
+			fi
+			service nginx restart
+		elif [ "$WEBSERVER" == "Apache" ]; then
 			cyanMessage " "
 			okAndSleep "Restarting PHP-FPM and Apache2."
 			service apache2 restart 1>/dev/null
@@ -157,7 +169,16 @@ RestartWebserver() {
 			service lighttpd restart 1>/dev/null
 		fi
 	elif [ "$OS" == "centos" ]; then
-		if [ "$WEBSERVER" == "Apache" ]; then
+		if [ "$WEBSERVER" == "Nginx" ]; then
+			cyanMessage " "
+			if [ -f /etc/php-fpm.conf ]; then
+				okAndSleep "Restarting PHP-FPM and Nginx."
+				systemctl restart php-fpm.service 1>/dev/null
+			else
+				okAndSleep "Restarting Nginx."
+			fi
+			systemctl restart nginx.service 1>/dev/null
+		elif [ "$WEBSERVER" == "Apache" ]; then
 			cyanMessage " "
 			if [ -f /etc/php-fpm.conf ]; then
 				okAndSleep "Restarting PHP-FPM and Apache2."
@@ -193,25 +214,8 @@ RestartDatabase() {
 	fi
 }
 
-if [ -f /etc/debian_version ]; then
-	INSTALLER="apt-get"
-	OS="debian"
-	DIALOG=`which dialog`
-	LOGGER=`which logger`
-elif [ -f /etc/centos-release ]; then
-	INSTALLER="yum"
-	OS="centos"
-	setenforce 0 >/dev/null 2>&1
-	cyanMessage " "
-	if [ "`rpm -qa wget`" == "" ]; then
-		$INSTALLER install -y -q wget >/dev/null 2
-	fi
-	if [ "`rpm -qa which`" == "" ]; then
-		$INSTALLER install -y -q which >/dev/null 2
-	fi
-fi
-
 INSTALLER_VERSION="2.4"
+OS=""
 SYS_REBOOT="No"
 USERADD=`which useradd`
 USERMOD=`which usermod`
@@ -224,6 +228,19 @@ if [ "$LOCAL_IP" == "" ]; then
 	HOST_NAME=`hostname -f | awk '{print tolower($0)}'`
 else
 	HOST_NAME=`getent hosts $LOCAL_IP | awk '{print tolower($2)}' | head -n 1`
+fi
+
+if [ -f /etc/debian_version ]; then
+	INSTALLER="apt-get"
+	OS="debian"
+	DIALOG=`which dialog`
+	LOGGER=`which logger`
+elif [ -f /etc/centos-release ]; then
+	INSTALLER="yum"
+	OS="centos"
+#	setenforce 0 >/dev/null 2>&1
+	cyanMessage " "
+	$INSTALLER install -y -q wget >/dev/null 2
 fi
 
 cyanMessage " "
@@ -245,7 +262,6 @@ fi
 if [ "`id -u`" != "0" ]; then
 	errorAndExit "Still not root, aborting"
 fi
-
 
 cyanMessage " "
 okAndSleep "Update the system packages to the latest version? Required, as otherwise dependencies might brake!"
@@ -286,21 +302,14 @@ checkInstall curl
 
 #CentOS - SELinux
 if [ "$OS" == "centos" ]; then
-	if ([ ! -d /home/easywi_web -a "`find /home -type d -name 'masterserver'`" == "" -a "`find /home -type f -name 'ts3server'`" == "" ]); then
-		yellowMessage ""
-		yellowMessage "Note: Please update your fresh operating system and restart it!"
-		yellowMessage ""
-	fi
-	if [ -f /etc/selinux/config ]; then
-		if [ "`grep 'SELINUX=' /etc/selinux/config | sed -n '2 p'`" != "SELINUX=disabled" ]; then
-			backUpFile /etc/selinux/config
-			sed -i "s/SELINUX=enforcing/SELINUX=disabled/g" /etc/selinux/config
-			redMessage " "
-			redMessage "Please reboot your Root/Vserver to disabled SELinux Security Function!"
-			redMessage "Otherwise, the WebInterface can not work."
-			redMessage " "
-			exit 0
-		fi
+	yellowMessage ""
+	yellowMessage "Note: Please update your fresh operating system and restart it!"
+	if [ "`grep 'SELINUX=' /etc/selinux/config | sed -n '2 p'`" != "SELINUX=disabled" ]; then
+		backUpFile /etc/selinux/config
+		sed -i "s/SELINUX=enforcing/SELINUX=disabled/g" /etc/selinux/config
+		redMessage "Please reboot your Root/Vserver to disabled SELinux Security Function!"
+		redMessage "Otherwise, the WebInterface can not work."
+		redMessage " "
 	fi
 fi
 
@@ -347,14 +356,12 @@ fi
 
 if [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -lt "1510" -o "$OS" == "debian" -a "$OSVERSION_TMP" -lt "70" -o "$OS" == "centos" -a "$OSVERSION_TMP" -lt "70" ]; then
 	echo; echo
-	redMessage "Error: Your OS \"$OS - $OSVERSION\" is not more supported from Easy-WI Installer."
+	redMessage "Error: Your OS \"$OS - $OSVERSION\"  is not more supported from Easy-WI Installer."
 	redMessage "Please Upgrade to a newer OS Version!"
 	echo
 	exit 0
 fi
 
-yellowMessage " "
-yellowOneLineMessage "If you want to install everything on this system, then please install the "; cyanOneLineMessage "Easy-WI Webpanel "; yellowMessage "first!"
 cyanMessage " "
 cyanMessage "What shall be installed/prepared?"
 
@@ -496,23 +503,33 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" -o "$INSTALL" == "MY" ]; then
 		fi
 	fi
 
-	if ([ "$INSTALL" != "EW" -a "$INSTALL" != "MY" ] && [ ! -d /home/easywi_web/htdocs/ ]); then
+	if [ "$INSTALL" != "MY" ]; then
 		cyanMessage " "
 		cyanMessage "Please select the webserver you would like to use"
 	fi
 
 	if [ "$INSTALL" == "EW" ]; then
-		WEBSERVER="Apache"
-	elif [ "$INSTALL" != "EW" -a "$INSTALL" != "MY" ]; then
+		cyanMessage "Apache is recommended in case you want to run additional sites on this host."
+		cyanMessage "Nginx is recommended if the server should only run the Easy-WI Web Panel."
+
+		OPTIONS=("Nginx" "Apache" "Quit")
+		select WEBSERVER in "${OPTIONS[@]}"; do
+			case "$REPLY" in
+				1|2 ) break;;
+				3 ) errorAndQuit;;
+				*) errorAndContinue;;
+			esac
+		done
+	elif [ "$INSTALL" != "MY" ]; then
 		if [ ! -d /home/easywi_web/htdocs/ ]; then
-			cyanMessage "Lighttpd is recommended for FastDL"
+			cyanMessage "Nginx is recommended for FastDL and few but high efficient vhosts"
 			cyanMessage "Apache is recommended in case you want to run many PHP supporting Vhosts aka mass web hosting"
 
-			OPTIONS=("Apache" "Lighttpd" "None" "Quit")
+			OPTIONS=("Nginx" "Apache" "Lighttpd" "None" "Quit")
 			select WEBSERVER in "${OPTIONS[@]}"; do
 				case "$REPLY" in
-					1|2|3 ) break;;
-					4 ) errorAndQuit;;
+					1|2|3|4 ) break;;
+					5 ) errorAndQuit;;
 					*) errorAndContinue;;
 				esac
 			done
@@ -530,7 +547,12 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" ]; then
 		WEBGROUPPATH="/var/www"
 		WEBGROUPCOMMENT="Webserver"
 	elif [ "$OS" == "centos" ]; then
-		if [ "$WEBSERVER" == "Lighttpd" ]; then
+		if [ "$WEBSERVER" == "Nginx" ]; then
+			WEBGROUPNAME="nginx"
+			WEBGROUPTMPID="994"
+			WEBGROUPPATH="/var/lib/nginx"
+			WEBGROUPCOMMENT="Nginx web server"
+		elif [ "$WEBSERVER" == "Lighttpd" ]; then
 			WEBGROUPNAME="lighttpd"
 			WEBGROUPTMPID="993"
 			WEBGROUPPATH="/var/www/lighttpd"
@@ -541,7 +563,12 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" ]; then
 			WEBGROUPPATH="/usr/share/httpd"
 			WEBGROUPCOMMENT="Apache"
 		elif [ "$WEBSERVER" == "None" ]; then
-			if [ -f /etc/lighttpd/lighttpd.conf ]; then
+			if [ -f /etc/nginx/nginx.conf ]; then
+				WEBGROUPNAME="nginx"
+				WEBGROUPTMPID="994"
+				WEBGROUPPATH="/var/lib/nginx"
+				WEBGROUPCOMMENT="Nginx web server"
+			elif [ -f /etc/lighttpd/lighttpd.conf ]; then
 				WEBGROUPNAME="lighttpd"
 				WEBGROUPTMPID="993"
 				WEBGROUPPATH="/var/www/lighttpd"
@@ -551,9 +578,6 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" ]; then
 				WEBGROUPTMPID="48"
 				WEBGROUPPATH="/usr/share/httpd"
 				WEBGROUPCOMMENT="Apache"
-				if [ "$OS" == "centos" -a "$INSTALL" == "WR" ]; then
-					WEBSERVER="Apache"
-				fi
 			else
 				errorAndExit "No Webserver Installation found. Aborting!"
 			fi
@@ -563,13 +587,13 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" ]; then
 	WEBGROUPID=`getent group $WEBGROUPNAME | awk -F ':' '{print $3}'`
 	if [ "$WEBGROUPID" != "$WEBGROUPTMPID" ]; then
 		$GROUPADD -g $WEBGROUPTMPID $WEBGROUPNAME >/dev/null 2>&1
-		if [ "$WEBSERVER" == "Lighttpd" ]; then
+		if [ "$WEBSERVER" == "Lighttpd" -o "$WEBSERVER" == "Nginx" ]; then
 			$USERADD -c "$WEBGROUPCOMMENT" -u $WEBGROUPTMPID -g $WEBGROUPTMPID -s /sbin/nologin -r -d $WEBGROUPPATH $WEBGROUPNAME
 		fi
 		WEBGROUPID=`getent group $WEBGROUPNAME | awk -F ':' '{print $3}'`
 	fi
 
-	if [ "$INSTALL" == "EW" -o -d /home/easywi_web/htdocs/ ]; then
+	if [ "$INSTALL" == "EW" ]; then
 		OPTION="Yes"
 	else
 		cyanMessage " "
@@ -678,7 +702,7 @@ if [ "$INSTALL" != "MY" ]; then
 			rm -rf /home/$MASTERUSER/.ssh
 		fi
 
-		makeDir /home/$MASTERUSER/.ssh
+		mkdir -p /home/$MASTERUSER/.ssh
 		chown $MASTERUSER:$WEBGROUPNAME /home/$MASTERUSER/.ssh >/dev/null 2>&1
 		cd /home/$MASTERUSER/.ssh
 
@@ -694,16 +718,12 @@ if [ "$INSTALL" != "MY" ]; then
 				if [ -d /home/easywi_web/htdocs/keys/ ]; then
 					cp /home/$MASTERUSER/.ssh/id_rsa.pub /home/easywi_web/htdocs/keys/$MASTERUSER.pub
 					cp /home/$MASTERUSER/.ssh/id_rsa /home/easywi_web/htdocs/keys/$MASTERUSER
-					WEBGROUPNAME2=`ls -ls /home/easywi_web/htdocs/keys/ | grep "easywi_web" | awk '{print $5}' | head -n1`
-					chown -cR easywi_web:$WEBGROUPNAME2 /home/easywi_web/htdocs/keys/ 2>&1 >/dev/null
 				fi
 			fi
 		else
 			redMessage "Error: could not find a key. You might need to create one manually at a later point."
 		fi
 	elif [ "$OPTION" == "Set password" ]; then
-		cyanMessage " "
-		cyanMessage "Please provide the user password for $MASTERUSER."
 		passwd $MASTERUSER
 	fi
 fi
@@ -720,9 +740,20 @@ fi
 
 if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" -o "$INSTALL" == "MY" ]; then
 	cyanMessage " "
-	if [ "$WEBSERVER" == "Lighttpd" -a "$INSTALL" != "MY" ]; then
-		checkInstall lighttpd
-		if [ "$OS" == "centos" ]; then
+	if [ "$WEBSERVER" == "Nginx" -a "$INSTALL" != "MY" ]; then
+		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
+			checkInstall nginx-full
+		elif [ "$OS" == "centos" ]; then
+			if [ -d /etc/httpd ]; then
+				systemctl disable httpd.service >/dev/null 2>&1
+				systemctl stop httpd.service
+			fi
+			checkInstall nginx
+			systemctl enable nginx.service >/dev/null 2>&1
+		fi
+	elif [ "$WEBSERVER" == "Lighttpd" -a "$INSTALL" != "MY" ]; then
+		if [ "$OS" == "debian" -o "$OS" == "ubuntu" -o "$OS" == "centos" ]; then
+			checkInstall lighttpd
 			systemctl enable lighttpd.service >/dev/null 2>&1
 		fi
 	elif [ "$WEBSERVER" == "Apache" -a "$INSTALL" != "MY" ]; then
@@ -761,12 +792,8 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" -o "$INSTALL" == "MY" ]; then
 				esac
 			done
 		elif [ "$OS" == "centos" ]; then
-			if [ ! -d /home/easywi_web/htdocs/ ]; then
-				SQL="MariaDB"
-				SQL_VERSION="10"
-			else
-				SQL="None"
-			fi
+			SQL="MariaDB"
+			SQL_VERSION="5.5"
 		fi
 
 		if [ "$OS" == "centos" -a "$SQL" == "MariaDB" -a "$INSTALL" == "WR" -o "$INSTALL" == "MY" ]; then
@@ -788,7 +815,7 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" -o "$INSTALL" == "MY" ]; then
 		fi
 	fi
 
-	if [ "$SQL" != "" -a "$SQL" != "None" ]; then
+	if [ "$SQL" != "" ]; then
 		if [ "`ps fax | grep 'mysqld' | grep -v 'grep'`" != "" ]; then
 			cyanMessage " "
 			cyanMessage "Please provide the root password for the MySQL Database."
@@ -805,7 +832,11 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" -o "$INSTALL" == "MY" ]; then
 				ERROR_CODE=$?
 			done
 		else
-			MYSQL_ROOT_PASSWORD=`< /dev/urandom tr -dc A-Za-z0-9 | head -c18`
+			until [ "$MYSQL_ROOT_PASSWORD" != "" ]; do
+				cyanMessage " "
+				cyanMessage "Please provide the root password for the MySQL Database."
+				read MYSQL_ROOT_PASSWORD
+			done
 		fi
 
 		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
@@ -821,8 +852,8 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" -o "$INSTALL" == "MY" ]; then
 			checkInstall python-software-properties
 			apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 0xcbcb082a1bb943db
 
-			if [ "$SQL" == "MariaDB" -a "`apt-cache search mariadb-server-10.2`" == "" ]; then
-				add-apt-repository "deb http://mirror.netcologne.de/mariadb/repo/10.2/$OS $OSBRANCH main"
+			if [ "$SQL" == "MariaDB" -a "`apt-cache search mariadb-server-10.0`" == "" ]; then
+				add-apt-repository "deb http://mirror.netcologne.de/mariadb/repo/10.0/$OS $OSBRANCH main"
 				RUNUPDATE=1
 			fi
 		elif [ "$OS" == "centos" -a "$SQL_VERSION" == "10" ]; then
@@ -830,11 +861,11 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" -o "$INSTALL" == "MY" ]; then
 				MARIADB_FILE=$(ls /etc/yum.repos.d/)
 				for search_mariadb in "${MARIADB_FILE[@]}"; do
 					if [ "`grep '/MariaDB/' $search_mariadb >/dev/null 2>&1`" == "" -a ! -f /etc/yum.repos.d/MariaDB.repo ]; then
-						echo '# MariaDB 10.2 CentOS repository list - created 2018-08-30 23:19 UTC
+						echo '# MariaDB 10.0 CentOS repository list - created 2017-06-15 22:41 UTC
 # http://downloads.mariadb.org/mariadb/repositories/
 [mariadb]
 name = MariaDB
-baseurl = http://yum.mariadb.org/10.2/centos7-amd64
+baseurl = http://yum.mariadb.org/10.0/centos7-amd64
 gpgkey=https://yum.mariadb.org/RPM-GPG-KEY-MariaDB
 gpgcheck=1' > /etc/yum.repos.d/MariaDB.repo
 					fi
@@ -881,8 +912,13 @@ gpgcheck=1' > /etc/yum.repos.d/MariaDB.repo
 					checkInstall mariadb-common
 				fi
 			elif [ "$OS" == "centos" ]; then
-				checkInstall mariadb-server
-				systemctl enable mariadb.service >/dev/null 2>&1
+				if [ "$SQL_VERSION" == "5.5" ]; then
+					checkInstall mariadb-server
+					systemctl enable mariadb.service >/dev/null 2>&1
+				elif [ "$SQL_VERSION" == "10" ]; then
+					checkInstall mariadb-server
+					systemctl enable mysql.service >/dev/null 2>&1
+				fi
 			fi
 		fi
 
@@ -896,7 +932,9 @@ gpgcheck=1' > /etc/yum.repos.d/MariaDB.repo
 				errorAndExit "$SQL Database not fully installed!"
 			fi
 			RestartDatabase
+		fi
 
+		if [ "$SQL" != "None" ]; then
 			if [ "$INSTALL" == "WR" -o "$INSTALL" == "MY" ]; then
 				cyanMessage " "
 				cyanMessage "Is Easy-WI installed on a different server."
@@ -991,7 +1029,7 @@ _EOF_
 		cyanMessage " "
 		okAndSleep "Please note that Easy-Wi will install required PHP packages."
 		PHPINSTALL="Yes"
-	elif [ "$INSTALL" != "MY" -a "`rpm -qa php 2>/dev/null`" == "" -a "`dpkg -l 2>/dev/null | egrep -o "php-common"`" ]; then
+	elif [ "$INSTALL" != "MY" ]; then
 		cyanMessage " "
 		cyanMessage "Install/Update PHP?"
 		cyanMessage "Select \"None\" in case this server should host only Fastdownload webspace."
@@ -1004,8 +1042,6 @@ _EOF_
 				*) errorAndContinue;;
 			esac
 		done
-	else
-		PHPINSTALL="None"
 	fi
 
 	if [ "$PHPINSTALL" == "Yes" ]; then
@@ -1013,7 +1049,7 @@ _EOF_
 
 		if [ "$OS" == "debian" -a "$OSVERSION_TMP" -ge "85" -o "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1604" -a "$OSVERSION_TMP" -lt "1610" ]; then
 			USE_PHP_VERSION='7.0'
-		elif [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1610" -a "$OSVERSION_TMP" -lt "1803" -o "$OS" == "centos" ]; then
+		elif [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1610" -a "$OSVERSION_TMP" -lt "1803" ]; then
 			USE_PHP_VERSION='7.1'
 		elif [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1803" ]; then
 			USE_PHP_VERSION='7.2'
@@ -1054,11 +1090,6 @@ _EOF_
 			fi
 		fi
 
-		if [ "$OS" == "centos" ]; then
-			checkInstall http://rpms.remirepo.net/enterprise/remi-release-7.rpm
-			yum-config-manager --enable remi-php71
-		fi
-
 		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 			if [ "$WEBSERVER" == "Apache" ]; then
 				checkInstall php${USE_PHP_VERSION}
@@ -1080,19 +1111,26 @@ _EOF_
 			checkInstall php
 			checkInstall php-common
 			checkInstall php-gd
-			checkInstall libsodium-devel
-			checkInstall php-mysqlnd
+			if [ "$OS" == "centos" ]; then
+				checkInstall libsodium-devel
+			else
+				checkInstall php-mcrypt
+			fi
+			checkInstall php-mysql
 			checkInstall php-cli
 			checkInstall php-xml
 			checkInstall php-mbstring
 			checkInstall php-zip
 		fi
 
-		if [ "$WEBSERVER" == "Lighttpd" ]; then
+		if [ "$WEBSERVER" == "Nginx" -o "$WEBSERVER" == "Lighttpd" ]; then
 			if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 				checkInstall php${USE_PHP_VERSION}-fpm
-				lighttpd-enable-mod fastcgi
-				lighttpd-enable-mod fastcgi-php
+
+				if [ "$WEBSERVER" == "Lighttpd" ]; then
+					lighttpd-enable-mod fastcgi
+					lighttpd-enable-mod fastcgi-php
+				fi
 			elif [ "$OS" == "centos" ]; then
 				checkInstall php-fpm
 				systemctl enable php-fpm.service >/dev/null 2>&1
@@ -1101,8 +1139,13 @@ _EOF_
 				backUpFile /etc/php-fpm.conf
 				backUpFile /etc/php-fpm.d/www.conf
 
-				sed -i "s/user = apache/user = lighttpd/g" /etc/php-fpm.d/www.conf
-				sed -i "s/group = apache/group = lighttpd/g" /etc/php-fpm.d/www.conf
+				if [ "$WEBSERVER" == "Lighttpd" ]; then
+					sed -i "s/user = apache/user = lighttpd/g" /etc/php-fpm.d/www.conf
+					sed -i "s/group = apache/group = lighttpd/g" /etc/php-fpm.d/www.conf
+				elif [ "$WEBSERVER" == "Nginx" ]; then
+					sed -i "s/user = apache/user = nginx/g" /etc/php-fpm.d/www.conf
+					sed -i "s/group = apache/group = nginx/g" /etc/php-fpm.d/www.conf
+				fi
 			fi
 
 			makeDir /home/$MASTERUSER/fpm-pool.d/
@@ -1113,6 +1156,8 @@ _EOF_
 				elif [ -f /etc/php/"${USE_PHP_VERSION}"/fpm/php-fpm.conf ]; then
 					sed -i "s/include=\/etc\/php\/${USE_PHP_VERSION}\/fpm\/pool.d\/\*.conf/include=\/home\/$MASTERUSER\/fpm-pool.d\/\*.conf/g" /etc/php/"${USE_PHP_VERSION}"/fpm/php-fpm.conf
 				fi
+#			elif [ "$OS" == "centos" -a -f /etc/php-fpm.conf ]; then
+#				sed -i "/include=\/etc\/php-fpm.d\/\*.conf/ainclude=\/home\/$MASTERUSER\/fpm-pool.d\/\*.conf" /etc/php-fpm.conf
 			fi
 		elif [ "$WEBSERVER" == "Apache" ]; then
 			if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
@@ -1148,21 +1193,17 @@ if ([ "$INSTALL" == "WR" -o "$INSTALL" == "EW" ] && [ "`grep '/bin/false' /etc/s
 fi
 
 if [ "$INSTALL" != "VS" -a "$INSTALL" != "EW" -a "$INSTALL" != "MY" ]; then
-	if [ "`rpm -qa proftpd 2>/dev/null`" == "" -a "`dpkg -l 2>/dev/null | egrep -o "proftpd"`" == "" ]; then
-		cyanMessage " "
-		cyanMessage "Install/Update ProFTPD?"
+	cyanMessage " "
+	cyanMessage "Install/Update ProFTPD?"
 
-		OPTIONS=("Yes" "No" "Quit")
-		select OPTION in "${OPTIONS[@]}"; do
-			case "$REPLY" in
-				1|2 ) break;;
-				3 ) errorAndQuit;;
-				*) errorAndContinue;;
-			esac
-		done
-	else
-		OPTION="No"
-	fi
+	OPTIONS=("Yes" "No" "Quit")
+	select OPTION in "${OPTIONS[@]}"; do
+		case "$REPLY" in
+			1|2 ) break;;
+			3 ) errorAndQuit;;
+			*) errorAndContinue;;
+		esac
+	done
 
 	if [ "$OPTION" == "Yes" ]; then
 		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
@@ -1184,7 +1225,7 @@ if [ "$INSTALL" != "VS" -a "$INSTALL" != "EW" -a "$INSTALL" != "MY" ]; then
 			sed -i 's/#.*DefaultRoot.*~/DefaultRoot ~/g' /etc/proftpd/proftpd.conf
 			sed -i 's/# RequireValidShell.*/RequireValidShell on/g' /etc/proftpd/proftpd.conf
 		elif [ "$OS" == "centos" ]; then
-			makeDir /etc/proftpd
+			mkdir -p /etc/proftpd
 			if [ ! -f /etc/proftpd/proftpd.conf ];then
 				mv /etc/proftpd.conf /etc/proftpd/
 				cd /etc
@@ -1193,7 +1234,7 @@ if [ "$INSTALL" != "VS" -a "$INSTALL" != "EW" -a "$INSTALL" != "MY" ]; then
 			backUpFile /etc/proftpd/proftpd.conf
 			if [ "`cat /etc/proftpd/proftpd.conf | grep 'Include'`" == "" ]; then
 				echo "Include /etc/proftpd/conf.d/" >> /etc/proftpd/proftpd.conf
-				makeDir /etc/proftpd/conf.d
+				mkdir -p /etc/proftpd/conf.d
 			fi
 		fi
 
@@ -1308,21 +1349,17 @@ if [ "$INSTALL" != "VS" -a "$INSTALL" != "EW" -a "$INSTALL" != "MY" ]; then
 fi
 
 if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
-	if [ ! -f /home/aquota.user ]; then
-		cyanMessage " "
-		cyanMessage "Install Quota?"
+	cyanMessage " "
+	cyanMessage "Install Quota?"
 
-		OPTIONS=("Yes" "No" "Quit")
-		select QUOTAINSTALL in "${OPTIONS[@]}"; do
-			case "$REPLY" in
-				1|2 ) break;;
-				3 ) errorAndQuit;;
-				*) errorAndContinue;;
-			esac
-		done
-	else
-		QUOTAINSTALL="No"
-	fi
+	OPTIONS=("Yes" "No" "Quit")
+	select QUOTAINSTALL in "${OPTIONS[@]}"; do
+		case "$REPLY" in
+			1|2 ) break;;
+			3 ) errorAndQuit;;
+			*) errorAndContinue;;
+		esac
+	done
 
 	if [ "$QUOTAINSTALL" == "Yes" ]; then
 		cyanMessage " "
@@ -1383,7 +1420,19 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
 fi
 
 if [ "$INSTALL" == "WR" -o "$INSTALL" == "EW" ]; then
-	if [ "$WEBSERVER" == "Lighttpd" ]; then
+	if [ "$WEBSERVER" == "Nginx" ]; then
+		backUpFile /etc/nginx/nginx.conf
+		if [ "`grep '/home/$MASTERUSER/sites-enabled/' /etc/nginx/nginx.conf`" == "" ]; then
+			if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
+				sed -i "\/etc\/nginx\/sites-enabled\/\*;/a \ \ \include \/home\/$MASTERUSER\/sites-enabled\/\*;" /etc/nginx/nginx.conf
+			elif [ "$OS" == "centos" ]; then
+#				sed -i 's/include \/etc\/nginx\/default.d\/*.conf;/#include \/etc\/nginx\/default.d\/*.conf;/g' /etc/nginx/nginx.conf ##################################################
+				sed -i 's/\/usr\/share\/nginx\/html;/\/home;/g' /etc/nginx/nginx.conf
+#				sed -i '/^/# Include Easy-WI Webserver Templates' /etc/nginx/nginx.conf
+#				echo "include /home/$MASTERUSER/sites-enabled/*.conf;" >> /etc/nginx/nginx.conf
+			fi
+		fi
+	elif [ "$WEBSERVER" == "Lighttpd" ]; then
 		backUpFile /etc/lighttpd/lighttpd.conf
 		echo "include_shell \"find /home/$MASTERUSER/sites-enabled/ -maxdepth 1 -type f -exec cat {} \;\"" >> /etc/lighttpd/lighttpd.conf
 	elif [ "$WEBSERVER" == "Apache" ]; then
@@ -1436,9 +1485,8 @@ _EOF_
 			APACHE_VERSION=`httpd -v | grep 'Server version'`
 		fi
 
-		if [ "`grep '/home/'$MASTERUSER'/sites-enabled/' $APACHE_CONFIG`" == "" ]; then
-			echo " " >> $APACHE_CONFIG
-			echo '# Load config files in the "/home/'$MASTERUSER'/sites-enabled" directory, if any.' >> $APACHE_CONFIG
+		if [ "`grep '/home/$MASTERUSER/sites-enabled/' $APACHE_CONFIG`" == "" ]; then
+			echo '# Load config files in the "/home/$MASTERUSER/sites-enabled" directory, if any.' >>  $APACHE_CONFIG
 			if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 				if [[ "$APACHE_VERSION" =~ .*Apache/2.2.* ]]; then
 					sed -i "/Include sites-enabled\//a Include \/home\/$MASTERUSER\/sites-enabled\/" $APACHE_CONFIG
@@ -1495,22 +1543,15 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
 		echo "$MASTERUSER ALL = (ALL, !root:$MASTERUSER) NOPASSWD: /bin/bash /home/$MASTERUSER/temp/*.sh" >> /etc/sudoers
 	fi
 
-	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
-		if [ "$WEBSERVER" == "Lighttpd" ]; then
-			HTTPDBIN=`which lighttpd`
-			HTTPDSCRIPT="/etc/init.d/lighttpd"
-		elif [ "$WEBSERVER" == "Apache" ]; then
-			HTTPDBIN=`which apache2`
-			HTTPDSCRIPT="/etc/init.d/apache2"
-		fi
-	elif [ "$OS" == "centos" ]; then
-		if [ "$WEBSERVER" == "Lighttpd" ]; then
-			HTTPDBIN=`which lighttpd`
-			HTTPDSCRIPT='lighttpd'
-		elif [ "$WEBSERVER" == "Apache" ]; then
-			HTTPDBIN=`which httpd`
-			HTTPDSCRIPT='httpd'
-		fi
+	if [ "$WEBSERVER" == "Nginx" ]; then
+		HTTPDBIN=`which nginx`
+		HTTPDSCRIPT="/etc/init.d/nginx"
+	elif [ "$WEBSERVER" == "Lighttpd" ]; then
+		HTTPDBIN=`which lighttpd`
+		HTTPDSCRIPT="/etc/init.d/lighttpd"
+	elif [ "$WEBSERVER" == "Apache" ]; then
+		HTTPDBIN=`which apache2`
+		HTTPDSCRIPT="/etc/init.d/apache2"
 	fi
 
 	if [ "$HTTPDBIN" != "" -a -f /etc/sudoers ]; then
@@ -1518,11 +1559,27 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
 			echo "$MASTERUSER ALL = NOPASSWD: $HTTPDBIN" >> /etc/sudoers
 		fi
 
-		if [ "`grep $MASTERUSER /etc/sudoers | grep 'reload $HTTPDSCRIPT'`" == "" ]; then
+		if [ "`grep $MASTERUSER /etc/sudoers | grep $HTTPDSCRIPT`" == "" ]; then
+			echo "$MASTERUSER ALL = NOPASSWD: $HTTPDSCRIPT" >> /etc/sudoers
+		fi
+
+		if [ "$PHPINSTALL" == "Yes" -a "$WEBSERVER" == "Nginx" ]; then
 			if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
-				echo "$MASTERUSER ALL = NOPASSWD: $HTTPDSCRIPT" >> /etc/sudoers
-			else
-				echo "$MASTERUSER ALL = NOPASSWD: /bin/systemctl reload $HTTPDSCRIPT" >> /etc/sudoers
+				if [ "`grep $MASTERUSER /etc/sudoers | grep 'php${USE_PHP_VERSION}-fpm'`" == "" ]; then
+					FPM_BIN=`which php${USE_PHP_VERSION}-fpm`
+					echo "$MASTERUSER ALL = NOPASSWD: /etc/init.d/php${USE_PHP_VERSION}-fpm" >> /etc/sudoers
+					if [ "$FPM_BIN" != "" -a "`grep $MASTERUSER /etc/sudoers | grep '$FPM_BIN'`" == "" ]; then
+						echo "$MASTERUSER ALL = NOPASSWD: $FPM_BIN" >> /etc/sudoers
+					fi
+				fi
+			elif [ "$OS" == "centos" ]; then
+				if [ "`grep $MASTERUSER /etc/sudoers | grep 'php-fpm'`" == "" ]; then
+					FPM_BIN=`which php-fpm`
+					echo "$MASTERUSER ALL = NOPASSWD: /etc/init.d/php-fpm" >> /etc/sudoers
+					if [ "$FPM_BIN" != "" -a "`grep $MASTERUSER /etc/sudoers | grep '$FPM_BIN'`" == "" ]; then
+						echo "$MASTERUSER ALL = NOPASSWD: $FPM_BIN" >> /etc/sudoers
+					fi
+				fi
 			fi
 		fi
 	fi
@@ -1549,11 +1606,13 @@ if [ "$INSTALL" == "WR" ]; then
 
 	if [ "$HTTPDSCRIPT" != "" ]; then
 		greenOneLineMessage "The HTTPD restart command is: "
-		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
-			cyanMessage "sudo $HTTPDSCRIPT reload"
-		else
-			cyanMessage "sudo /bin/systemctl reload $HTTPDSCRIPT"
-		fi
+		cyanMessage "sudo $HTTPDSCRIPT reload"
+	fi
+
+	if [ "$PHPINSTALL" == "Yes" -a "$FPM_BIN" != "" -a "$WEBSERVER" == "Nginx" ]; then
+		cyanMessage " "
+		greenOneLineMessage "The PHP FPM restart command is: "
+		cyanMessage "sudo $FPM_BIN reload"
 	fi
 fi
 
@@ -1865,10 +1924,11 @@ if [ "$INSTALL" == "EW" ]; then
 			elif [ "$OS" == "centos" ]; then
 				$INSTALLER-config-manager --enable rhui-REGION-rhel-server-extras rhui-REGION-rhel-server-optional -y
 				checkInstall certbot
-				checkInstall mod_ssl
 			fi
 		elif [ "$SSL_KEY" == "Self-signed" ]; then
-			if [ "$WEBSERVER" == "Apache" ]; then
+			if [ "$WEBSERVER" == "Nginx" ]; then
+				SSL_DIR=/etc/nginx/ssl
+			elif [ "$WEBSERVER" == "Apache" ]; then
 				if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 					SSL_DIR=/etc/apache2/ssl
 				elif [ "$OS" == "centos" ]; then
@@ -1897,10 +1957,15 @@ if [ "$INSTALL" == "EW" ]; then
 		fi
 	fi
 
-	#Certbot - create Cerfiticate
+  #Certbot - create Cerfiticate
 	if [ "$SSL" == "Yes" -a "$SSL_KEY" == "Lets Encrypt" ]; then
 		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
-			if [ "$WEBSERVER" == "Apache" ]; then
+			if [ "$WEBSERVER" == "Nginx" ]; then
+				cyanMessage " "
+				okAndSleep "Stopping PHP-FPM and Nginx."
+				service php${USE_PHP_VERSION}-fpm stop
+				service nginx stop
+			elif [ "$WEBSERVER" == "Apache" ]; then
 				cyanMessage " "
 				okAndSleep "Stopping PHP-FPM and Apache2."
 				service php${USE_PHP_VERSION}-fpm stop
@@ -1923,13 +1988,14 @@ if [ "$INSTALL" == "EW" ]; then
 				fi
 			fi
 		elif [ "$OS" == "centos" ]; then
-			if [ "$WEBSERVER" == "Apache" ]; then
-				okAndSleep "Stopping Apache2."
-				systemctl stop httpd.service
-			elif [ "$WEBSERVER" == "Lighttpd" ]; then
-				okAndSleep "Stopping Lighttpd and PHP-FPM."
-				systemctl stop lighttpd
+			if [ "$WEBSERVER" == " Ngingx" ]; then
+				okAndSleep "Stopping PHP-FPM and Nginx."
 				systemctl stop php-fpm.service
+				systemctl stop nginx.service
+			elif [ "$WEBSERVER" == "Apache" ]; then
+				okAndSleep "Stopping PHP-FPM and Apache2."
+				systemctl stop php-fpm.service
+				systemctl stop httpd.service
 			fi
 
 			cyanMessage " "
@@ -1942,7 +2008,7 @@ if [ "$INSTALL" == "EW" ]; then
 		fi
 	fi
 
-	if [ "$WEBSERVER" == "Lighttpd" ]; then
+	if [ "$WEBSERVER" == "Nginx" -o "$WEBSERVER" == "Lighttpd" ]; then
 		makeDir /home/$MASTERUSER/fpm-pool.d/
 		FILE_NAME_POOL=/home/$MASTERUSER/fpm-pool.d/$FILE_NAME.conf
 
@@ -1973,7 +2039,69 @@ if [ "$INSTALL" == "EW" ]; then
 
 	FILE_NAME_VHOST=/home/$MASTERUSER/sites-enabled/$FILE_NAME.conf
 
-	if [ "$WEBSERVER" == "Apache" ]; then
+	if [ "$WEBSERVER" == "Nginx" ]; then
+		echo 'server {' > $FILE_NAME_VHOST
+		echo '    listen 80;' >> $FILE_NAME_VHOST
+
+		if [ "$SSL" == "Yes" ]; then
+			echo "    server_name $IP_DOMAIN;" >> $FILE_NAME_VHOST
+			echo "    return 301 https://$IP_DOMAIN"'$request_uri;' >> $FILE_NAME_VHOST
+			echo '}' >> $FILE_NAME_VHOST
+
+			backUpFile /etc/nginx/nginx.conf
+
+			if [ "`grep 'ssl_ecdh_curve secp384r1;' /etc/nginx/nginx.conf`" == "" ]; then
+				sed -i '/ssl_prefer_server_ciphers on;/a \\tssl_ecdh_curve secp384r1;' /etc/nginx/nginx.conf
+			fi
+			if [ "`grep 'ssl_session_cache' /etc/nginx/nginx.conf`" == "" ]; then
+				sed -i '/ssl_prefer_server_ciphers on;/a \\tssl_session_cache shared:SSL:10m;' /etc/nginx/nginx.conf
+			fi
+			if [ "`grep 'ssl_session_timeout' /etc/nginx/nginx.conf`" == "" ]; then
+				sed -i '/ssl_prefer_server_ciphers on;/a \\tssl_session_timeout 10m;' /etc/nginx/nginx.conf
+			fi
+			if [ "`grep 'ssl_ciphers' /etc/nginx/nginx.conf`" == "" ]; then
+				sed -i '/ssl_prefer_server_ciphers on;/a \\tssl_ciphers EECDH+AESGCM:EDH+AESGCM:EECDH:EDH:!MD5:!RC4:!LOW:!MEDIUM:!CAMELLIA:!ECDSA:!DES:!DSS:!3DES:!NULL;' /etc/nginx/nginx.conf
+			fi
+
+			if [ "$SSL_KEY" == "Lets Encrypt" ]; then
+				echo 'server {' >> $FILE_NAME_VHOST
+				echo '    listen 443 ssl;' >> $FILE_NAME_VHOST
+				echo "    ssl_certificate /etc/letsencrypt/live/$IP_DOMAIN/fullchain.pem;" >> $FILE_NAME_VHOST
+				echo "    ssl_certificate_key /etc/letsencrypt/live/$IP_DOMAIN/privkey.pem;" >> $FILE_NAME_VHOST
+			else
+				echo 'server {' >> $FILE_NAME_VHOST
+				echo '    listen 443 ssl;' >> $FILE_NAME_VHOST
+				echo "    ssl_certificate $SSL_DIR/$FILE_NAME.crt;" >> $FILE_NAME_VHOST
+				echo "    ssl_certificate_key $SSL_DIR/$FILE_NAME.key;" >> $FILE_NAME_VHOST
+			fi
+		fi
+
+		echo '    root /home/easywi_web/htdocs/;' >> $FILE_NAME_VHOST
+		echo '    index index.html index.htm index.php;' >> $FILE_NAME_VHOST
+		echo "    server_name $IP_DOMAIN;" >> $FILE_NAME_VHOST
+		echo '    location ~ /(keys|stuff|template|languages|downloads|tmp) { deny all; }' >> $FILE_NAME_VHOST
+		echo '    location / {' >> $FILE_NAME_VHOST
+		echo '        try_files $uri $uri/ =404;' >> $FILE_NAME_VHOST
+		echo '    }' >> $FILE_NAME_VHOST
+		echo '    location ~ \.php$ {' >> $FILE_NAME_VHOST
+		echo '        fastcgi_split_path_info ^(.+\.php)(/.+)$;' >> $FILE_NAME_VHOST
+		echo '        try_files $fastcgi_script_name =404;' >> $FILE_NAME_VHOST
+		echo '        set $path_info $fastcgi_path_info;' >> $FILE_NAME_VHOST
+		echo '        fastcgi_param PATH_INFO $path_info;' >> $FILE_NAME_VHOST
+		echo '        fastcgi_index index.php;' >> $FILE_NAME_VHOST
+
+		if [ -f /etc/nginx/fastcgi.conf ]; then
+			echo '        include /etc/nginx/fastcgi.conf;' >> $FILE_NAME_VHOST
+		elif [ -f /etc/nginx/fastcgi_params ]; then
+			echo '        include /etc/nginx/fastcgi_params;' >> $FILE_NAME_VHOST
+		fi
+
+		echo "        fastcgi_pass unix:${PHP_SOCKET};" >> $FILE_NAME_VHOST
+		echo '    }' >> $FILE_NAME_VHOST
+		echo '}' >> $FILE_NAME_VHOST
+
+		chown -cR $MASTERUSER:$WEBGROUPNAME /home/$MASTERUSER/ >/dev/null 2>&1
+	elif [ "$WEBSERVER" == "Apache" ]; then
 		echo '<VirtualHost *:80>' > $FILE_NAME_VHOST
 		echo "    ServerName $IP_DOMAIN" >> $FILE_NAME_VHOST
 		echo "    ServerAdmin info@$IP_DOMAIN" >> $FILE_NAME_VHOST
@@ -1982,12 +2110,12 @@ if [ "$INSTALL" == "EW" ]; then
 			echo "    Redirect permanent / https://$IP_DOMAIN/" >> $FILE_NAME_VHOST
 			echo '</VirtualHost>' >> $FILE_NAME_VHOST
 
-			if [ "$OS" != "centos" ]; then
+			if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 				okAndSleep "Activating TLS/SSL related Apache modules."
 				a2enmod ssl
 			fi
 
-			if [ "$OS" != "centos" ]; then
+			if [ ! -f /etc/apache2/mods-enabled/headers.load ]; then
 				cyanMessage " "
 				okAndSleep "Activating Headers related Apache modules."
 				a2enmod headers
@@ -2007,7 +2135,6 @@ if [ "$INSTALL" == "EW" ]; then
 				echo "    SSLCertificateFile $SSL_DIR/$FILE_NAME.crt" >> $FILE_NAME_VHOST
 				echo "    SSLCertificateKeyFile $SSL_DIR/$FILE_NAME.key" >> $FILE_NAME_VHOST
 			fi
-			echo " " >> $FILE_NAME_VHOST
 		fi
 
 		echo '    DocumentRoot "/home/easywi_web/htdocs/"' >> $FILE_NAME_VHOST
@@ -2051,9 +2178,9 @@ if [ "$INSTALL" == "EW" ]; then
 		echo '</VirtualHost>' >> $FILE_NAME_VHOST
 	fi
 
-	chown $MASTERUSER:$WEBGROUPNAME $FILE_NAME_VHOST
-
 	RestartWebserver
+
+	chown $MASTERUSER:$WEBGROUPNAME $FILE_NAME_VHOST
 
 	if [ "`grep reboot.php /etc/crontab`" == "" ]; then
 		echo '0 */1 * * * easywi_web cd /home/easywi_web/htdocs && timeout 300 php ./reboot.php >/dev/null 2>&1
@@ -2121,22 +2248,7 @@ if [ "$INSTALL" == "VS" ]; then
 
 		cyanMessage " "
 		cyanMessage "Please specify the IPv4 address of the Easy-WI web panel."
-		OPTIONS=("$LOCAL_IP" "Other")
-		select OPTION in "${OPTIONS[@]}"; do
-			case "$REPLY" in
-				1|2 ) break;;
-				3 ) errorAndQuit;;
-				*) errorAndContinue;;
-			esac
-		done
-
-		if [ "$OPTION" == "$LOCAL_IP" -a "$LOCAL_IP" != "" ]; then
-			IP_ADDRESS="$LOCAL_IP"
-		else
-			cyanMessage " "
-			cyanMessage "Please provide the IP address of the Easy-WI web panel."
-			read IP_ADDRESS
-		fi
+		read IP_ADDRESS
 
 		if [ "$IP_ADDRESS" != "" ]; then
 			if [ "`grep -E '\b((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.|$)){4}\b' <<< $IP_ADDRESS`" != "" -a "`grep $IP_ADDRESS $QUERY_WHITLIST_TXT`" == "" ]; then
@@ -2149,7 +2261,6 @@ if [ "$INSTALL" == "VS" ]; then
 
 	if [ ! -f .ts3server_license_accepted ]; then
 		touch .ts3server_license_accepted
-		chown -cR $MASTERUSER:$MASTERUSER .ts3server_license_accepted 2>&1 >/dev/null
 	fi
 
 	QUERY_PASSWORD=`< /dev/urandom tr -dc A-Za-z0-9 | head -c12`
@@ -2165,107 +2276,36 @@ if [ "$INSTALL" == "VS" ]; then
 	su -c "./ts3server_startscript.sh start inifile=ts3server.ini" $MASTERUSER
 fi
 
-if [ "$INSTALL" == "MY" ]; then
-	cyanMessage " "
-	cyanOneLineMessage "Please provide the "; greenOneLineMessage "root password "; cyanMessage "for the MySQL Database."
-	read MYSQL_ROOT_PASSWORD
-
-	cyanMessage " "
-	cyanMessage "Please enter the name of the database user, which does not exist yet."
-	read MYSQL_USER
-
-	cyanMessage " "
-	cyanMessage "Is MySQL server installed on a different server."
-
-	OPTIONS=("Yes" "No" "Quit")
-	select EXTERNAL_INSTALL in "${OPTIONS[@]}"; do
-		case "$REPLY" in
-			1|2 ) break;;
-			3 ) errorAndQuit;;
-			*) errorAndContinue;;
-		esac
-	done
-
-	MYSQL_USER_PASSWORD=`< /dev/urandom tr -dc A-Za-z0-9 | head -c18`
-
-	if [ "$EXTERNAL_INSTALL" == "No" ]; then
-		if [ "`ps fax | grep 'mysqld' | grep -v 'grep'`" != "" ]; then
-			mysql -uroot -p$MYSQL_ROOT_PASSWORD -e exit 2> /dev/null
-			ERROR_CODE=$?
-
-			until [ $ERROR_CODE == 0 ]; do
-				cyanMessage " "
-				cyanOneLineMessage "Password incorrect, please provide the "; greenOneLineMessage "root password "; cyanMessage "for the MySQL Database."
-				read MYSQL_ROOT_PASSWORD
-
-				mysql -uroot -p$MYSQL_ROOT_PASSWORD -e exit 2> /dev/null
-				ERROR_CODE=$?
-			done
-
-			mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "CREATE USER '$MYSQL_USER'@'localhost' IDENTIFIED BY '$MYSQL_USER_PASSWORD'; GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, RELOAD, PROCESS, FILE, REFERENCES, INDEX, ALTER, SHOW DATABASES, SUPER, CREATE TEMPORARY TABLES, LOCK TABLES, CREATE VIEW, EVENT, TRIGGER, SHOW VIEW, CREATE ROUTINE, ALTER ROUTINE, CREATE USER, EXECUTE ON *.* TO '$MYSQL_USER'@'localhost' REQUIRE NONE WITH GRANT OPTION MAX_QUERIES_PER_HOUR 0 MAX_CONNECTIONS_PER_HOUR 0 MAX_UPDATES_PER_HOUR 0 MAX_USER_CONNECTIONS 0; FLUSH PRIVILEGES;" 2> /dev/null
-		else
-			redMessage " "
-			redMessage "Error: No Database Server running!"
-		fi
-	else
-		cyanMessage " "
-		cyanMessage "Please provide the IP for the MySQL Database."
-		read DATABASE_SERVER_IP
-
-		#IP / Domain check
-		if [ "`grep -E '\b((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.|$)){4}\b' <<< $DATABASE_SERVER_IP`" == "" -a "`grep -E '^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$' <<< $DATABASE_SERVER_IP`" == "" ]; then
-			errorAndExit "Error: $DATABASE_SERVER_IP is neither a domain nor an IPv4 address!"
-		fi
-
-		mysql -h $DATABASE_SERVER_IP -uroot -p$MYSQL_ROOT_PASSWORD -e exit 2> /dev/null
-		ERROR_CODE=$?
-
-		until [ $ERROR_CODE == 0 ]; do
-			cyanMessage " "
-			cyanOneLineMessage "Password incorrect, please provide the "; greenOneLineMessage "root password "; cyanMessage "for the MySQL Database."
-			read MYSQL_ROOT_PASSWORD
-
-			mysql -h $DATABASE_HOST -uroot -p$MYSQL_ROOT_PASSWORD -e exit 2> /dev/null
-			ERROR_CODE=$?
-		done
-
-		mysql -h $DATABASE_SERVER_IP -u root -p"$MYSQL_ROOT_PASSWORD" -e "CREATE USER '$MYSQL_USER'@'%' IDENTIFIED BY '$MYSQL_USER_PASSWORD';GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, RELOAD, PROCESS, FILE, REFERENCES, INDEX, ALTER, SHOW DATABASES, SUPER, CREATE TEMPORARY TABLES, LOCK TABLES, CREATE VIEW, EVENT, TRIGGER, SHOW VIEW, CREATE ROUTINE, ALTER ROUTINE, CREATE USER, EXECUTE ON *.* TO '$MYSQL_USER'@'%' REQUIRE NONE WITH GRANT OPTION MAX_QUERIES_PER_HOUR 0 MAX_CONNECTIONS_PER_HOUR 0 MAX_UPDATES_PER_HOUR 0 MAX_USER_CONNECTIONS 0; FLUSH PRIVILEGES;" 2> /dev/null
-	fi
-fi
-
-# Removing not needed packages
+cyanMessage " "
+okAndSleep "Removing not needed packages."
 if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
-	$INSTALLER autoremove -y -q
+	$INSTALLER autoremove -y
 elif [ "$OS" == "centos" ]; then
-	$INSTALLER clean all -y -q
-	rm -rf /var/cache/yum
+	$INSTALLER clean all -y
 fi
 
 # Firewall CentOS
-if ([ "$OS" == "centos" -a "`rpm -qa firewalld`" != "" -a "`systemctl status firewalld 2>/dev/null | egrep -o 'inactive'`" == "" ]); then
+if [ "$OS" == "centos" ]; then
 	yellowMessage " "
 	yellowMessage "Adding Firewall Rules for:"
 
 	if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" ]; then
 		if [ "`firewall-cmd --zone=public --list-all | egrep -o 'http'`" == "" ]; then
-			greenMessage " - HTTP Port: 80/tcp"
+			greenMessage " - HTTP"
 			firewall-cmd --zone=public --permanent --add-service=http 1> /dev/null
-			FIREWALL="Yes"
 		fi
 		if [ "$SSL" == "Yes" -a "`firewall-cmd --zone=public --list-all | egrep -o '443'`" == "" ]; then
-			greenMessage " - HTTPS Port: 443/tcp"
+			greenMessage " - HTTPS"
 			firewall-cmd --zone=public --permanent --add-port=443/tcp 1> /dev/null
-			FIREWALL="Yes"
 		fi
 	fi
 
 	if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" -o "$INSTALL" == "GS" ]; then
 		if [ "$PROFTP_INSTALL" != "NO" ]; then
 			if [ "`firewall-cmd --zone=public --list-all | egrep -o 'ftp'`" == "" ]; then
-				greenMessage " - FTP Port: 21/tcp"
+				greenMessage " - FTP"
 				firewall-cmd --zone=public --permanent --add-port=21/tcp 1> /dev/null
 				firewall-cmd --zone=public --permanent --add-service=ftp 1> /dev/null
-				FIREWALL="Yes"
 			fi
 		fi
 	fi
@@ -2273,44 +2313,22 @@ if ([ "$OS" == "centos" -a "`rpm -qa firewalld`" != "" -a "`systemctl status fir
 	if [ "$INSTALL" == "WR" -o "$INSTALL" == "MY" ]; then
 		if [ "$EXTERNAL_INSTALL" == "Yes" -a "$SQL" != "None" ]; then
 			if [ "`firewall-cmd --zone=public --list-all | egrep -o 'mysql'`" == "" ]; then
-				greenMessage " - MySQL Port: 3306/tcp"
+				greenMessage " - MySQL"
 				firewall-cmd --zone=public --permanent --add-service=mysql 1> /dev/null
-				FIREWALL="Yes"
 			fi
 		fi
 	fi
 
 	if [ "$INSTALL" == "VS" ]; then
 		if [ "`firewall-cmd --zone=public --list-all | egrep -o '9987'`" == "" ]; then
-			greenMessage " - Teamspeak Port: 10011/tcp, 30033/tcp, 9987/udp"
+			greenMessage " - Teamspeak"
 			firewall-cmd --zone=public --permanent --add-port=10011/tcp 1> /dev/null
 			firewall-cmd --zone=public --permanent --add-port=30033/tcp 1> /dev/null
 			firewall-cmd --zone=public --permanent --add-port=9987/udp 1> /dev/null
-			FIREWALL="Yes"
 		fi
 	fi
 
-	if [ "$INSTALL" == "GS" ]; then
-		if [ "`firewall-cmd --zone=public --list-all | egrep -o '4380'`" == "" ]; then
-			greenMessage " - Steam Port: 4380/udp, 27000-27030/udp"
-			firewall-cmd --zone=public --permanent --add-port=4380/udp 1> /dev/null
-			firewall-cmd --zone=public --permanent --add-port=27000-27030/udp 1> /dev/null
-			FIREWALL="Yes"
-		fi
-	fi
-
-	if [ "$FIREWALL" == "Yes" ]; then
-		firewall-cmd --reload 1> /dev/null
-		greenMessage " "
-	else
-		if [ "$INSTALL" == "GS" ]; then
-			FIREWALL="Yes"
-		fi
-		greenMessage "Nothing to do."
-		greenMessage " "
-	fi
-else
-	FIREWALL="No"
+	firewall-cmd --reload 1> /dev/null
 fi
 
 if [ "$INSTALL" == "EW" ]; then
@@ -2327,19 +2345,7 @@ if [ "$INSTALL" == "EW" ]; then
 	greenOneLineMessage "Please open "; cyanOneLineMessage "$PROTOCOL://$IP_DOMAIN/install/install.php"; greenMessage " and complete the installation dialog."
 	greenOneLineMessage "DB user and table name are "; cyanOneLineMessage "easy_wi"; greenOneLineMessage " and the password is "; cyanMessage "$DB_PASSWORD"
 	greenMessage " "
-	greenOneLineMessage "DB root user name are "; cyanOneLineMessage "root"; greenOneLineMessage " and the password is "; cyanMessage "$MYSQL_ROOT_PASSWORD"
-	redMessage "Dont't use this Login for Easy-WI DB!"
-	redMessage " "
-	if [ ! -f /root/database_root_login.txt ]; then
-		touch /root/database_root_login.txt
-		echo "User: root" > /root/database_root_login.txt
-		echo "Password: $MYSQL_ROOT_PASSWORD" >> /root/database_root_login.txt
-		greenOneLineMessage "Database root login data is saved in "; cyanOneLineMessage "\"/root/database_root_login.txt\""; greenMessage "."
-		redMessage "Please download and remove this file from this system!"
-	fi
-	yellowMessage " "
 elif [ "$INSTALL" == "GS" ]; then
-	greenMessage " "
 	greenOneLineMessage "Gameserver Root setup is done. Please enter the above data at the webpanel at "; cyanOneLineMessage "\"App/Game Master > Overview > Add\""; greenMessage "."
 	greenMessage " "
 	greenOneLineMessage "Username: "; cyanMessage "$MASTERUSER"
@@ -2349,22 +2355,20 @@ elif [ "$INSTALL" == "GS" ]; then
 	else
 		yellowMessage "Don't forget to copy Keyfile into \"/home/easywi_web/keys/\""
 	fi
-	if [ "$OS" == "centos" -a "$FIREWALL" == "Yes" ]; then
+	if [ "$OS" == "centos" ]; then
 		redMessage " "
 		redMessage "Don't forget to open Game Server Ports self!"
 		redMessage " "
-		cyanMessage 'Command:'
-		yellowMessage 'firewall-cmd --zone=public --permanent --add-port=Port_Number/tcp_or_udp'
+		yellowMessage 'Command: firewall-cmd --zone=public --permanent --add-port=Port_Number/tcp_or_udp'
 		yellowMessage 'After adding: firewall-cmd --reload'
 		yellowMessage " "
-		cyanMessage 'Example:'
-		yellowMessage 'firewall-cmd --zone=public --permanent --add-port=27015/tcp'
+		yellowMessage 'Example: firewall-cmd --zone=public --permanent --add-port=27015/tcp'
 		yellowMessage 'firewall-cmd --reload'
 	fi
-	yellowMessage " "
+		yellowMessage " "
 elif [ "$INSTALL" == "VS" ]; then
 	greenMessage " "
-	greenMessage "Teamspeak 3 setup is done."
+	greenOneLineMessage "Teamspeak 3 setup is done."
 	greenOneLineMessage "TS3 Query password is "; cyanMessage "$QUERY_PASSWORD"
 	greenOneLineMessage "Please enter this server at the webpanel at "; cyanOneLineMessage "\"Voiceserver > Master > Add\""; greenMessage "."
 	greenMessage " "
@@ -2384,51 +2388,22 @@ elif [ "$INSTALL" == "WR" ]; then
 	greenOneLineMessage "Webspace Root setup is done. Please enter the above data at the webpanel at "; cyanOneLineMessage "\"Webspace > Master > Add\""; greenMessage "."
 	greenMessage " "
 	greenOneLineMessage "Username: "; cyanMessage "$MASTERUSER"
-	greenOneLineMessage "Webgroup: "; cyanMessage "$WEBGROUPNAME"
 	if [ -f /home/easywi_web/htdocs/keys/"$MASTERUSER" -a "$SSH_KEY_NOT_COPY" != "YES" ]; then
 		greenOneLineMessage "Keyfile Name: "; cyanMessage "$MASTERUSER"
 	else
-		yellowMessage "Don't forget to copy Keyfile into \"/home/easywi_web/htdocs/keys/\""
+		yellowMessage "Don't forget to copy Keyfile into \"/home/easywi_web/keys/\""
 	fi
 	greenMessage " "
-	if [ "$MYSQL_ROOT_PASSWORD" != "" ]; then
-		greenOneLineMessage "DB root user name are "; cyanOneLineMessage "root"; greenOneLineMessage " and the password is "; cyanMessage "$MYSQL_ROOT_PASSWORD"
-		if [ ! -f /root/database_root_login.txt ]; then
-			touch /root/database_root_login.txt
-			echo "User: root" > /root/database_root_login.txt
-			echo "Password: $MYSQL_ROOT_PASSWORD" >> /root/database_root_login.txt
-			greenOneLineMessage "Database root login data is saved in "; cyanOneLineMessage "\"/root/database_root_login.txt\""; greenMessage "."
-			redMessage "Please download and remove this file from this system!"
-		fi
-		greenMessage " "
-	fi
-elif [ "$INSTALL" == "MY" ]; then
-	if [ "$MYSQL_USER" != "" -a "$MYSQL_USER_PASSWORD" != "" ]; then
-		greenMessage " "
-		greenOneLineMessage "MySQL setup is done. Please enter the server at the webpanel at "; cyanOneLineMessage "\"MySQL > Master > Add\""; greenMessage "."
-		greenMessage " "
-		greenOneLineMessage "DB user name are "; cyanOneLineMessage "$MYSQL_USER"; greenOneLineMessage " and the password is "; cyanMessage "$MYSQL_USER_PASSWORD"
-		greenMessage " "
-	fi
-	if [ "$MYSQL_ROOT_PASSWORD" != "" -a "$SQL" != "None" ]; then
-		greenOneLineMessage "DB root user name are "; cyanOneLineMessage "root"; greenOneLineMessage " and the password is "; cyanMessage "$MYSQL_ROOT_PASSWORD"
-		if [ ! -f /root/database_root_login.txt ]; then
-			touch /root/database_root_login.txt
-			echo "User: root" > /root/database_root_login.txt
-			echo "Password: $MYSQL_ROOT_PASSWORD" >> /root/database_root_login.txt
-			greenOneLineMessage "Database root login data is saved in "; cyanOneLineMessage "\"/root/database_root_login.txt\""; greenMessage "."
-			redMessage "Please download and remove this file from this system!"
-		fi
-		greenMessage " "
-	fi
 fi
 
-if [ -f /root/database_root_login.txt ]; then
-	chmod 600 /root/database_root_login.txt 2>&1 >/dev/null
+if ([ "$INSTALL" == "MY" ] || [ "$INSTALL" == "WR" -a "$SQL" != "None" ]); then
+	greenMessage " "
+	greenOneLineMessage "MySQL Root setup is done. Please enter the server at the webpanel at "; cyanOneLineMessage "\"MySQL > Master > Add\""; greenMessage "."
+	greenMessage " "
 fi
 
 # clear password variable
-unset MYSQL_ROOT_PASSWORD MYSQL_USER_PASSWORD DB_PASSWORD QUERY_PASSWORD WEBGROUPNAME2 FIREWALL
+unset MYSQL_ROOT_PASSWORD DB_PASSWORD QUERY_PASSWORD
 
 cyanMessage " "
 
