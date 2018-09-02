@@ -864,280 +864,280 @@ gpgcheck=1' > /etc/yum.repos.d/MariaDB.repo
 				$INSTALLER -y update
 			fi
 		fi
+	fi
 
-		if [ "$SQL" == "MySQL" ]; then
-			cyanMessage " "
-			checkInstall mysql-server
-			checkInstall mysql-client
-			checkInstall mysql-common
-		elif [ "$SQL" == "MariaDB" ]; then
-			cyanMessage " "
-			if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
-				checkInstall mariadb-server
-				checkInstall mariadb-client
-				if ([ "`printf "${OSVERSION_TMP}\n8.0" | sort -V | tail -n 1`" == "8.0" -o "$OS" == "ubuntu" ] && [ "`grep '/mariadb/' /etc/apt/sources.list`" == "" ]); then
-					checkInstall mysql-common
-				else
-					checkInstall mariadb-common
-				fi
-			elif [ "$OS" == "centos" ]; then
-				checkInstall mariadb-server
-				systemctl enable mariadb.service >/dev/null 2>&1
+  if [ "$SQL" == "MySQL" ]; then
+		cyanMessage " "
+		checkInstall mysql-server
+		checkInstall mysql-client
+		checkInstall mysql-common
+	elif [ "$SQL" == "MariaDB" ]; then
+		cyanMessage " "
+		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
+			checkInstall mariadb-server
+			checkInstall mariadb-client
+			if ([ "`printf "${OSVERSION_TMP}\n8.0" | sort -V | tail -n 1`" == "8.0" -o "$OS" == "ubuntu" ] && [ "`grep '/mariadb/' /etc/apt/sources.list`" == "" ]); then
+				checkInstall mysql-common
+			else
+				checkInstall mariadb-common
 			fi
+		elif [ "$OS" == "centos" ]; then
+			checkInstall mariadb-server
+			systemctl enable mariadb.service >/dev/null 2>&1
+		fi
+	fi
+
+	if [ "$SQL" != "None" ]; then
+		if [ "$OS" == "debian" -o "$OS" == "ubuntu" -a -f /etc/mysql/my.cnf ]; then
+			backUpFile /etc/mysql/my.cnf
+		elif [ "$OS" == "centos" -a -f /etc/my.cnf -a -f /usr/share/mysql/my-medium.cnf ]; then
+			backUpFile /etc/my.cnf
+			cp /usr/share/mysql/my-medium.cnf -R /etc/my.cnf
+		else
+			errorAndExit "$SQL Database not fully installed!"
+		fi
+		RestartDatabase
+
+		if [ "$INSTALL" == "WR" -o "$INSTALL" == "MY" ]; then
+			cyanMessage " "
+			cyanMessage "Is Easy-WI installed on a different server."
+
+			OPTIONS=("Yes" "No" "Quit")
+			select EXTERNAL_INSTALL in "${OPTIONS[@]}"; do
+				case "$REPLY" in
+					1|2 ) break;;
+					3 ) errorAndQuit;;
+					*) errorAndContinue;;
+				esac
+			done
 		fi
 
-		if [ "$SQL" != "None" ]; then
-			if [ "$OS" == "debian" -o "$OS" == "ubuntu" -a -f /etc/mysql/my.cnf ]; then
-				backUpFile /etc/mysql/my.cnf
-			elif [ "$OS" == "centos" -a -f /etc/my.cnf -a -f /usr/share/mysql/my-medium.cnf ]; then
-				backUpFile /etc/my.cnf
-				cp /usr/share/mysql/my-medium.cnf -R /etc/my.cnf
-			else
-				errorAndExit "$SQL Database not fully installed!"
-			fi
-			RestartDatabase
-
-			if [ "$INSTALL" == "WR" -o "$INSTALL" == "MY" ]; then
-				cyanMessage " "
-				cyanMessage "Is Easy-WI installed on a different server."
-
-				OPTIONS=("Yes" "No" "Quit")
-				select EXTERNAL_INSTALL in "${OPTIONS[@]}"; do
-					case "$REPLY" in
-						1|2 ) break;;
-						3 ) errorAndQuit;;
-						*) errorAndContinue;;
-					esac
-				done
+		cyanMessage " "
+		okAndSleep "Securing MySQL by running \"mysql_secure_installation\" commands."
+		if [ "$MYSQL_ROOT_PASSWORD" != "" ]; then
+			if [ "$OS" == "centos" ]; then
+				mysqladmin -u root password "$MYSQL_ROOT_PASSWORD"
+				mysqladmin shutdown -p"$MYSQL_ROOT_PASSWORD"
+				RestartDatabase
 			fi
 
-			cyanMessage " "
-			okAndSleep "Securing MySQL by running \"mysql_secure_installation\" commands."
-			if [ "$MYSQL_ROOT_PASSWORD" != "" ]; then
-				if [ "$OS" == "centos" ]; then
-					mysqladmin -u root password "$MYSQL_ROOT_PASSWORD"
-					mysqladmin shutdown -p"$MYSQL_ROOT_PASSWORD"
-					RestartDatabase
-				fi
-
-				mysql --user=root --password="$MYSQL_ROOT_PASSWORD" <<_EOF_
+			mysql --user=root --password="$MYSQL_ROOT_PASSWORD" <<_EOF_
 DELETE FROM mysql.user WHERE User='';
 DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
 DROP DATABASE IF EXISTS test;
 DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';
 FLUSH PRIVILEGES;
 _EOF_
-			else
-				cyanMessage " "
-				errorAndExit "Error: Password for MySQL Server not found!"
-			fi
-		fi
-
-		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
-			MYSQL_CONF="/etc/mysql/my.cnf"
-		elif [ "$OS" == "centos" ]; then
-			MYSQL_CONF="/etc/my.cnf"
-		fi
-
-		if [ "$EXTERNAL_INSTALL" == "Yes" ]; then
-			mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "GRANT USAGE ON *.* TO 'root'@'' IDENTIFIED BY '$MYSQL_ROOT_PASSWORD' WITH MAX_QUERIES_PER_HOUR 0 MAX_CONNECTIONS_PER_HOUR 0 MAX_UPDATES_PER_HOUR 0 MAX_USER_CONNECTIONS 0;" 2> /dev/null
-			mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "UPDATE mysql.user SET Select_priv='Y',Insert_priv='Y',Update_priv='Y',Delete_priv='Y',Create_priv='Y',Drop_priv='Y',Reload_priv='Y',Shutdown_priv='Y',Process_priv='Y',File_priv='Y',Grant_priv='Y',References_priv='Y',Index_priv='Y',Alter_priv='Y',Show_db_priv='Y',Super_priv='Y',Create_tmp_table_priv='Y',Lock_tables_priv='Y',Execute_priv='Y',Repl_slave_priv='Y',Repl_client_priv='Y',Create_view_priv='Y',Show_view_priv='Y',Create_routine_priv='Y',Alter_routine_priv='Y',Create_user_priv='Y',Event_priv='Y',Trigger_priv='Y',Create_tablespace_priv='Y' WHERE User='root' AND Host='';" 2> /dev/null
-
-			if [ "$LOCAL_IP" == "" ]; then
-				cyanMessage " "
-				cyanMessage "Could not detect local IP. Please specify which to use."
-				read LOCAL_IP
-			fi
-
-			if [ "$LOCAL_IP" != "" -a -f "$MYSQL_CONF" ]; then
-				if [ "`grep 'bind-address' $MYSQL_CONF`" ]; then
-					sed -i "s/bind-address.*/bind-address = 0.0.0.0/g" $MYSQL_CONF
-				else
-					sed -i "/\[mysqld\]/abind-address = 0.0.0.0" $MYSQL_CONF
-				fi
-			fi
 		else
-			if [ "`cat $MYSQL_CONF | grep 'bind-address'`" == "" ]; then
-				sed -i "/\[mysqld\]/abind-address = 127.0.0.1" $MYSQL_CONF
-			elif [ "`cat $MYSQL_CONF | grep 'bind-address = 0.0.0.0'`" == "" ]; then
-				sed -i "s/bind-address.*/bind-address = 127.0.0.1/g" $MYSQL_CONF
-			fi
-		fi
-
-		if [ "$SQL" != "None" ]; then
-			MYSQL_VERSION=`mysql -V | awk {'print $5'} | tr -d ,`
-		fi
-
-		if [ "$SQL" != "None" -a "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
-			if [ "`grep -E 'key_buffer[[:space:]]*=' /etc/mysql/my.cnf`" != "" -a "printf "${MYSQL_VERSION}\n5.5" | sort -V | tail -n 1" != "5.5" ]; then
-				sed -i -e "51s/key_buffer[[:space:]]*=/key_buffer_size = /g" $MYSQL_CONF
-				sed -i -e "57s/myisam-recover[[:space:]]*=/myisam-recover-options = /g" $MYSQL_CONF
-			fi
-			if [ "$SQL" != "None" -a "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1603" -a ! -f /etc/mysql/conf.d/disable_strict_mode.cnf ]; then
-				echo '[mysqld]' > /etc/mysql/conf.d/disable_strict_mode.cnf
-				echo 'sql_mode=IGNORE_SPACE,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION' >> /etc/mysql/conf.d/disable_strict_mode.cnf
-			fi
-		fi
-
-		RestartDatabase
-
-		if [ "$INSTALL" == "EW" -a "`ps ax | grep mysql | grep -v grep`" == "" ]; then
 			cyanMessage " "
-			errorAndExit "Error: No SQL server running but required for Webpanel installation."
+			errorAndExit "Error: Password for MySQL Server not found!"
 		fi
 	fi
 
-	if [ "$INSTALL" == "EW" ]; then
-		cyanMessage " "
-		okAndSleep "Please note that Easy-Wi will install required PHP packages."
-		PHPINSTALL="Yes"
-	elif [ "$INSTALL" != "MY" -a "`rpm -qa php 2>/dev/null`" == "" -a "`dpkg -l 2>/dev/null | egrep -o "php-common"`" ]; then
-		cyanMessage " "
-		cyanMessage "Install/Update PHP?"
-		cyanMessage "Select \"None\" in case this server should host only Fastdownload webspace."
+	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
+		MYSQL_CONF="/etc/mysql/my.cnf"
+	elif [ "$OS" == "centos" ]; then
+		MYSQL_CONF="/etc/my.cnf"
+	fi
 
-		OPTIONS=("Yes" "No" "None" "Quit")
-		select PHPINSTALL in "${OPTIONS[@]}"; do
-			case "$REPLY" in
-				1|2|3 ) break;;
-				4 ) errorAndQuit;;
-				*) errorAndContinue;;
-			esac
-		done
+	if [ "$EXTERNAL_INSTALL" == "Yes" ]; then
+		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "GRANT USAGE ON *.* TO 'root'@'' IDENTIFIED BY '$MYSQL_ROOT_PASSWORD' WITH MAX_QUERIES_PER_HOUR 0 MAX_CONNECTIONS_PER_HOUR 0 MAX_UPDATES_PER_HOUR 0 MAX_USER_CONNECTIONS 0;" 2> /dev/null
+		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "UPDATE mysql.user SET Select_priv='Y',Insert_priv='Y',Update_priv='Y',Delete_priv='Y',Create_priv='Y',Drop_priv='Y',Reload_priv='Y',Shutdown_priv='Y',Process_priv='Y',File_priv='Y',Grant_priv='Y',References_priv='Y',Index_priv='Y',Alter_priv='Y',Show_db_priv='Y',Super_priv='Y',Create_tmp_table_priv='Y',Lock_tables_priv='Y',Execute_priv='Y',Repl_slave_priv='Y',Repl_client_priv='Y',Create_view_priv='Y',Show_view_priv='Y',Create_routine_priv='Y',Alter_routine_priv='Y',Create_user_priv='Y',Event_priv='Y',Trigger_priv='Y',Create_tablespace_priv='Y' WHERE User='root' AND Host='';" 2> /dev/null
+
+		if [ "$LOCAL_IP" == "" ]; then
+			cyanMessage " "
+			cyanMessage "Could not detect local IP. Please specify which to use."
+			read LOCAL_IP
+		fi
+
+		if [ "$LOCAL_IP" != "" -a -f "$MYSQL_CONF" ]; then
+			if [ "`grep 'bind-address' $MYSQL_CONF`" ]; then
+				sed -i "s/bind-address.*/bind-address = 0.0.0.0/g" $MYSQL_CONF
+			else
+				sed -i "/\[mysqld\]/abind-address = 0.0.0.0" $MYSQL_CONF
+			fi
+		fi
 	else
-		PHPINSTALL="None"
+		if [ "`cat $MYSQL_CONF | grep 'bind-address'`" == "" ]; then
+			sed -i "/\[mysqld\]/abind-address = 127.0.0.1" $MYSQL_CONF
+		elif [ "`cat $MYSQL_CONF | grep 'bind-address = 0.0.0.0'`" == "" ]; then
+			sed -i "s/bind-address.*/bind-address = 127.0.0.1/g" $MYSQL_CONF
+		fi
 	fi
 
-	if [ "$PHPINSTALL" == "Yes" ]; then
-		USE_PHP_VERSION='5'
+	if [ "$SQL" != "None" ]; then
+		MYSQL_VERSION=`mysql -V | awk {'print $5'} | tr -d ,`
+	fi
 
-		if [ "$OS" == "debian" -a "$OSVERSION_TMP" -ge "85" -o "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1604" -a "$OSVERSION_TMP" -lt "1610" ]; then
-			USE_PHP_VERSION='7.0'
-		elif [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1610" -a "$OSVERSION_TMP" -lt "1803" -o "$OS" == "centos" ]; then
-			USE_PHP_VERSION='7.1'
-		elif [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1803" ]; then
-			USE_PHP_VERSION='7.2'
+	if [ "$SQL" != "None" -a "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
+		if [ "`grep -E 'key_buffer[[:space:]]*=' /etc/mysql/my.cnf`" != "" -a "printf "${MYSQL_VERSION}\n5.5" | sort -V | tail -n 1" != "5.5" ]; then
+			sed -i -e "51s/key_buffer[[:space:]]*=/key_buffer_size = /g" $MYSQL_CONF
+			sed -i -e "57s/myisam-recover[[:space:]]*=/myisam-recover-options = /g" $MYSQL_CONF
 		fi
+		if [ "$SQL" != "None" -a "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1603" -a ! -f /etc/mysql/conf.d/disable_strict_mode.cnf ]; then
+			echo '[mysqld]' > /etc/mysql/conf.d/disable_strict_mode.cnf
+			echo 'sql_mode=IGNORE_SPACE,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION' >> /etc/mysql/conf.d/disable_strict_mode.cnf
+		fi
+	fi
 
-		if [ "$OS" == "debian" -a "$DOTDEB" == "Yes" ]; then
-			if [ "$OSBRANCH" == "wheezy" ]; then
-				cyanMessage " "
-				cyanMessage "Which PHP version should be used?"
+	RestartDatabase
 
-				OPTIONS=("5.4" "5.5", "5.6", "5.6 Zend thread safety" "Quit")
-				select DOTDEBPHPUPGRADE in "${OPTIONS[@]}"; do
-					case "$REPLY" in
-						1|2|3|4 ) break;;
-						5 ) errorAndQuit;;
-						*) errorAndContinue;;
-					esac
-				done
+	if [ "$INSTALL" == "EW" -a "`ps ax | grep mysql | grep -v grep`" == "" ]; then
+		cyanMessage " "
+		errorAndExit "Error: No SQL server running but required for Webpanel installation."
+	fi
+fi
 
-				if [ "$DOTDEBPHPUPGRADE" == "5.5" -a "`grep 'wheezy-php55' /etc/apt/sources.list`" == "" ]; then
-					add-apt-repository "deb http://packages.dotdeb.org wheezy-php55 all"
-					add-apt-repository "deb-src http://packages.dotdeb.org wheezy-php55 all"
-				elif [ "$DOTDEBPHPUPGRADE" == "5.6" -a "`grep 'wheezy-php56' /etc/apt/sources.list`" == "" ]; then
-					add-apt-repository "deb http://packages.dotdeb.org wheezy-php56 all"
-					add-apt-repository "deb-src http://packages.dotdeb.org wheezy-php56 all"
-				elif [ "$DOTDEBPHPUPGRADE" == "5.6 Zend thread safety" -a "`grep 'wheezy-php56-zts' /etc/apt/sources.list`" == "" ]; then
-					add-apt-repository "deb http://packages.dotdeb.org wheezy-php56-zts all"
-					add-apt-repository "deb-src http://packages.dotdeb.org wheezy-php56-zts all"
-				fi
-			elif [ "$OSBRANCH" == "squeeze" -a "`grep 'squeeze-php54' /etc/apt/sources.list`" == "" ]; then
-				add-apt-repository "deb http://packages.dotdeb.org squeeze-php54 all"
-				add-apt-repository "deb-src http://packages.dotdeb.org squeeze-php54 all"
+if [ "$INSTALL" == "EW" ]; then
+	cyanMessage " "
+	okAndSleep "Please note that Easy-Wi will install required PHP packages."
+	PHPINSTALL="Yes"
+elif [ "$INSTALL" == "WR" -a "`rpm -qa php 2>/dev/null`" == "" -a "`dpkg -l 2>/dev/null | egrep -o "php-common"`" == "" ]; then
+	cyanMessage " "
+	cyanMessage "Install/Update PHP?"
+	cyanMessage "Select \"None\" in case this server should host only Fastdownload webspace."
+
+	OPTIONS=("Yes" "No" "None" "Quit")
+	select PHPINSTALL in "${OPTIONS[@]}"; do
+		case "$REPLY" in
+			1|2|3 ) break;;
+			4 ) errorAndQuit;;
+			*) errorAndContinue;;
+		esac
+	done
+else
+	PHPINSTALL="None"
+fi
+
+if [ "$PHPINSTALL" == "Yes" ]; then
+	USE_PHP_VERSION='5'
+
+	if [ "$OS" == "debian" -a "$OSVERSION_TMP" -ge "85" -o "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1604" -a "$OSVERSION_TMP" -lt "1610" ]; then
+		USE_PHP_VERSION='7.0'
+	elif [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1610" -a "$OSVERSION_TMP" -lt "1803" -o "$OS" == "centos" ]; then
+		USE_PHP_VERSION='7.1'
+	elif [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1803" ]; then
+		USE_PHP_VERSION='7.2'
+	fi
+
+	if [ "$OS" == "debian" -a "$DOTDEB" == "Yes" ]; then
+		if [ "$OSBRANCH" == "wheezy" ]; then
+			cyanMessage " "
+			cyanMessage "Which PHP version should be used?"
+
+			OPTIONS=("5.4" "5.5", "5.6", "5.6 Zend thread safety" "Quit")
+			select DOTDEBPHPUPGRADE in "${OPTIONS[@]}"; do
+				case "$REPLY" in
+					1|2|3|4 ) break;;
+					5 ) errorAndQuit;;
+					*) errorAndContinue;;
+				esac
+			done
+
+			if [ "$DOTDEBPHPUPGRADE" == "5.5" -a "`grep 'wheezy-php55' /etc/apt/sources.list`" == "" ]; then
+				add-apt-repository "deb http://packages.dotdeb.org wheezy-php55 all"
+				add-apt-repository "deb-src http://packages.dotdeb.org wheezy-php55 all"
+			elif [ "$DOTDEBPHPUPGRADE" == "5.6" -a "`grep 'wheezy-php56' /etc/apt/sources.list`" == "" ]; then
+				add-apt-repository "deb http://packages.dotdeb.org wheezy-php56 all"
+				add-apt-repository "deb-src http://packages.dotdeb.org wheezy-php56 all"
+			elif [ "$DOTDEBPHPUPGRADE" == "5.6 Zend thread safety" -a "`grep 'wheezy-php56-zts' /etc/apt/sources.list`" == "" ]; then
+				add-apt-repository "deb http://packages.dotdeb.org wheezy-php56-zts all"
+				add-apt-repository "deb-src http://packages.dotdeb.org wheezy-php56-zts all"
 			fi
-
-			if [ "$OSBRANCH" == "wheezy" -o "$OSBRANCH" == "squeeze" ]; then
-				$INSTALLER update
-				$INSTALLER upgrade -y && $INSTALLER dist-upgrade -y
-			fi
+		elif [ "$OSBRANCH" == "squeeze" -a "`grep 'squeeze-php54' /etc/apt/sources.list`" == "" ]; then
+			add-apt-repository "deb http://packages.dotdeb.org squeeze-php54 all"
+			add-apt-repository "deb-src http://packages.dotdeb.org squeeze-php54 all"
 		fi
 
-		if [ "$OS" == "centos" ]; then
-			checkInstall http://rpms.remirepo.net/enterprise/remi-release-7.rpm
-			yum-config-manager --enable remi-php71
+		if [ "$OSBRANCH" == "wheezy" -o "$OSBRANCH" == "squeeze" ]; then
+			$INSTALLER update
+			$INSTALLER upgrade -y && $INSTALLER dist-upgrade -y
 		fi
+	fi
+
+	if [ "$OS" == "centos" ]; then
+		checkInstall http://rpms.remirepo.net/enterprise/remi-release-7.rpm
+		yum-config-manager --enable remi-php71
+	fi
+
+	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
+		if [ "$WEBSERVER" == "Apache" ]; then
+			checkInstall php${USE_PHP_VERSION}
+		fi
+		checkInstall php${USE_PHP_VERSION}-common
+		checkInstall php${USE_PHP_VERSION}-curl
+		checkInstall php${USE_PHP_VERSION}-gd
+		if [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -lt "1803" -o "$OS" == "debian" ]; then
+			checkInstall php${USE_PHP_VERSION}-mcrypt
+		elif [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1804" ]; then
+			checkInstall libsodium-dev
+		fi
+		checkInstall php${USE_PHP_VERSION}-mysql
+		checkInstall php${USE_PHP_VERSION}-cli
+		checkInstall php${USE_PHP_VERSION}-xml
+		checkInstall php${USE_PHP_VERSION}-mbstring
+		checkInstall php${USE_PHP_VERSION}-zip
+	elif [ "$OS" == "centos" ]; then
+		checkInstall php
+		checkInstall php-common
+		checkInstall php-gd
+		checkInstall libsodium-devel
+		checkInstall php-mysqlnd
+		checkInstall php-cli
+		checkInstall php-xml
+		checkInstall php-mbstring
+		checkInstall php-zip
+	fi
+
+	if [ "$WEBSERVER" == "Lighttpd" ]; then
+		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
+			checkInstall php${USE_PHP_VERSION}-fpm
+			lighttpd-enable-mod fastcgi
+			lighttpd-enable-mod fastcgi-php
+		elif [ "$OS" == "centos" ]; then
+			checkInstall php-fpm
+			systemctl enable php-fpm.service >/dev/null 2>&1
+
+			backUpFile /etc/php.ini
+			backUpFile /etc/php-fpm.conf
+			backUpFile /etc/php-fpm.d/www.conf
+
+			sed -i "s/user = apache/user = lighttpd/g" /etc/php-fpm.d/www.conf
+			sed -i "s/group = apache/group = lighttpd/g" /etc/php-fpm.d/www.conf
+		fi
+
+		makeDir /home/$MASTERUSER/fpm-pool.d/
 
 		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
-			if [ "$WEBSERVER" == "Apache" ]; then
-				checkInstall php${USE_PHP_VERSION}
+			if [ -f /etc/php5/fpm/php-fpm.conf ]; then
+				sed -i "s/include=\/etc\/php5\/fpm\/pool.d\/\*.conf/include=\/home\/$MASTERUSER\/fpm-pool.d\/\*.conf/g" /etc/php5/fpm/php-fpm.conf
+			elif [ -f /etc/php/"${USE_PHP_VERSION}"/fpm/php-fpm.conf ]; then
+				sed -i "s/include=\/etc\/php\/${USE_PHP_VERSION}\/fpm\/pool.d\/\*.conf/include=\/home\/$MASTERUSER\/fpm-pool.d\/\*.conf/g" /etc/php/"${USE_PHP_VERSION}"/fpm/php-fpm.conf
 			fi
-			checkInstall php${USE_PHP_VERSION}-common
-			checkInstall php${USE_PHP_VERSION}-curl
-			checkInstall php${USE_PHP_VERSION}-gd
-			if [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -lt "1803" -o "$OS" == "debian" ]; then
-				checkInstall php${USE_PHP_VERSION}-mcrypt
-			elif [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1804" ]; then
-				checkInstall libsodium-dev
+		fi
+	elif [ "$WEBSERVER" == "Apache" ]; then
+		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
+			if [ "$OS" == "debian" -a "$OSVERSION_TMP" -lt "9" -o "$OS" == "ubuntu" -a "$OSVERSION_TMP" -lt "1803" ]; then
+				checkInstall apache2-mpm-itk
 			fi
-			checkInstall php${USE_PHP_VERSION}-mysql
-			checkInstall php${USE_PHP_VERSION}-cli
-			checkInstall php${USE_PHP_VERSION}-xml
-			checkInstall php${USE_PHP_VERSION}-mbstring
-			checkInstall php${USE_PHP_VERSION}-zip
+			checkInstall libapache2-mpm-itk
+			checkInstall libapache2-mod-php${USE_PHP_VERSION}
+			a2enmod php${USE_PHP_VERSION}
 		elif [ "$OS" == "centos" ]; then
-			checkInstall php
-			checkInstall php-common
-			checkInstall php-gd
-			checkInstall libsodium-devel
-			checkInstall php-mysqlnd
-			checkInstall php-cli
-			checkInstall php-xml
-			checkInstall php-mbstring
-			checkInstall php-zip
+			checkInstall httpd-itk
+			backUpFile /etc/httpd/conf.modules.d/00-mpm-itk.conf
+			sed -i "s/#LoadModule mpm_itk_module modules\/mod_mpm_itk.so/LoadModule mpm_itk_module modules\/mod_mpm_itk.so/g" /etc/httpd/conf.modules.d/00-mpm-itk.conf
 		fi
+	fi
 
-		if [ "$WEBSERVER" == "Lighttpd" ]; then
-			if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
-				checkInstall php${USE_PHP_VERSION}-fpm
-				lighttpd-enable-mod fastcgi
-				lighttpd-enable-mod fastcgi-php
-			elif [ "$OS" == "centos" ]; then
-				checkInstall php-fpm
-				systemctl enable php-fpm.service >/dev/null 2>&1
-
-				backUpFile /etc/php.ini
-				backUpFile /etc/php-fpm.conf
-				backUpFile /etc/php-fpm.d/www.conf
-
-				sed -i "s/user = apache/user = lighttpd/g" /etc/php-fpm.d/www.conf
-				sed -i "s/group = apache/group = lighttpd/g" /etc/php-fpm.d/www.conf
-			fi
-
-			makeDir /home/$MASTERUSER/fpm-pool.d/
-
-			if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
-				if [ -f /etc/php5/fpm/php-fpm.conf ]; then
-					sed -i "s/include=\/etc\/php5\/fpm\/pool.d\/\*.conf/include=\/home\/$MASTERUSER\/fpm-pool.d\/\*.conf/g" /etc/php5/fpm/php-fpm.conf
-				elif [ -f /etc/php/"${USE_PHP_VERSION}"/fpm/php-fpm.conf ]; then
-					sed -i "s/include=\/etc\/php\/${USE_PHP_VERSION}\/fpm\/pool.d\/\*.conf/include=\/home\/$MASTERUSER\/fpm-pool.d\/\*.conf/g" /etc/php/"${USE_PHP_VERSION}"/fpm/php-fpm.conf
-				fi
-			fi
-		elif [ "$WEBSERVER" == "Apache" ]; then
-			if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
-				if [ "$OS" == "debian" -a "$OSVERSION_TMP" -lt "9" -o "$OS" == "ubuntu" -a "$OSVERSION_TMP" -lt "1803" ]; then
-					checkInstall apache2-mpm-itk
-				fi
-				checkInstall libapache2-mpm-itk
-				checkInstall libapache2-mod-php${USE_PHP_VERSION}
-				a2enmod php${USE_PHP_VERSION}
-			elif [ "$OS" == "centos" ]; then
-				checkInstall httpd-itk
-				backUpFile /etc/httpd/conf.modules.d/00-mpm-itk.conf
-				sed -i "s/#LoadModule mpm_itk_module modules\/mod_mpm_itk.so/LoadModule mpm_itk_module modules\/mod_mpm_itk.so/g" /etc/httpd/conf.modules.d/00-mpm-itk.conf
-			fi
-		fi
-
-		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ] && [ -f /etc/php5/fpm/php-fpm.conf ]; then
-			PHP_SOCKET="/var/run/php${USE_PHP_VERSION}-fpm.sock"
-		elif [ "$OS" == "debian" -o "$OS" == "ubuntu" ] && [ -f /etc/php/${USE_PHP_VERSION}/fpm/php-fpm.conf ]; then
-			#In case of php 7 the socket is different
-			PHP_SOCKET="/var/run/php/php${USE_PHP_VERSION}-fpm.sock"
-		elif [ "$OS" == "centos" -a -f /etc/php-fpm.conf ]; then
-			#In case of centos the socket is different
-			PHP_SOCKET="/var/run/php-fpm/php-fpm.sock"
-		fi
+	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ] && [ -f /etc/php5/fpm/php-fpm.conf ]; then
+		PHP_SOCKET="/var/run/php${USE_PHP_VERSION}-fpm.sock"
+	elif [ "$OS" == "debian" -o "$OS" == "ubuntu" ] && [ -f /etc/php/${USE_PHP_VERSION}/fpm/php-fpm.conf ]; then
+		#In case of php 7 the socket is different
+		PHP_SOCKET="/var/run/php/php${USE_PHP_VERSION}-fpm.sock"
+	elif [ "$OS" == "centos" -a -f /etc/php-fpm.conf ]; then
+		#In case of centos the socket is different
+		PHP_SOCKET="/var/run/php-fpm/php-fpm.sock"
 	fi
 
 	RestartWebserver
@@ -1147,7 +1147,7 @@ if ([ "$INSTALL" == "WR" -o "$INSTALL" == "EW" ] && [ "`grep '/bin/false' /etc/s
 	echo "/bin/false" >> /etc/shells
 fi
 
-if [ "$INSTALL" != "VS" -a "$INSTALL" != "EW" -a "$INSTALL" != "MY" ]; then
+if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
 	if [ "`rpm -qa proftpd 2>/dev/null`" == "" -a "`dpkg -l 2>/dev/null | egrep -o "proftpd"`" == "" ]; then
 		cyanMessage " "
 		cyanMessage "Install/Update ProFTPD?"
@@ -2242,75 +2242,77 @@ elif [ "$OS" == "centos" ]; then
 fi
 
 # Firewall CentOS
-if ([ "$OS" == "centos" -a "`rpm -qa firewalld`" != "" -a "`systemctl status firewalld 2>/dev/null | egrep -o 'inactive'`" == "" ]); then
-	yellowMessage " "
-	yellowMessage "Adding Firewall Rules for:"
+if [ "$OS" == "centos" ]; then
+	if ([ "`rpm -qa firewalld`" != "" -a "`systemctl status firewalld 2>/dev/null | egrep -o 'inactive'`" == "" ]); then
+		yellowMessage " "
+		yellowMessage "Adding Firewall Rules for:"
 
-	if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" ]; then
-		if [ "`firewall-cmd --zone=public --list-all | egrep -o 'http'`" == "" ]; then
-			greenMessage " - HTTP Port: 80/tcp"
-			firewall-cmd --zone=public --permanent --add-service=http 1> /dev/null
-			FIREWALL="Yes"
-		fi
-		if [ "$SSL" == "Yes" -a "`firewall-cmd --zone=public --list-all | egrep -o '443'`" == "" ]; then
-			greenMessage " - HTTPS Port: 443/tcp"
-			firewall-cmd --zone=public --permanent --add-port=443/tcp 1> /dev/null
-			FIREWALL="Yes"
-		fi
-	fi
-
-	if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" -o "$INSTALL" == "GS" ]; then
-		if [ "$PROFTP_INSTALL" != "NO" ]; then
-			if [ "`firewall-cmd --zone=public --list-all | egrep -o 'ftp'`" == "" ]; then
-				greenMessage " - FTP Port: 21/tcp"
-				firewall-cmd --zone=public --permanent --add-port=21/tcp 1> /dev/null
-				firewall-cmd --zone=public --permanent --add-service=ftp 1> /dev/null
+		if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" ]; then
+			if [ "`firewall-cmd --zone=public --list-all | egrep -o 'http'`" == "" ]; then
+				greenMessage " - HTTP Port: 80/tcp"
+				firewall-cmd --zone=public --permanent --add-service=http 1> /dev/null
+				FIREWALL="Yes"
+			fi
+			if [ "$SSL" == "Yes" -a "`firewall-cmd --zone=public --list-all | egrep -o '443'`" == "" ]; then
+				greenMessage " - HTTPS Port: 443/tcp"
+				firewall-cmd --zone=public --permanent --add-port=443/tcp 1> /dev/null
 				FIREWALL="Yes"
 			fi
 		fi
-	fi
 
-	if [ "$INSTALL" == "WR" -o "$INSTALL" == "MY" ]; then
-		if [ "$EXTERNAL_INSTALL" == "Yes" -a "$SQL" != "None" ]; then
-			if [ "`firewall-cmd --zone=public --list-all | egrep -o 'mysql'`" == "" ]; then
-				greenMessage " - MySQL Port: 3306/tcp"
-				firewall-cmd --zone=public --permanent --add-service=mysql 1> /dev/null
+		if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" -o "$INSTALL" == "GS" ]; then
+			if [ "$PROFTP_INSTALL" != "NO" ]; then
+				if [ "`firewall-cmd --zone=public --list-all | egrep -o 'ftp'`" == "" ]; then
+					greenMessage " - FTP Port: 21/tcp"
+					firewall-cmd --zone=public --permanent --add-port=21/tcp 1> /dev/null
+					firewall-cmd --zone=public --permanent --add-service=ftp 1> /dev/null
+					FIREWALL="Yes"
+				fi
+			fi
+		fi
+
+		if [ "$INSTALL" == "WR" -o "$INSTALL" == "MY" ]; then
+			if [ "$EXTERNAL_INSTALL" == "Yes" -a "$SQL" != "None" ]; then
+				if [ "`firewall-cmd --zone=public --list-all | egrep -o 'mysql'`" == "" ]; then
+					greenMessage " - MySQL Port: 3306/tcp"
+					firewall-cmd --zone=public --permanent --add-service=mysql 1> /dev/null
+					FIREWALL="Yes"
+				fi
+			fi
+		fi
+
+		if [ "$INSTALL" == "VS" ]; then
+			if [ "`firewall-cmd --zone=public --list-all | egrep -o '9987'`" == "" ]; then
+				greenMessage " - Teamspeak Port: 10011/tcp, 30033/tcp, 9987/udp"
+				firewall-cmd --zone=public --permanent --add-port=10011/tcp 1> /dev/null
+				firewall-cmd --zone=public --permanent --add-port=30033/tcp 1> /dev/null
+				firewall-cmd --zone=public --permanent --add-port=9987/udp 1> /dev/null
 				FIREWALL="Yes"
 			fi
 		fi
-	fi
 
-	if [ "$INSTALL" == "VS" ]; then
-		if [ "`firewall-cmd --zone=public --list-all | egrep -o '9987'`" == "" ]; then
-			greenMessage " - Teamspeak Port: 10011/tcp, 30033/tcp, 9987/udp"
-			firewall-cmd --zone=public --permanent --add-port=10011/tcp 1> /dev/null
-			firewall-cmd --zone=public --permanent --add-port=30033/tcp 1> /dev/null
-			firewall-cmd --zone=public --permanent --add-port=9987/udp 1> /dev/null
-			FIREWALL="Yes"
-		fi
-	fi
-
-	if [ "$INSTALL" == "GS" ]; then
-		if [ "`firewall-cmd --zone=public --list-all | egrep -o '4380'`" == "" ]; then
-			greenMessage " - Steam Port: 4380/udp, 27000-27030/udp"
-			firewall-cmd --zone=public --permanent --add-port=4380/udp 1> /dev/null
-			firewall-cmd --zone=public --permanent --add-port=27000-27030/udp 1> /dev/null
-			FIREWALL="Yes"
-		fi
-	fi
-
-	if [ "$FIREWALL" == "Yes" ]; then
-		firewall-cmd --reload 1> /dev/null
-		greenMessage " "
-	else
 		if [ "$INSTALL" == "GS" ]; then
-			FIREWALL="Yes"
+			if [ "`firewall-cmd --zone=public --list-all | egrep -o '4380'`" == "" ]; then
+				greenMessage " - Steam Port: 4380/udp, 27000-27030/udp"
+				firewall-cmd --zone=public --permanent --add-port=4380/udp 1> /dev/null
+				firewall-cmd --zone=public --permanent --add-port=27000-27030/udp 1> /dev/null
+				FIREWALL="Yes"
+			fi
 		fi
-		greenMessage "Nothing to do."
-		greenMessage " "
+
+		if [ "$FIREWALL" == "Yes" ]; then
+			firewall-cmd --reload 1> /dev/null
+			greenMessage " "
+		else
+			if [ "$INSTALL" == "GS" ]; then
+				FIREWALL="Yes"
+			fi
+			greenMessage "Nothing to do."
+			greenMessage " "
+		fi
+	else
+		FIREWALL="No"
 	fi
-else
-	FIREWALL="No"
 fi
 
 if [ "$INSTALL" == "EW" ]; then
