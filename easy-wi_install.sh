@@ -133,6 +133,14 @@ checkInstall() {
 	fi
 }
 
+importKey() {
+	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
+		apt-key adv --recv-keys --keyserver $1 $2
+	elif [ "$OS" == "centos" ]; then
+		rpm --import $1
+	fi
+}
+
 checkUser() {
 	if [ "$1" == "" ]; then
 		redMessage "Error: No masteruser specified"
@@ -277,7 +285,7 @@ elif [ "$OS" == "centos" ]; then
 	$INSTALLER update -y
 	checkInstall redhat-lsb
 	checkInstall epel-release
-	rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY*
+	importKey /etc/pki/rpm-gpg/RPM-GPG-KEY*
 	checkInstall yum-utils
 fi
 checkInstall curl
@@ -330,9 +338,9 @@ if [ "$OSVERSION" == "" ]; then
 else
 	okAndSleep "Detected version: $OSVERSION"
 
-	if [ "$OS" == "ubuntu" -o "$OS" == "debian" ]; then
+	if [ "$OS" == "ubuntu" ]; then
 		OSVERSION_TMP=`echo "$OSVERSION" | tr -d .`
-	elif [ "$OS" == "centos" ]; then
+	elif [ "$OS" == "centos" -o "$OS" == "debian" ]; then
 		OSVERSION_TMP=`echo "$OSVERSION" | tr -d . | cut -c 1-2`
 	fi
 fi
@@ -343,7 +351,7 @@ else
 	okAndSleep "Detected architecture: $ARCH"
 fi
 
-if [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -lt "1510" -o "$OS" == "debian" -a "$OSVERSION_TMP" -lt "80" -o "$OS" == "centos" -a "$OSVERSION_TMP" -lt "70" ]; then
+if [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -lt "1604" -o "$OS" == "debian" -a "$OSVERSION_TMP" -lt "80" -o "$OS" == "centos" -a "$OSVERSION_TMP" -lt "70" ]; then
 	echo; echo
 	redMessage "Error: Your OS \"$OS - $OSVERSION\" is not more supported from Easy-WI Installer."
 	redMessage "Please Upgrade to a newer OS Version!"
@@ -356,7 +364,7 @@ yellowOneLineMessage "If you want to install everything on this system, then ple
 cyanMessage " "
 cyanMessage "What shall be installed/prepared?"
 
-OPTIONS=("Gameserver Root" "Voicemaster" "Easy-WI Webpanel" "Webspace Root" "MySQL" "Quit")
+OPTIONS=("Easy-WI Webpanel" "Gameserver Root" "Voicemaster" "Webspace Root" "MySQL" "Quit")
 select OPTION in "${OPTIONS[@]}"; do
 	case "$REPLY" in
 		1|2|3|4|5 ) break;;
@@ -744,11 +752,11 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "MY" ]; then
 					*) errorAndContinue;;
 				esac
 			done
-		elif [ "$OS" == "centos" ]; then
-			if [ "`ps fax | grep 'mysqld' | grep -v 'grep'`" == "" ]; then
-				SQL="MariaDB"
-				SQL_VERSION="10"
-			fi
+		fi
+	elif [ "$OS" == "centos" ]; then
+		if [ "`ps fax | grep 'mysqld' | grep -v 'grep'`" == "" ]; then
+			SQL="MariaDB"
+			SQL_VERSION="10"
 		fi
 	fi
 
@@ -786,10 +794,12 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "MY" ]; then
 				checkInstall dirmngr
 			fi
 
-			if [ "$OS" == "debian" ]; then
-				apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 0xcbcb082a1bb943db
+			if [ "$OS" == "debian" -a "$OSVERSION_TMP" -ge "90" ]; then
+				importKey keyserver.ubuntu.com 0xF1656F24C74CD1D8
+			elif [ "$OS" == "debian" -a "$OSVERSION_TMP" -ge "80" ]; then
+				importKey keyserver.ubuntu.com 0xcbcb082a1bb943db
 			elif [ "$OS" == "ubuntu" ]; then
-				apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0xF1656F24C74CD1D8
+				importKey hkp://keyserver.ubuntu.com:80 0xF1656F24C74CD1D8
 			fi
 
 			if [ "`apt-cache search mariadb-server-10.2`" == "" ]; then
@@ -816,7 +826,7 @@ gpgkey=https://yum.mariadb.org/RPM-GPG-KEY-MariaDB
 gpgcheck=1' > /etc/yum.repos.d/MariaDB.repo
 				fi
 			done
-			rpm --import https://yum.mariadb.org/RPM-GPG-KEY-MariaDB
+			importKey https://yum.mariadb.org/RPM-GPG-KEY-MariaDB
 			RUNUPDATE=1
 		fi
 
@@ -979,13 +989,15 @@ fi
 if [ "$PHPINSTALL" == "Yes" ]; then
 	if [ "$OS" == "debian" -a "$OSVERSION_TMP" -ge "85" -o "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1604" -a "$OSVERSION_TMP" -lt "1610" ]; then
 		USE_PHP_VERSION='7.0'
-	elif [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1610" -a "$OSVERSION_TMP" -lt "1803" -o "$OS" == "centos" ]; then
+	elif [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1610" -a "$OSVERSION_TMP" -lt "1803" ]; then
 		USE_PHP_VERSION='7.1'
 	elif [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1803" ]; then
 		USE_PHP_VERSION='7.2'
 	elif [ "$OS" == "centos" ]; then
 		checkInstall http://rpms.remirepo.net/enterprise/remi-release-7.rpm
 		yum-config-manager --enable remi-php71
+	else
+		USE_PHP_VERSION='5'
 	fi
 
 	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
@@ -1544,7 +1556,7 @@ if [ "$INSTALL" == "GS" ]; then
 	chmod -R 750 /home/$MASTERUSER/
 	chmod -R 770 /home/$MASTERUSER/logs/ /home/$MASTERUSER/temp/ /home/$MASTERUSER/fdl_data/
 
-	if [ "$OS" == "debian" -a "$OSVERSION_TMP" -lt "9" ]; then
+	if [ "$OS" == "debian" -a "$OSVERSION_TMP" -lt "90" ]; then
 		if [ "`uname -m`" == "x86_64" -a "`cat /etc/debian_version | grep '6.'`" == "" ]; then
 			dpkg --add-architecture i386
 		fi
@@ -1570,7 +1582,8 @@ if [ "$INSTALL" == "GS" ]; then
 			$INSTALLER install libgcc1:i386 -y
 			$INSTALLER install libreadline5:i386 -y
 			$INSTALLER install libncursesw5:i386 -y
-			if [ "$OS" == "debian" -a "$OSVERSION_TMP" -gt "8" ]; then
+#			if [ "$OS" == "debian" -a "$OSVERSION_TMP" -gt "80" ]; then
+			if [ "`apt-cache search zlib1g-dev`" != "" ]; then
 				$INSTALLER install zlib1g-dev -y
 			else
 				$INSTALLER install zlib1g:i386 -y
