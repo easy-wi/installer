@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DEBUG="ON"
+DEBUG="OFF"
 
 #    Author:     Ulrich Block <ulrich.block@easy-wi.com>,
 #                Alexander Doerwald <alexander.doerwald@easy-wi.com>
