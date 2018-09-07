@@ -9,9 +9,19 @@ Supported OS:
   - Ubuntu
   - CentOS
   
-  ## Unstable Installer (Developer Version)
+## Unstable Installer (Developer Version)
   
 ```sh 
 wget https://raw.githubusercontent.com/easy-wi/installer/master/easy-wi_install.sh
 bash ./easy-wi_install.sh
+```
+
+## Stable Installer
+  
+```sh
+LATEST_VERSION=`wget -q --timeout=60 -O - https://api.github.com/repos/easy-wi/installer/releases/latest | grep -Po '(?<="tag_name": ")([0-9]\.[0-9]+)'`
+wget -O installer.tar.gz https://github.com/easy-wi/installer/archive/$LATEST_VERSION.tar.gz
+tar zxf installer.tar.gz && mv ./installer-*/easy-wi_install.sh ./
+rm -r installer.tar.gz installer-*/
+bash easy-wi_install.sh
 ```
