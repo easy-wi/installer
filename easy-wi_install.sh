@@ -210,15 +210,14 @@ elif [ -f /etc/centos-release ]; then
 	setenforce 0 >/dev/null 2>&1
 	cyanMessage " "
 	if [ "`rpm -qa wget`" == "" ]; then
-		$INSTALLER install -y -q wget >/dev/null 2
+		$INSTALLER -y -q install wget >/dev/null 2
 	fi
 	if [ "`rpm -qa which`" == "" ]; then
-		$INSTALLER install -y -q which >/dev/null 2
+		$INSTALLER -y -q install which >/dev/null 2
 	fi
 fi
 
 INSTALLER_VERSION="2.4"
-SYS_REBOOT="No"
 USERADD=`which useradd`
 USERMOD=`which usermod`
 USERDEL=`which userdel`
@@ -227,9 +226,15 @@ MACHINE=`uname -m`
 LOCAL_IP=`ip route get 8.8.8.8 | awk '{print $NF; exit}'`
 
 if [ "$LOCAL_IP" == "" ]; then
-	HOST_NAME=`hostname -f | awk '{print tolower($0)}'`
-else
 	HOST_NAME=`getent hosts $LOCAL_IP | awk '{print tolower($2)}' | head -n 1`
+fi
+
+if [ "$HOST_NAME" == "" -o "$HOST_NAME" == "0" ]; then
+	HOST_NAME=`hostname -f | awk '{print tolower($0)}'`
+fi
+
+if [ "$LOCAL_IP" == "" -o "$LOCAL_IP" == "0" ]; then
+	LOCAL_IP="IP not found!"
 fi
 
 cyanMessage " "
@@ -269,8 +274,8 @@ cyanMessage " "
 yellowMessage "Please wait... Update is currently running."
 if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 	cyanMessage " "
-	$INSTALLER update
-	$INSTALLER upgrade -y
+	$INSTALLER -y update
+	$INSTALLER -y upgrade
 	checkInstall debconf-utils
 	checkInstall lsb-release
 	if [ "$DIALOG" == "" ]; then
@@ -282,7 +287,7 @@ if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 elif [ "$OS" == "centos" ]; then
 	cyanMessage " "
 	cyanMessage "Update all obsolete packages."
-	$INSTALLER update -y
+	$INSTALLER -y update
 	checkInstall redhat-lsb
 	checkInstall epel-release
 	importKey /etc/pki/rpm-gpg/RPM-GPG-KEY*
@@ -351,11 +356,21 @@ else
 	okAndSleep "Detected architecture: $ARCH"
 fi
 
-if [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -lt "1604" -o "$OS" == "debian" -a "$OSVERSION_TMP" -lt "80" -o "$OS" == "centos" -a "$OSVERSION_TMP" -lt "70" ]; then
+if [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -lt "1404" -o "$OS" == "debian" -a "$OSVERSION_TMP" -lt "80" -o "$OS" == "centos" -a "$OSVERSION_TMP" -lt "60" ]; then
 	echo; echo
 	redMessage "Error: Your OS \"$OS - $OSVERSION\" is not more supported from Easy-WI Installer."
 	redMessage "Please Upgrade to a newer OS Version!"
-	echo
+	redMessage " "
+	if [ "$OS" == "ubuntu" ]; then
+		redMessage "Command: do-release-upgrade"
+		redMessage " "
+	elif [ "$OS" == "debian" ]; then
+		redMessage "Command: apt-get update; apt-get upgrade; apt-get dist-upgrade"
+		redMessage " "
+	elif [ "$OS" == "centos" ]; then
+		redMessage "Command: yum check-update; yum update"
+		redMessage " "
+	fi
 	exit 0
 fi
 
@@ -495,7 +510,7 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" ]; then
 				curl --remote-name https://www.dotdeb.org/dotdeb.gpg
 				apt-key add dotdeb.gpg
 				removeIfExists dotdeb.gpg
-				$INSTALLER update
+				$INSTALLER -y update
 			fi
 		fi
 	fi
@@ -798,8 +813,10 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "MY" ]; then
 				importKey keyserver.ubuntu.com 0xF1656F24C74CD1D8
 			elif [ "$OS" == "debian" -a "$OSVERSION_TMP" -ge "80" ]; then
 				importKey keyserver.ubuntu.com 0xcbcb082a1bb943db
-			elif [ "$OS" == "ubuntu" ]; then
+			elif [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1410" ]; then
 				importKey hkp://keyserver.ubuntu.com:80 0xF1656F24C74CD1D8
+			elif [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -lt "1410" ]; then
+				importKey hkp://keyserver.ubuntu.com:80 0xcbcb082a1bb943db
 			fi
 
 			if [ "`apt-cache search mariadb-server-10.2`" == "" ]; then
@@ -831,17 +848,10 @@ gpgcheck=1' > /etc/yum.repos.d/MariaDB.repo
 		fi
 
 		if [ "$RUNUPDATE" == "1" ]; then
-			if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
-				yellowMessage " "
-				yellowMessage "Please wait... Update is currently running."
-				yellowMessage " "
-				$INSTALLER update -y
-			elif [ "$OS" == "centos" ]; then
-				yellowMessage " "
-				yellowMessage "Please wait... Update is currently running."
-				yellowMessage " "
-				$INSTALLER -y update
-			fi
+			yellowMessage " "
+			yellowMessage "Please wait... Update is currently running."
+			yellowMessage " "
+			$INSTALLER -y update
 		fi
 	fi
 
@@ -996,8 +1006,24 @@ if [ "$PHPINSTALL" == "Yes" ]; then
 	elif [ "$OS" == "centos" ]; then
 		checkInstall http://rpms.remirepo.net/enterprise/remi-release-7.rpm
 		yum-config-manager --enable remi-php71
+		RUNUPDATE="1"
+	elif [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -lt "1604" ]; then
+		if [ "`which add-apt-repository`" == "" ]; then
+			checkInstall add-apt-repository
+		fi
+		checkInstall language-pack-en-base
+		LC_ALL=C.UTF-8 add-apt-repository -y ppa:ondrej/php
+		USE_PHP_VERSION='5.6'
+		RUNUPDATE="1"
 	else
 		USE_PHP_VERSION='5'
+	fi
+
+	if [ "$RUNUPDATE" == "1" ]; then
+		yellowMessage " "
+		yellowMessage "Please wait... Update is currently running."
+		yellowMessage " "
+		$INSTALLER -y update
 	fi
 
 	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
@@ -1017,6 +1043,9 @@ if [ "$PHPINSTALL" == "Yes" ]; then
 		checkInstall php${USE_PHP_VERSION}-xml
 		checkInstall php${USE_PHP_VERSION}-mbstring
 		checkInstall php${USE_PHP_VERSION}-zip
+		if [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -lt "1604" ]; then
+			checkInstall php${USE_PHP_VERSION}-fpm
+		fi
 	elif [ "$OS" == "centos" ]; then
 		checkInstall php
 		checkInstall php-common
@@ -1045,14 +1074,6 @@ if [ "$PHPINSTALL" == "Yes" ]; then
 			sed -i "s/user = apache/user = lighttpd/g" /etc/php-fpm.d/www.conf
 			sed -i "s/group = apache/group = lighttpd/g" /etc/php-fpm.d/www.conf
 		fi
-
-		makeDir /home/$MASTERUSER/fpm-pool.d/
-
-		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
-			if [ -f /etc/php/"${USE_PHP_VERSION}"/fpm/php-fpm.conf ]; then
-				sed -i "s/include=\/etc\/php\/${USE_PHP_VERSION}\/fpm\/pool.d\/\*.conf/include=\/home\/$MASTERUSER\/fpm-pool.d\/\*.conf/g" /etc/php/"${USE_PHP_VERSION}"/fpm/php-fpm.conf
-			fi
-		fi
 	elif [ "$WEBSERVER" == "Apache" ]; then
 		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 			checkInstall libapache2-mpm-itk
@@ -1062,6 +1083,14 @@ if [ "$PHPINSTALL" == "Yes" ]; then
 			checkInstall httpd-itk
 			backUpFile /etc/httpd/conf.modules.d/00-mpm-itk.conf
 			sed -i "s/#LoadModule mpm_itk_module modules\/mod_mpm_itk.so/LoadModule mpm_itk_module modules\/mod_mpm_itk.so/g" /etc/httpd/conf.modules.d/00-mpm-itk.conf
+		fi
+	fi
+
+	if [ -f /etc/php/"${USE_PHP_VERSION}"/fpm/php-fpm.conf ]; then
+		makeDir /home/$MASTERUSER/fpm-pool.d/
+
+		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
+			sed -i "s/include=\/etc\/php\/${USE_PHP_VERSION}\/fpm\/pool.d\/\*.conf/include=\/home\/$MASTERUSER\/fpm-pool.d\/\*.conf/g" /etc/php/"${USE_PHP_VERSION}"/fpm/php-fpm.conf
 		fi
 	fi
 
@@ -1101,7 +1130,7 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
 		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 			echo "proftpd-basic shared/proftpd/inetd_or_standalone select standalone" | debconf-set-selections
 		elif [ "$OS" == "centos" ]; then
-			$INSTALLER update -y -q
+			$INSTALLER -y -q update
 		fi
 
 		cyanMessage " "
@@ -1274,6 +1303,9 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
 			fi
 		done
 
+		cyanMessage " "
+		okAndSleep "Quota Table Output"
+		cyanMessage " "
 		cat /root/tempfstab
 
 		cyanMessage " "
@@ -1525,11 +1557,22 @@ if [ "$INSTALL" == "GS" ]; then
 			if [ "$OSBRANCH" == "jessie" -a "`grep jessie-backports /etc/apt/sources.list`" == "" ]; then
 				okAndSleep "Adding jessie backports"
 				echo "deb http://ftp.de.debian.org/debian jessie-backports main" >> /etc/apt/sources.list
-				$INSTALLER update
+				$INSTALLER -y update
 			fi
 
 			if [ "$OSBRANCH" == "jessie" ]; then
 				apt install -t jessie-backports openjdk-8-jre-headless ca-certificates-java -y
+			fi
+
+			if [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -lt "1410" ]; then
+				if [ "`which add-apt-repository`" == "" ]; then
+					checkInstall add-apt-repository
+				fi
+				add-apt-repository -y ppa:openjdk-r/ppa
+				yellowMessage " "
+				yellowMessage "Please wait... Update is currently running."
+				yellowMessage " "
+				$INSTALLER -y update
 			fi
 
 			checkInstall openjdk-8-jdk
@@ -1565,31 +1608,31 @@ if [ "$INSTALL" == "GS" ]; then
 	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 		cyanMessage " "
 		okAndSleep "Installing required packages wput screen bzip2 sudo rsync zip unzip"
-		$INSTALLER install wput screen bzip2 sudo rsync zip unzip -y
+		$INSTALLER -y install wput screen bzip2 sudo rsync zip unzip
 
 		if [ "`uname -m`" == "x86_64" ]; then
 			cyanMessage " "
 			okAndSleep "Installing 32bit support for 64bit systems."
 
-			$INSTALLER install zlib1g -y
-			$INSTALLER install lib32z1 -y
-			$INSTALLER install lib32gcc1 -y
-			$INSTALLER install lib32readline5 -y
-			$INSTALLER install lib32ncursesw5 -y
-			$INSTALLER install lib32stdc++6 -y
-			$INSTALLER install lib64stdc++6 -y
-			$INSTALLER install libstdc++6 -y
-			$INSTALLER install libgcc1:i386 -y
-			$INSTALLER install libreadline5:i386 -y
-			$INSTALLER install libncursesw5:i386 -y
+			$INSTALLER -y install zlib1g
+			$INSTALLER -y install lib32z1
+			$INSTALLER -y install lib32gcc1
+			$INSTALLER -y install lib32readline5
+			$INSTALLER -y install lib32ncursesw5
+			$INSTALLER -y install lib32stdc++6
+			$INSTALLER -y install lib64stdc++6
+			$INSTALLER -y install libstdc++6
+			$INSTALLER -y install libgcc1:i386
+			$INSTALLER -y install libreadline5:i386
+			$INSTALLER -y install libncursesw5:i386
 #			if [ "$OS" == "debian" -a "$OSVERSION_TMP" -gt "80" ]; then
 			if [ "`apt-cache search zlib1g-dev`" != "" ]; then
-				$INSTALLER install zlib1g-dev -y
+				$INSTALLER -y install zlib1g-dev
 			else
-				$INSTALLER install zlib1g:i386 -y
+				$INSTALLER -y install zlib1g:i386
 			fi
 		else
-			$INSTALLER install libreadline5 libncursesw5 -y
+			$INSTALLER -y install libreadline5 libncursesw5
 		fi
 	elif [ "$OS" == "centos" ]; then
 		cyanMessage " "
@@ -1744,7 +1787,7 @@ if [ "$INSTALL" == "EW" ]; then
 		cyanMessage "Please provide the root password for the MySQL Database."
 		read MYSQL_ROOT_PASSWORD
 	fi
-	mysql -u root -p$MYSQL_ROOT_PASSWORD -Bse "CREATE DATABASE IF NOT EXISTS easy_wi; GRANT ALL ON easy_wi.* TO 'easy_wi'@'localhost' IDENTIFIED BY '$DB_PASSWORD'; FLUSH PRIVILEGES;"
+	mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "CREATE DATABASE IF NOT EXISTS easy_wi; GRANT ALL ON easy_wi.* TO 'easy_wi'@'localhost' IDENTIFIED BY '$DB_PASSWORD'; FLUSH PRIVILEGES;"
 
 	cyanMessage " "
 	cyanMessage "Secure Vhost with SSL? (recommended!)"
@@ -1786,15 +1829,17 @@ if [ "$INSTALL" == "EW" ]; then
 						okAndSleep "Adding jessie backports"
 						echo "deb http://ftp.de.debian.org/debian jessie-backports main" >> /etc/apt/sources.list
 					fi
-					$INSTALLER update
-					$INSTALLER install certbot -t jessie-backports -y
+					$INSTALLER -y update
+					$INSTALLER -y install certbot -t jessie-backports
 				else
-					$INSTALLER install certbot -y
+					$INSTALLER -y install certbot
 				fi
 			elif [ "$OS" == "ubuntu" ]; then
-				$INSTALLER install software-properties-common
-				add-apt-repository ppa:certbot/certbot
-				$INSTALLER update
+				if [ "`which add-apt-repository`" == "" ]; then
+					$INSTALLER -y install software-properties-common
+				fi
+				add-apt-repository -y ppa:certbot/certbot
+				$INSTALLER -y update
 				checkInstall certbot
 			elif [ "$OS" == "centos" ]; then
 				$INSTALLER-config-manager --enable rhui-REGION-rhel-server-extras rhui-REGION-rhel-server-optional -y
@@ -2166,9 +2211,9 @@ fi
 
 # Removing not needed packages
 if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
-	$INSTALLER autoremove -y -q
+	$INSTALLER -y -q autoremove 2>&1 >/dev/null
 elif [ "$OS" == "centos" ]; then
-	$INSTALLER clean all -y -q
+	$INSTALLER -y -q clean all
 	rm -rf /var/cache/yum
 fi
 
