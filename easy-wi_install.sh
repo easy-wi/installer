@@ -163,7 +163,7 @@ checkUser() {
 		redMessage "Error: No masteruser specified"
 	elif [ "$1" == "root" ]; then
 		redMessage "Error: Using root as masteruser is a security hazard and not allowed."
-	elif [ "`id $1 2> /dev/null`" != "" ] && ([ "$INSTALL" != "EW" -a "$INSTALL" != "WR" ] || [ ! -d "/home/$1/sites-enabled" ]); then
+	elif [ $(id $1 2> /dev/null) != "" ] && ([ "$INSTALL" != "EW" -a "$INSTALL" != "WR" ] || [ ! -d "/home/$1/sites-enabled" ]); then
 		redMessage "Error: User \"$1\" already exists. Please name a not yet existing user"
 	else
 		echo 1
@@ -253,7 +253,7 @@ elif [ -f /etc/centos-release ]; then
 	if [ "`rpm -qa wget`" == "" ]; then
 		$INSTALLER -y -q install wget >/dev/null 2
 	fi
-	if [ "`rpm -qa which`" == "" ]; then
+	if [ $(rpm -qa which) == "" ]; then
 		$INSTALLER -y -q install which >/dev/null 2
 	fi
 fi
@@ -267,12 +267,12 @@ MACHINE=$(uname -m)
 LOCAL_IP=$(ip route get 8.8.8.8 | awk '{print $NF; exit}')
 
 if [ "$LOCAL_IP" == "" -o "$LOCAL_IP" == "0" ]; then
-	LOCAL_IP=`hostname -I | awk '{print $1}'`
+	LOCAL_IP=$(hostname -I | awk '{print $1}')
 fi
 
 cyanMessage " "
 cyanMessage "Checking for the latest installer version"
-LATEST_VERSION=`wget -q --timeout=60 -O - https://api.github.com/repos/easy-wi/installer/releases/latest | grep -Po '(?<="tag_name": ")([0-9]\.[0-9]+)'`
+LATEST_VERSION=$(wget -q --timeout=60 -O - https://api.github.com/repos/easy-wi/installer/releases/latest | grep -Po '(?<="tag_name": ")([0-9]\.[0-9]+)')
 
 if [ "`printf "${LATEST_VERSION}\n${INSTALLER_VERSION}" | sort -V | tail -n 1`" != "$INSTALLER_VERSION" ]; then
 	errorAndExit "You are using the old version ${INSTALLER_VERSION}. Please upgrade to version ${LATEST_VERSION} and retry."
@@ -281,12 +281,12 @@ else
 fi
 
 # We need to be root to install and update
-if [ "`id -u`" != "0" ]; then
+if [ $(id -u) != "0" ]; then
 	cyanMessage "Change to root account required"
 	su -
 fi
 
-if [ "`id -u`" != "0" ]; then
+if [ $(id -u) != "0" ]; then
 	errorAndExit "Still not root, aborting"
 fi
 
@@ -337,13 +337,13 @@ fi
 
 #CentOS - SELinux
 if [ "$OS" == "centos" ]; then
-	if ([ ! -d /home/easywi_web -a "`find /home -type d -name 'masterserver'`" == "" -a "`find /home -type f -name 'ts3server'`" == "" ]); then
+	if ([ ! -d /home/easywi_web -a $(find /home -type d -name 'masterserver') == "" -a $(find /home -type f -name 'ts3server') == "" ]); then
 		yellowMessage ""
 		yellowMessage "Note: Please update your fresh operating system and restart it!"
 		yellowMessage ""
 	fi
 	if [ -f /etc/selinux/config ]; then
-		if [ "`grep 'SELINUX=' /etc/selinux/config | sed -n '2 p'`" != "SELINUX=disabled" ]; then
+		if [ $(grep 'SELINUX=' /etc/selinux/config | sed -n '2 p') != "SELINUX=disabled" ]; then
 			backUpFile /etc/selinux/config
 			sed -i "s/SELINUX=enforcing/SELINUX=disabled/g" /etc/selinux/config
 			redMessage " "
@@ -356,9 +356,9 @@ if [ "$OS" == "centos" ]; then
 fi
 
 cyanMessage " "
-OS=`lsb_release -i 2> /dev/null | grep 'Distributor' | awk '{print tolower($3)}'`
-OSVERSION_TMP=`lsb_release -r 2> /dev/null | grep 'Release' | awk '{print $2}'`
-OSBRANCH=`lsb_release -c 2> /dev/null | grep 'Codename' | awk '{print $2}'`
+OS=$(lsb_release -i 2> /dev/null | grep 'Distributor' | awk '{print tolower($3)}')
+OSVERSION_TMP=$(lsb_release -r 2> /dev/null | grep 'Release' | awk '{print $2}')
+OSBRANCH=$(lsb_release -c 2> /dev/null | grep 'Codename' | awk '{print $2}')
 
 if [ "$MACHINE" == "x86_64" ]; then
 	ARCH="amd64"
@@ -384,11 +384,11 @@ else
 	okAndSleep "Detected version: $OSVERSION_TMP"
 
 	if [ "$OS" == "ubuntu" ]; then
-		OSVERSION=`echo "$OSVERSION_TMP" | tr -d .`
+		OSVERSION=$(echo "$OSVERSION_TMP" | tr -d .)
 	elif [ "$OS" == "debian" ]; then
-		OSVERSION=`echo "$OSVERSION_TMP"0 | tr -d . | cut -c 1-3`
+		OSVERSION=$(echo "$OSVERSION_TMP"0 | tr -d . | cut -c 1-3)
 	elif [ "$OS" == "centos" -o "$OS" == "debian" ]; then
-		OSVERSION=`echo "$OSVERSION_TMP" | tr -d . | cut -c 1-2`
+		OSVERSION=$(echo "$OSVERSION_TMP" | tr -d . | cut -c 1-2)
 	fi
 fi
 
@@ -417,7 +417,7 @@ if [ "$OS" == "ubuntu" -a "$OSVERSION" -lt "1404" -o "$OS" == "debian" -a "$OSVE
 		OSBRANCH_NEW="jessie (Debian 8)"
 	fi
 
-	cyanMessage 'Upgrade to "$OS" "$OSBRANCH_NEW"?'
+	cyanMessage "Upgrade to $OS $OSBRANCH_NEW ?"
 	OPTIONS=("Yes" "No" "Quit")
 	select OPTION in "${OPTIONS[@]}"; do
 		case "$REPLY" in
@@ -582,7 +582,7 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" ]; then
 		done
 
 		if [ "$DOTDEB" == "Yes" ]; then
-			if [ "`grep 'packages.dotdeb.org' /etc/apt/sources.list`" == "" ]; then
+			if [ $(grep 'packages.dotdeb.org' /etc/apt/sources.list) == "" ]; then
 				cyanMessage " "
 				okAndSleep "Adding entries to /etc/apt/sources.list"
 
@@ -660,7 +660,7 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" ]; then
 		fi
 	fi
 
-	WEBGROUPID=`getent group $WEBGROUPNAME | awk -F ':' '{print $3}'`
+	WEBGROUPID=$(getent group $WEBGROUPNAME | awk -F ':' '{print $3}')
 	if [ "$WEBGROUPID" != "$WEBGROUPTMPID" ]; then
 		$GROUPADD -g $WEBGROUPTMPID $WEBGROUPNAME >/dev/null 2>&1
 		if [ "$WEBSERVER" == "Lighttpd" ]; then
@@ -859,7 +859,7 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "MY" ]; then
 		fi
 	fi
 
-	if [ "`ps fax | grep 'mysqld' | grep -v 'grep'`" != "" ]; then
+	if [ $(ps fax | grep 'mysqld' | grep -v 'grep') != "" ]; then
 		if [ -f /root/database_root_login.txt ]; then
 			MYSQL_ROOT_PASSWORD=$(grep "Password:" /root/database_root_login.txt | awk '{print $2}')
 		else
@@ -890,7 +890,7 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "MY" ]; then
 
 	if [ "$SQL" == "MariaDB" ]; then
 		RUNUPDATE=0
-		if ([ "$OS" == "debian" -o "$OS" == "ubuntu" ] && [ "`grep '/mariadb/' /etc/apt/sources.list`" == "" ]); then
+		if ([ "$OS" == "debian" -o "$OS" == "ubuntu" ] && [ $(grep '/mariadb/' /etc/apt/sources.list) == "" ]); then
 			checkInstall software-properties-common
 
 			if [ "$OS" == "debian" -a "$OSVERSION" -ge "900" ]; then
@@ -953,7 +953,7 @@ gpgcheck=1' > /etc/yum.repos.d/MariaDB.repo
 		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 			checkInstall mariadb-server
 			checkInstall mariadb-client
-			if ([ "`printf "${OSVERSION}\n80" | sort -V | tail -n 1`" == "80" -o "$OS" == "ubuntu" ] && [ "`grep '/mariadb/' /etc/apt/sources.list`" == "" ]); then
+			if ([ $(printf "${OSVERSION}\n80" | sort -V | tail -n 1) == "80" -o "$OS" == "ubuntu" ] && [ $(grep '/mariadb/' /etc/apt/sources.list) == "" ]); then
 				checkInstall mysql-common
 			else
 				checkInstall mariadb-common
@@ -1032,9 +1032,9 @@ _EOF_
 		fi
 
 		if [ "$LOCAL_IP" != "" -a -f "$MYSQL_CONF" -a ! "$MYSQL_CONF".easy-install.backup ]; then
-			if [ "`grep 'bind-address' $MYSQL_CONF | awk '{print $3}'`" != "0.0.0.0" ]; then
+			if [ $(grep 'bind-address' $MYSQL_CONF | awk '{print $3}') != "0.0.0.0" ]; then
 				sed -i "s/bind-address.*/bind-address = 0.0.0.0/g" $MYSQL_CONF
-			elif [ "`grep 'bind-address' $MYSQL_CONF`" == "" ]; then
+			elif [ $(grep 'bind-address' $MYSQL_CONF) == "" ]; then
 				sed -i "/\[mysqld\]/abind-address = 0.0.0.0" $MYSQL_CONF
 			fi
 		fi
@@ -1049,7 +1049,7 @@ _EOF_
 	MYSQL_VERSION=`mysql -V | awk {'print $5'} | tr -d ,`
 
 	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
-		if [ "`grep -E 'key_buffer[[:space:]]*=' /etc/mysql/my.cnf`" != "" -a "printf "${MYSQL_VERSION}\n5.5" | sort -V | tail -n 1" != "5.5" ]; then
+		if [ $(grep -E 'key_buffer[[:space:]]*=' /etc/mysql/my.cnf) != "" -a $(printf "${MYSQL_VERSION}\n5.5" | sort -V | tail -n 1) != "5.5" ]; then
 			sed -i -e "51s/key_buffer[[:space:]]*=/key_buffer_size = /g" $MYSQL_CONF
 			sed -i -e "57s/myisam-recover[[:space:]]*=/myisam-recover-options = /g" $MYSQL_CONF
 		fi
@@ -1061,7 +1061,7 @@ _EOF_
 
 	RestartDatabase
 
-	if [ "`ps ax | grep mysql | grep -v grep`" == "" ]; then
+	if [ $(ps ax | grep mysql | grep -v grep) == "" ]; then
 		cyanMessage " "
 		errorAndExit "Error: No SQL server running but required for Webpanel installation."
 	fi
@@ -1072,7 +1072,7 @@ if [ "$INSTALL" == "EW" ]; then
 	okAndSleep "Please note that Easy-Wi will install required PHP packages."
 	PHPINSTALL="Yes"
 elif [ "$INSTALL" == "WR" ]; then
-	if [ "`rpm -qa php 2>/dev/null`" == "" -a "`dpkg -l 2>/dev/null | egrep -o "php-common"`" == "" ]; then
+	if [ $(rpm -qa php 2>/dev/null) == "" -a $(dpkg -l 2>/dev/null | egrep -o "php-common") == "" ]; then
 		cyanMessage " "
 		cyanMessage "Install/Update PHP?"
 		cyanMessage "Select \"None\" in case this server should host only Fastdownload webspace."
@@ -1270,7 +1270,7 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
 				esac
 			done
 
-			if [ "$OPTION" == "Yes" -a "`grep '<Directory \/home\/\*\/pserver\/\*>' /etc/proftpd/proftpd.conf`" == "" -a ! -f /etc/proftpd/conf.d/easy-wi.conf ]; then
+			if [ "$OPTION" == "Yes" -a $(grep '<Directory \/home\/\*\/pserver\/\*>' /etc/proftpd/proftpd.conf) == "" -a ! -f /etc/proftpd/conf.d/easy-wi.conf ]; then
 				makeDir /etc/proftpd/conf.d/
 				chmod 755 /etc/proftpd/conf.d/
 
@@ -1390,7 +1390,7 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
 
 			cat /etc/fstab | while read LINE; do
 				if [[ `echo $LINE | grep '/' | egrep -v '#|boot|proc|swap|floppy|cdrom|usrquota|usrjquota|/sys|/shm|/pts'` ]]; then
-					CURRENTOPTIONS=`echo $LINE | awk '{print $4}'`
+					CURRENTOPTIONS=$(echo $LINE | awk '{print $4}')
 					echo $LINE | sed "s/$CURRENTOPTIONS/$CURRENTOPTIONS,usrjquota=aquota.user,jqfmt=vfsv0/g" >> /root/tempfstab
 					echo $LINE | awk '{print $2}' >> /root/tempmountpoints
 				else
