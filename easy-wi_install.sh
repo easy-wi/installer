@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # DEBUG MODE
-DEBUG="ON"
+DEBUG="OFF"
 
 #    Author:     Ulrich Block <ulrich.block@easy-wi.com>,
 #                Alexander Doerwald <alexander.doerwald@easy-wi.com>
@@ -120,13 +120,13 @@ backUpFile() {
 
 checkInstall() {
 	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
-		if [ $(dpkg-query -s $1 2>/dev/null) == "" ]; then
+		if [ "`dpkg-query -s $1 2>/dev/null`" == "" ]; then
 			cyanMessage " "
 			okAndSleep "Installing package $1"
 			$INSTALLER -y install $1
 		fi
 	elif [ "$OS" == "centos" ]; then
-		if [ $(rpm -qa $1) == "" ]; then
+		if [ "`rpm -qa $1`" == "" ]; then
 			cyanMessage " "
 			okAndSleep "Installing package $1"
 			$INSTALLER -y install $1
@@ -136,13 +136,13 @@ checkInstall() {
 
 checkUnInstall() {
 	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
-		if [ $(dpkg-query -s $1 2>/dev/null) == "" ]; then
+		if [ "`dpkg-query -s $1 2>/dev/null`" == "" ]; then
 			cyanMessage " "
 			okAndSleep "Uninstalling package $1"
 			$INSTALLER -y remove $1
 		fi
 	elif [ "$OS" == "centos" ]; then
-		if [ $(rpm -qa $1) == "" ]; then
+		if [ "`rpm -qa $1`" == "" ]; then
 			cyanMessage " "
 			okAndSleep "Uninstalling package $1"
 			$INSTALLER -y remove $1
@@ -163,7 +163,7 @@ checkUser() {
 		redMessage "Error: No masteruser specified"
 	elif [ "$1" == "root" ]; then
 		redMessage "Error: Using root as masteruser is a security hazard and not allowed."
-	elif [ $(id $1 2> /dev/null) != "" ] && ([ "$INSTALL" != "EW" -a "$INSTALL" != "WR" ] || [ ! -d "/home/$1/sites-enabled" ]); then
+	elif [ "`id $1 2> /dev/null`" != "" ] && ([ "$INSTALL" != "EW" -a "$INSTALL" != "WR" ] || [ ! -d "/home/$1/sites-enabled" ]); then
 		redMessage "Error: User \"$1\" already exists. Please name a not yet existing user"
 	else
 		echo 1
@@ -217,6 +217,10 @@ RestartDatabase() {
 }
 
 doReboot() {
+	if [ "$2" != "" ]; then
+		redMessage " "
+		redMessage $2
+	fi
 	cyanMessage " "
 	cyanMessage "Do you want to restart now?"
 	OPTIONS=("Yes" "No" "Quit")
@@ -231,7 +235,11 @@ doReboot() {
 	if [ "$OPTION" == "Yes" ]; then
 		echo
 		redMessage $1
+		removeIfExists /tmp/easy-wi_reboot
 		shutdown -r now
+		errorAndQuit
+	else
+		touch /tmp/easy-wi_reboot
 		errorAndQuit
 	fi
 }
@@ -250,11 +258,11 @@ elif [ -f /etc/centos-release ]; then
 	OS="centos"
 	setenforce 0 >/dev/null 2>&1
 	cyanMessage " "
-	if [ $(rpm -qa wget) == "" ]; then
-		$INSTALLER -y -q install wget >/dev/null 2
+	if [ "`rpm -qa wget`" == "" ]; then
+		checkInstall wget
 	fi
-	if [ $(rpm -qa which) == "" ]; then
-		$INSTALLER -y -q install which >/dev/null 2
+	if [ "`rpm -qa which`" == "" ]; then
+		checkInstall which
 	fi
 fi
 
@@ -267,26 +275,26 @@ MACHINE=$(uname -m)
 LOCAL_IP=$(ip route get 8.8.8.8 | awk '{print $NF; exit}')
 
 if [ "$LOCAL_IP" == "" -o "$LOCAL_IP" == "0" ]; then
-	LOCAL_IP=$(hostname -I | awk '{print $1}')
+	LOCAL_IP=`hostname -I | awk '{print $1}'`
 fi
 
 cyanMessage " "
 cyanMessage "Checking for the latest installer version"
-LATEST_VERSION=$(wget -q --timeout=60 -O - https://api.github.com/repos/easy-wi/installer/releases/latest | grep -Po '(?<="tag_name": ")([0-9]\.[0-9]+)')
+LATEST_VERSION=`wget -q --timeout=60 -O - https://api.github.com/repos/easy-wi/installer/releases/latest | grep -Po '(?<="tag_name": ")([0-9]\.[0-9]+)'`
 
-if [ $(printf "${LATEST_VERSION}\n${INSTALLER_VERSION}" | sort -V | tail -n 1) != "$INSTALLER_VERSION" ]; then
+if [ "`printf "${LATEST_VERSION}\n${INSTALLER_VERSION}" | sort -V | tail -n 1`" != "$INSTALLER_VERSION" ]; then
 	errorAndExit "You are using the old version ${INSTALLER_VERSION}. Please upgrade to version ${LATEST_VERSION} and retry."
 else
 	okAndSleep "You are using the up to date version ${INSTALLER_VERSION}"
 fi
 
 # We need to be root to install and update
-if [ $(id -u) != "0" ]; then
+if [ "`id -u`" != "0" ]; then
 	cyanMessage "Change to root account required"
 	su -
 fi
 
-if [ $(id -u) != "0" ]; then
+if [ "`id -u`" != "0" ]; then
 	errorAndExit "Still not root, aborting"
 fi
 
@@ -336,14 +344,14 @@ elif [ "$OS" == "centos" ]; then
 fi
 
 #CentOS - SELinux
-if [ "$OS" == "centos" ]; then
-	if ([ ! -d /home/easywi_web -a $(find /home -type d -name 'masterserver') == "" -a $(find /home -type f -name 'ts3server') == "" ]); then
+if [ "$OS" == "centos" -a ! -f /tmp/easy-wi_reboot ]; then
+	if ([ ! -d /home/easywi_web -a "`find /home -type d -name 'masterserver'`" == "" -a "`find /home -type f -name 'ts3server'`" == "" ]); then
 		yellowMessage ""
 		yellowMessage "Note: Please update your fresh operating system and restart it!"
 		yellowMessage ""
 	fi
 	if [ -f /etc/selinux/config ]; then
-		if [ $(grep 'SELINUX=' /etc/selinux/config | sed -n '2 p') != "SELINUX=disabled" ]; then
+		if [ "`grep 'SELINUX=' /etc/selinux/config | sed -n '2 p'`" != "SELINUX=disabled" ]; then
 			backUpFile /etc/selinux/config
 			sed -i "s/SELINUX=enforcing/SELINUX=disabled/g" /etc/selinux/config
 			redMessage " "
@@ -353,6 +361,8 @@ if [ "$OS" == "centos" ]; then
 			doReboot "System is rebooting now for finish SELinux Security Function!"
 		fi
 	fi
+else
+	doReboot "System is rebooting now for finish SELinux Security Function!" "Please reboot your Root/Vserver to disabled SELinux Security Function!"
 fi
 
 cyanMessage " "
@@ -417,7 +427,7 @@ if [ "$OS" == "ubuntu" -a "$OSVERSION" -lt "1404" -o "$OS" == "debian" -a "$OSVE
 		OSBRANCH_NEW="jessie (Debian 8)"
 	fi
 
-	cyanMessage "Upgrade to $OS $OSBRANCH_NEW ?"
+	cyanMessage "Upgrade to $OS $OSBRANCH_NEW?"
 	OPTIONS=("Yes" "No" "Quit")
 	select OPTION in "${OPTIONS[@]}"; do
 		case "$REPLY" in
@@ -546,7 +556,7 @@ if [ "$INSTALL" == "EW" ]; then
 		IP_DOMAIN=$OPTION
 	fi
 
-	if [ $(grep -E '\b((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.|$)){4}\b' <<< $IP_DOMAIN) == "" -a $(grep -E '^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$' <<< $IP_DOMAIN) == "" ]; then
+	if [ "`grep -E '\b((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.|$)){4}\b' <<< $IP_DOMAIN`" == "" -a "`grep -E '^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$' <<< $IP_DOMAIN`" == "" ]; then
 		errorAndExit "Error: $IP_DOMAIN is neither a domain nor an IPv4 address!"
 	fi
 
@@ -582,7 +592,7 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" ]; then
 		done
 
 		if [ "$DOTDEB" == "Yes" ]; then
-			if [ $(grep 'packages.dotdeb.org' /etc/apt/sources.list) == "" ]; then
+			if [ "`grep 'packages.dotdeb.org' /etc/apt/sources.list`" == "" ]; then
 				cyanMessage " "
 				okAndSleep "Adding entries to /etc/apt/sources.list"
 
@@ -660,13 +670,13 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" ]; then
 		fi
 	fi
 
-	WEBGROUPID=$(getent group $WEBGROUPNAME | awk -F ':' '{print $3}')
+	WEBGROUPID=`getent group $WEBGROUPNAME | awk -F ':' '{print $3}'`
 	if [ "$WEBGROUPID" != "$WEBGROUPTMPID" ]; then
 		$GROUPADD -g $WEBGROUPTMPID $WEBGROUPNAME >/dev/null 2>&1
 		if [ "$WEBSERVER" == "Lighttpd" ]; then
 			$USERADD -c "$WEBGROUPCOMMENT" -u $WEBGROUPTMPID -g $WEBGROUPTMPID -s /sbin/nologin -r -d $WEBGROUPPATH $WEBGROUPNAME
 		fi
-		WEBGROUPID=$(getent group $WEBGROUPNAME | awk -F ':' '{print $3}')
+		WEBGROUPID=`getent group $WEBGROUPNAME | awk -F ':' '{print $3}'`
 	fi
 
 	if [ "$INSTALL" == "EW" -o -d /home/easywi_web/htdocs/ ]; then
@@ -693,10 +703,10 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" ]; then
 		cyanMessage "Please name the group you want to use as webservergroup"
 		read WEBGROUP
 
-		WEBGROUPID=$(getent group $WEBGROUP | awk -F ':' '{print $3}')
+		WEBGROUPID=`getent group $WEBGROUP | awk -F ':' '{print $3}'`
 		if [ "$WEBGROUPID" == "" ]; then
 			$GROUPADD $WEBGROUP
-			WEBGROUPID=$(getent group $WEBGROUP | awk -F ':' '{print $3}')
+			WEBGROUPID=`getent group $WEBGROUP | awk -F ':' '{print $3}'`
 		fi
 	fi
 
@@ -714,7 +724,7 @@ if [ "$INSTALL" == "VS" ]; then
 
 	for VERSION in `curl -s "http://dl.4players.de/ts/releases/?C=M;O=D" | grep -Po '(?<=href=")[0-9]+(\.[0-9]+){2,3}(?=/")' | sort -Vr`; do
 		DOWNLOAD_URL_VERSION="http://dl.4players.de/ts/releases/$VERSION/teamspeak3-server_linux_$ARCH-$VERSION.tar.bz2"
-		STATUS=$(curl -I $DOWNLOAD_URL_VERSION 2>&1 | grep "HTTP/" | awk '{print $2}')
+		STATUS=`curl -I $DOWNLOAD_URL_VERSION 2>&1 | grep "HTTP/" | awk '{print $2}'`
 
 		if [ "$STATUS" == "200" ]; then
 			DOWNLOAD_URL=$DOWNLOAD_URL_VERSION
@@ -734,12 +744,12 @@ if [ "$INSTALL" != "MY" ]; then
 	cyanMessage "Please enter the name of the masteruser, which does not exist yet."
 	read MASTERUSER
 
-	CHECK_USER=$(checkUser $MASTERUSER)
+	CHECK_USER=`checkUser $MASTERUSER`
 
 	if [ "$CHECK_USER" != "1" ]; then
 		echo $CHECK_USER
 		read MASTERUSER
-		CHECK_USER=$(checkUser $MASTERUSER)
+		CHECK_USER=`checkUser $MASTERUSER`
 
 		if [ "$CHECK_USER" != "1" ]; then
 			echo $CHECK_USER
@@ -747,7 +757,7 @@ if [ "$INSTALL" != "MY" ]; then
 		fi
 	fi
 
-	if [ $(id $1 2> /dev/null) != "" ]; then
+	if [ "`id $1 2> /dev/null`" != "" ]; then
 		if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" ]; then
 			$USERADD -m -b /home -s /bin/bash -g $WEBGROUPNAME $MASTERUSER
 		else
@@ -786,7 +796,7 @@ if [ "$INSTALL" != "MY" ]; then
 		cyanMessage "It is recommended but not required to set a password"
 		su -c "ssh-keygen -t rsa" $MASTERUSER
 
-		KEYNAME=$(find -maxdepth 1 -name "*.pub" | head -n 1)
+		KEYNAME=`find -maxdepth 1 -name "*.pub" | head -n 1`
 
 		if [ "$KEYNAME" != "" ]; then
 			su -c "cat $KEYNAME >> authorized_keys" $MASTERUSER
@@ -794,7 +804,7 @@ if [ "$INSTALL" != "MY" ]; then
 				if [ -d /home/easywi_web/htdocs/keys/ ]; then
 					cp /home/$MASTERUSER/.ssh/id_rsa.pub /home/easywi_web/htdocs/keys/$MASTERUSER.pub
 					cp /home/$MASTERUSER/.ssh/id_rsa /home/easywi_web/htdocs/keys/$MASTERUSER
-					WEBGROUPNAME2=$(ls -ls /home/easywi_web/htdocs/keys/ | grep "easywi_web" | awk '{print $5}' | head -n1)
+					WEBGROUPNAME2=`ls -ls /home/easywi_web/htdocs/keys/ | grep "easywi_web" | awk '{print $5}' | head -n1`
 					chown -cR easywi_web:$WEBGROUPNAME2 /home/easywi_web/htdocs/keys/ 2>&1 >/dev/null
 				fi
 			fi
@@ -839,7 +849,7 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "MY" ]; then
 	fi
 
 	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
-		if [ $(ps fax | grep 'mysqld' | grep -v 'grep') == "" ]; then
+		if [ "`ps fax | grep 'mysqld' | grep -v 'grep'`" == "" ]; then
 			cyanMessage " "
 			cyanMessage "Please select if an which database server to install."
 
@@ -853,13 +863,13 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "MY" ]; then
 			done
 		fi
 	elif [ "$OS" == "centos" ]; then
-		if [ $(ps fax | grep 'mysqld' | grep -v 'grep') == "" ]; then
+		if [ "`ps fax | grep 'mysqld' | grep -v 'grep'`" == "" ]; then
 			SQL="MariaDB"
 			SQL_VERSION="10"
 		fi
 	fi
 
-	if [ $(ps fax | grep 'mysqld' | grep -v 'grep') != "" ]; then
+	if [ "`ps fax | grep 'mysqld' | grep -v 'grep'`" != "" ]; then
 		if [ -f /root/database_root_login.txt ]; then
 			MYSQL_ROOT_PASSWORD=$(grep "Password:" /root/database_root_login.txt | awk '{print $2}')
 		else
@@ -879,7 +889,7 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "MY" ]; then
 			ERROR_CODE=$?
 		done
 	else
-		MYSQL_ROOT_PASSWORD=$(< /dev/urandom tr -dc A-Za-z0-9 | head -c18)
+		MYSQL_ROOT_PASSWORD=`< /dev/urandom tr -dc A-Za-z0-9 | head -c18`
 	fi
 
 	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
@@ -890,7 +900,7 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "MY" ]; then
 
 	if [ "$SQL" == "MariaDB" ]; then
 		RUNUPDATE=0
-		if ([ "$OS" == "debian" -o "$OS" == "ubuntu" ] && [ $(grep '/mariadb/' /etc/apt/sources.list) == "" ]); then
+		if ([ "$OS" == "debian" -o "$OS" == "ubuntu" ] && [ "`grep '/mariadb/' /etc/apt/sources.list`" == "" ]); then
 			checkInstall software-properties-common
 
 			if [ "$OS" == "debian" -a "$OSVERSION" -ge "900" ]; then
@@ -907,7 +917,7 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "MY" ]; then
 				importKey hkp://keyserver.ubuntu.com:80 0xcbcb082a1bb943db
 			fi
 
-			if [ $(apt-cache search mariadb-server-10.2) == "" ]; then
+			if [ "`apt-cache search mariadb-server-10.2`" == "" ]; then
 				add-apt-repository "deb http://mirror.netcologne.de/mariadb/repo/10.2/$OS $OSBRANCH main"
 				RUNUPDATE=1
 			fi
@@ -921,7 +931,7 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "MY" ]; then
 		elif ([ "$OS" == "centos" -a "$SQL_VERSION" == "10" ] && [ ! -f /etc/yum.repos.d/MariaDB.repo ]); then
 			MARIADB_FILE=$(ls /etc/yum.repos.d/)
 			for search_mariadb in "${MARIADB_FILE[@]}"; do
-				if [ $(grep '/MariaDB/' $search_mariadb >/dev/null 2>&1) == "" -a ! -f /etc/yum.repos.d/MariaDB.repo ]; then
+				if [ "`grep '/MariaDB/' $search_mariadb >/dev/null 2>&1`" == "" -a ! -f /etc/yum.repos.d/MariaDB.repo ]; then
 					echo '# MariaDB 10.2 CentOS repository list - created 2018-08-30 23:19 UTC
 # http://downloads.mariadb.org/mariadb/repositories/
 [mariadb]
@@ -953,7 +963,7 @@ gpgcheck=1' > /etc/yum.repos.d/MariaDB.repo
 		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 			checkInstall mariadb-server
 			checkInstall mariadb-client
-			if ([ $(printf "${OSVERSION}\n80" | sort -V | tail -n 1) == "80" -o "$OS" == "ubuntu" ] && [ $(grep '/mariadb/' /etc/apt/sources.list) == "" ]); then
+			if ([ "`printf "${OSVERSION}\n80" | sort -V | tail -n 1`" == "80" -o "$OS" == "ubuntu" ] && [ "`grep '/mariadb/' /etc/apt/sources.list`" == "" ]); then
 				checkInstall mysql-common
 			else
 				checkInstall mariadb-common
@@ -1032,24 +1042,24 @@ _EOF_
 		fi
 
 		if [ "$LOCAL_IP" != "" -a -f "$MYSQL_CONF" -a ! "$MYSQL_CONF".easy-install.backup ]; then
-			if [ $(grep 'bind-address' $MYSQL_CONF | awk '{print $3}') != "0.0.0.0" ]; then
+			if [ "`grep 'bind-address' $MYSQL_CONF | awk '{print $3}'`" != "0.0.0.0" ]; then
 				sed -i "s/bind-address.*/bind-address = 0.0.0.0/g" $MYSQL_CONF
-			elif [ $(grep 'bind-address' $MYSQL_CONF) == "" ]; then
+			elif [ "`grep 'bind-address' $MYSQL_CONF`" == "" ]; then
 				sed -i "/\[mysqld\]/abind-address = 0.0.0.0" $MYSQL_CONF
 			fi
 		fi
 	elif [ "$EXTERNAL_INSTALL" == "No" ]; then
-		if [ $(grep 'bind-address' $MYSQL_CONF) == "" ]; then
+		if [ "`grep 'bind-address' $MYSQL_CONF`" == "" ]; then
 			sed -i "/\[mysqld\]/abind-address = 127.0.0.1" $MYSQL_CONF
-		elif [ $(grep 'bind-address = 0.0.0.0' $MYSQL_CONF) == "" -a ! "$MYSQL_CONF".easy-install.backup ]; then
+		elif [ "`grep 'bind-address = 0.0.0.0' $MYSQL_CONF`" == "" -a ! "$MYSQL_CONF".easy-install.backup ]; then
 			sed -i "s/bind-address.*/bind-address = 127.0.0.1/g" $MYSQL_CONF
 		fi
 	fi
 
-	MYSQL_VERSION=$(mysql -V | awk {'print $5'} | tr -d ,)
+	MYSQL_VERSION=`mysql -V | awk {'print $5'} | tr -d ,`
 
 	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
-		if [ $(grep -E 'key_buffer[[:space:]]*=' /etc/mysql/my.cnf) != "" -a $(printf "${MYSQL_VERSION}\n5.5" | sort -V | tail -n 1) != "5.5" ]; then
+		if [ "`grep -E 'key_buffer[[:space:]]*=' /etc/mysql/my.cnf`" != "" -a "printf "${MYSQL_VERSION}\n5.5" | sort -V | tail -n 1" != "5.5" ]; then
 			sed -i -e "51s/key_buffer[[:space:]]*=/key_buffer_size = /g" $MYSQL_CONF
 			sed -i -e "57s/myisam-recover[[:space:]]*=/myisam-recover-options = /g" $MYSQL_CONF
 		fi
@@ -1061,7 +1071,7 @@ _EOF_
 
 	RestartDatabase
 
-	if [ $(ps ax | grep mysql | grep -v grep) == "" ]; then
+	if [ "`ps ax | grep mysql | grep -v grep`" == "" ]; then
 		cyanMessage " "
 		errorAndExit "Error: No SQL server running but required for Webpanel installation."
 	fi
@@ -1072,7 +1082,7 @@ if [ "$INSTALL" == "EW" ]; then
 	okAndSleep "Please note that Easy-Wi will install required PHP packages."
 	PHPINSTALL="Yes"
 elif [ "$INSTALL" == "WR" ]; then
-	if [ $(rpm -qa php 2>/dev/null) == "" -a $(dpkg -l 2>/dev/null | egrep -o "php-common") == "" ]; then
+	if [ "`rpm -qa php 2>/dev/null`" == "" -a "`dpkg -l 2>/dev/null | egrep -o "php-common"`" == "" ]; then
 		cyanMessage " "
 		cyanMessage "Install/Update PHP?"
 		cyanMessage "Select \"None\" in case this server should host only Fastdownload webspace."
@@ -1199,12 +1209,12 @@ if [ "$PHPINSTALL" == "Yes" ]; then
 	RestartWebserver
 fi
 
-if ([ "$INSTALL" == "WR" -o "$INSTALL" == "EW" ] && [ $(grep '/bin/false' /etc/shells) == "" ]); then
+if ([ "$INSTALL" == "WR" -o "$INSTALL" == "EW" ] && [ "`grep '/bin/false' /etc/shells`" == "" ]); then
 	echo "/bin/false" >> /etc/shells
 fi
 
 if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
-	if [ $(rpm -qa proftpd 2>/dev/null) == "" -a $(dpkg -l 2>/dev/null | egrep -o "proftpd") == "" ]; then
+	if [ "`rpm -qa proftpd 2>/dev/null`" == "" -a "`dpkg -l 2>/dev/null | egrep -o "proftpd"`" == "" ]; then
 		cyanMessage " "
 		cyanMessage "Install/Update ProFTPD?"
 
@@ -1247,7 +1257,7 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
 				ln -s /etc/proftpd/proftpd.conf proftpd.conf
 			fi
 			backUpFile /etc/proftpd/proftpd.conf
-			if [ $(grep 'Include' /etc/proftpd/proftpd.conf) == "" ]; then
+			if [ "`grep 'Include' /etc/proftpd/proftpd.conf`" == "" ]; then
 				echo "Include /etc/proftpd/conf.d/" >> /etc/proftpd/proftpd.conf
 				makeDir /etc/proftpd/conf.d
 			fi
@@ -1270,7 +1280,7 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
 				esac
 			done
 
-			if [ "$OPTION" == "Yes" -a $(grep '<Directory \/home\/\*\/pserver\/\*>' /etc/proftpd/proftpd.conf) == "" -a ! -f /etc/proftpd/conf.d/easy-wi.conf ]; then
+			if [ "$OPTION" == "Yes" -a "`grep '<Directory \/home\/\*\/pserver\/\*>' /etc/proftpd/proftpd.conf`" == "" -a ! -f /etc/proftpd/conf.d/easy-wi.conf ]; then
 				makeDir /etc/proftpd/conf.d/
 				chmod 755 /etc/proftpd/conf.d/
 
@@ -1390,7 +1400,7 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
 
 			cat /etc/fstab | while read LINE; do
 				if [[ `echo $LINE | grep '/' | egrep -v '#|boot|proc|swap|floppy|cdrom|usrquota|usrjquota|/sys|/shm|/pts'` ]]; then
-					CURRENTOPTIONS=$(echo $LINE | awk '{print $4}')
+					CURRENTOPTIONS=`echo $LINE | awk '{print $4}'`
 					echo $LINE | sed "s/$CURRENTOPTIONS/$CURRENTOPTIONS,usrjquota=aquota.user,jqfmt=vfsv0/g" >> /root/tempfstab
 					echo $LINE | awk '{print $2}' >> /root/tempmountpoints
 				else
@@ -1457,7 +1467,7 @@ if [ "$INSTALL" == "WR" -o "$INSTALL" == "EW" ]; then
 		backUpFile $APACHE_CONFIG
 
 		if [ "$OS" == "centos" ]; then
-			if [ $(grep '<IfModule mpm_itk_module>' $APACHE_CONFIG) == "" ]; then
+			if [ "`grep '<IfModule mpm_itk_module>' $APACHE_CONFIG`" == "" ]; then
 				echo " " >> $APACHE_CONFIG
 				cat >> $APACHE_CONFIG <<_EOF_
 <IfModule mpm_itk_module>
@@ -1472,19 +1482,19 @@ _EOF_
 		fi
 
 
-		if [ $(grep 'ServerName localhost' $APACHE_CONFIG) == "" ]; then
+		if [ "`grep 'ServerName localhost' $APACHE_CONFIG`" == "" ]; then
 			echo " " >> $APACHE_CONFIG
 			echo '# Added to prevent error message Could not reliably determine the servers fully qualified domain name' >> $APACHE_CONFIG
 			echo 'ServerName localhost' >> $APACHE_CONFIG
 		fi
 
-		if [ $(grep 'ServerTokens' $APACHE_CONFIG) == "" ]; then
+		if [ "`grep 'ServerTokens' $APACHE_CONFIG`" == "" ]; then
 			echo " " >> $APACHE_CONFIG
 			echo '# Added to prevent the server information off in productive systems' >> $APACHE_CONFIG
 			echo 'ServerTokens prod' >> $APACHE_CONFIG
 		fi
 
-		if [ $(grep 'ServerSignature' $APACHE_CONFIG) == "" ]; then
+		if [ "`grep 'ServerSignature' $APACHE_CONFIG`" == "" ]; then
 			echo " " >> $APACHE_CONFIG
 			echo '# Added to prevent the server signatur off in productive systems' >> $APACHE_CONFIG
 			echo 'ServerSignature off' >> $APACHE_CONFIG
@@ -1492,12 +1502,12 @@ _EOF_
 		fi
 
 		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
-			APACHE_VERSION=$(apache2 -v | grep 'Server version')
+			APACHE_VERSION=`apache2 -v | grep 'Server version'`
 		elif [ "$OS" == "centos" ]; then
-			APACHE_VERSION=$(httpd -v | grep 'Server version')
+			APACHE_VERSION=`httpd -v | grep 'Server version'`
 		fi
 
-		if [ $(grep '/home/'$MASTERUSER'/sites-enabled/' $APACHE_CONFIG) == "" ]; then
+		if [ "`grep '/home/'$MASTERUSER'/sites-enabled/' $APACHE_CONFIG`" == "" ]; then
 			echo '# Load config files in the "/home/'$MASTERUSER'/sites-enabled" directory, if any.' >> $APACHE_CONFIG
 			if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 				if [[ "$APACHE_VERSION" =~ .*Apache/2.2.* ]]; then
@@ -1526,57 +1536,57 @@ fi
 # No direct root access for masteruser. Only limited access through sudo
 if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
 	checkInstall sudo
-	if [ -f /etc/sudoers -a $(grep $MASTERUSER /etc/sudoers | grep $USERADD) == "" ]; then
+	if [ -f /etc/sudoers -a "`grep $MASTERUSER /etc/sudoers | grep $USERADD`" == "" ]; then
 		echo "$MASTERUSER ALL = NOPASSWD: $USERADD" >> /etc/sudoers
 	fi
 
-	if [ -f /etc/sudoers -a $(grep $MASTERUSER /etc/sudoers | grep $USERMOD) == "" ]; then
+	if [ -f /etc/sudoers -a "`grep $MASTERUSER /etc/sudoers | grep $USERMOD`" == "" ]; then
 		echo "$MASTERUSER ALL = NOPASSWD: $USERMOD" >> /etc/sudoers
 	fi
 
-	if [ -f /etc/sudoers -a $(grep $MASTERUSER /etc/sudoers | grep $USERDEL) == "" ]; then
+	if [ -f /etc/sudoers -a "`grep $MASTERUSER /etc/sudoers | grep $USERDEL`" == "" ]; then
 		echo "$MASTERUSER ALL = NOPASSWD: $USERDEL" >> /etc/sudoers
 	fi
 
 	if [ "$QUOTAINSTALL" == "Yes" -a -f /etc/sudoers ]; then
-		if [ $(grep $MASTERUSER /etc/sudoers | grep setquota) == "" ]; then
+		if [ "`grep $MASTERUSER /etc/sudoers | grep setquota`" == "" ]; then
 			echo "$MASTERUSER ALL = NOPASSWD: `which setquota`" >> /etc/sudoers
 		fi
 
-		if [ $(grep $MASTERUSER /etc/sudoers | grep repquota) == "" ]; then
+		if [ "`grep $MASTERUSER /etc/sudoers | grep repquota`" == "" ]; then
 			echo "$MASTERUSER ALL = NOPASSWD: `which repquota`" >> /etc/sudoers
 		fi
 	fi
 
-	if [ "$INSTALL" == "GS" -a -f /etc/sudoers -a $(grep $MASTERUSER /etc/sudoers | grep temp) == "" ]; then
+	if [ "$INSTALL" == "GS" -a -f /etc/sudoers -a "`grep $MASTERUSER /etc/sudoers | grep temp`" == "" ]; then
 		echo "$MASTERUSER ALL = (ALL, !root:$MASTERUSER) NOPASSWD: /home/$MASTERUSER/temp/*.sh" >> /etc/sudoers
 		echo "$MASTERUSER ALL = (ALL, !root:$MASTERUSER) NOPASSWD: /bin/bash /home/$MASTERUSER/temp/*.sh" >> /etc/sudoers
 	fi
 
 	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 		if [ "$WEBSERVER" == "Lighttpd" ]; then
-			HTTPDBIN=$(which lighttpd)
+			HTTPDBIN=`which lighttpd`
 			HTTPDSCRIPT="/etc/init.d/lighttpd"
 		elif [ "$WEBSERVER" == "Apache" ]; then
-			HTTPDBIN=$(which apache2)
+			HTTPDBIN=`which apache2`
 			HTTPDSCRIPT="/etc/init.d/apache2"
 		fi
 	elif [ "$OS" == "centos" ]; then
 		if [ "$WEBSERVER" == "Lighttpd" ]; then
-			HTTPDBIN=$(which lighttpd)
+			HTTPDBIN=`which lighttpd`
 			HTTPDSCRIPT='lighttpd'
 		elif [ "$WEBSERVER" == "Apache" ]; then
-			HTTPDBIN=$(which httpd)
+			HTTPDBIN=`which httpd`
 			HTTPDSCRIPT='httpd'
 		fi
 	fi
 
 	if [ "$HTTPDBIN" != "" -a -f /etc/sudoers ]; then
-		if [ $(grep $MASTERUSER /etc/sudoers | grep $HTTPDBIN) == "" ]; then
+		if [ "`grep $MASTERUSER /etc/sudoers | grep $HTTPDBIN`" == "" ]; then
 			echo "$MASTERUSER ALL = NOPASSWD: $HTTPDBIN" >> /etc/sudoers
 		fi
 
-		if [ $(grep $MASTERUSER /etc/sudoers | grep 'reload $HTTPDSCRIPT') == "" ]; then
+		if [ "`grep $MASTERUSER /etc/sudoers | grep 'reload $HTTPDSCRIPT'`" == "" ]; then
 			if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 				echo "$MASTERUSER ALL = NOPASSWD: $HTTPDSCRIPT" >> /etc/sudoers
 			else
@@ -1629,7 +1639,7 @@ if [ "$INSTALL" == "GS" ]; then
 		touch /bin/false
 	fi
 
-	if [ $(grep '/bin/false' /etc/shells) == "" ]; then
+	if [ "`grep '/bin/false' /etc/shells`" == "" ]; then
 		echo "/bin/false" >> /etc/shells
 	fi
 
@@ -1647,7 +1657,7 @@ if [ "$INSTALL" == "GS" ]; then
 	if [ "$OPTION" == "Yes" ]; then
 		cyanMessage " "
 		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
-			if [ "$OSBRANCH" == "jessie" -a $(grep jessie-backports /etc/apt/sources.list) == "" ]; then
+			if [ "$OSBRANCH" == "jessie" -a "`grep jessie-backports /etc/apt/sources.list`" == "" ]; then
 				okAndSleep "Adding jessie backports"
 				echo "deb http://ftp.de.debian.org/debian jessie-backports main" >> /etc/apt/sources.list
 				$INSTALLER -y update
@@ -1658,7 +1668,7 @@ if [ "$INSTALL" == "GS" ]; then
 			fi
 
 			if [ "$OS" == "ubuntu" -a "$OSVERSION" -lt "1410" ]; then
-				if [ $(which add-apt-repository) == "" ]; then
+				if [ "`which add-apt-repository`" == "" ]; then
 					checkInstall add-apt-repository
 				fi
 				add-apt-repository -y ppa:openjdk-r/ppa
@@ -1693,7 +1703,7 @@ if [ "$INSTALL" == "GS" ]; then
 	chmod -R 770 /home/$MASTERUSER/logs/ /home/$MASTERUSER/temp/ /home/$MASTERUSER/fdl_data/
 
 	if [ "$OS" == "debian" -a "$OSVERSION" -lt "900" ]; then
-		if [ $(uname -m) == "x86_64" -a $(grep '6.' /etc/debian_version) == "" ]; then
+		if [ "`uname -m`" == "x86_64" -a "`grep '6.' /etc/debian_version`" == "" ]; then
 			dpkg --add-architecture i386
 		fi
 	fi
@@ -1703,7 +1713,7 @@ if [ "$INSTALL" == "GS" ]; then
 		okAndSleep "Installing required packages wput screen bzip2 sudo rsync zip unzip"
 		$INSTALLER -y install wput screen bzip2 sudo rsync zip unzip
 
-		if [ $(uname -m) == "x86_64" ]; then
+		if [ "`uname -m`" == "x86_64" ]; then
 			cyanMessage " "
 			okAndSleep "Installing 32bit support for 64bit systems."
 
@@ -1718,7 +1728,7 @@ if [ "$INSTALL" == "GS" ]; then
 			$INSTALLER -y install libgcc1:i386
 			$INSTALLER -y install libreadline5:i386
 			$INSTALLER -y install libncursesw5:i386
-			if [ $(apt-cache search zlib1g-dev) != "" ]; then
+			if [ "`apt-cache search zlib1g-dev`" != "" ]; then
 				$INSTALLER -y install zlib1g-dev
 			else
 				$INSTALLER -y install zlib1g:i386
@@ -1746,7 +1756,7 @@ if [ "$INSTALL" == "GS" ]; then
 			checkInstall wput
 		fi
 
-		if [ $(uname -m) == "x86_64" ]; then
+		if [ "`uname -m`" == "x86_64" ]; then
 			okAndSleep "Installing 32bit support for 64bit systems."
 			checkInstall glibc.i686
 			checkInstall libstdc++.i686
@@ -1776,7 +1786,7 @@ if [ "$INSTALL" == "GS" ]; then
 
 	chown -cR $MASTERUSER:$MASTERUSER /home/$MASTERUSER >/dev/null 2>&1
 
-	if [ -f /etc/crontab -a $(grep 'Minecraft can easily produce 1GB' /etc/crontab) == "" ]; then
+	if [ -f /etc/crontab -a "`grep 'Minecraft can easily produce 1GB' /etc/crontab`" == "" ]; then
 		cyanMessage " "
 		okAndSleep "Installing Minecraft Crontabs"
 		if ionice -c3 true 2>/dev/null; then
@@ -1821,9 +1831,9 @@ if [ "$INSTALL" == "EW" ]; then
 		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "FLUSH PRIVILEGES;"
 	fi
 
-	if [ $(id easywi_web 2> /dev/null) == "" -a ! -d /home/easywi_web ]; then
+	if [ "`id easywi_web 2> /dev/null`" == "" -a ! -d /home/easywi_web ]; then
 		$USERADD -md /home/easywi_web -g $WEBGROUPNAME -s /bin/bash -k /home/$MASTERUSER/skel/ easywi_web
-	elif [ $(id easywi_web 2> /dev/null) == "" -a -d /home/easywi_web ]; then
+	elif [ "`id easywi_web 2> /dev/null`" == "" -a -d /home/easywi_web ]; then
 		$USERADD -d /home/easywi_web -g $WEBGROUPNAME -s /bin/bash easywi_web
 	fi
 
@@ -1833,7 +1843,7 @@ if [ "$INSTALL" == "EW" ]; then
 	makeDir /home/easywi_web/session
 	chown -cR easywi_web:$WEBGROUPNAME /home/easywi_web >/dev/null 2>&1
 
-	if [ $(id easywi_web 2> /dev/null) == "" ]; then
+	if [ "`id easywi_web 2> /dev/null`" == "" ]; then
 		errorAndExit "Web user easywi_web does not exists! Exiting now!"
 	fi
 
@@ -1847,9 +1857,9 @@ if [ "$INSTALL" == "EW" ]; then
 	cyanMessage " "
 	okAndSleep "Downloading latest Easy-WI ${RELEASE_TYPE} version."
 	if [ "${RELEASE_TYPE}" == "Stable" ]; then
-		DOWNLOAD_URL=$(wget -q --timeout=60 -O - https://api.github.com/repos/easy-wi/developer/releases/latest | grep -Po '(?<="zipball_url": ")([\w:/\-.]+)')
+		DOWNLOAD_URL=`wget -q --timeout=60 -O - https://api.github.com/repos/easy-wi/developer/releases/latest | grep -Po '(?<="zipball_url": ")([\w:/\-.]+)'`
 	else
-		DOWNLOAD_URL=$(wget -q --timeout=60 -O - https://api.github.com/repos/easy-wi/developer/tags | grep -Po '(?<="zipball_url": ")([\w:/\-.]+)' | head -n 1)
+		DOWNLOAD_URL=`wget -q --timeout=60 -O - https://api.github.com/repos/easy-wi/developer/tags | grep -Po '(?<="zipball_url": ")([\w:/\-.]+)' | head -n 1`
 	fi
 
 	curl -L ${DOWNLOAD_URL} -o web.zip
@@ -1862,7 +1872,7 @@ if [ "$INSTALL" == "EW" ]; then
 	unzip -u web.zip >/dev/null 2>&1
 	removeIfExists web.zip
 
-	HEX_FOLDER=$(ls | grep 'easy-wi-developer-' | head -n 1)
+	HEX_FOLDER=`ls | grep 'easy-wi-developer-' | head -n 1`
 	if [ "${HEX_FOLDER}" != "" ]; then
 		mv ${HEX_FOLDER}/* ./
 		rm -rf ${HEX_FOLDER}
@@ -1873,7 +1883,7 @@ if [ "$INSTALL" == "EW" ]; then
 
 	chown -cR easywi_web:$WEBGROUPNAME /home/easywi_web >/dev/null 2>&1
 
-	DB_PASSWORD=$(< /dev/urandom tr -dc A-Za-z0-9 | head -c18)
+	DB_PASSWORD=`< /dev/urandom tr -dc A-Za-z0-9 | head -c18`
 	cyanMessage " "
 	okAndSleep "Creating database easy_wi and connected user easy_wi"
 	if [ "$MYSQL_ROOT_PASSWORD" == "" ]; then
@@ -1919,7 +1929,7 @@ if [ "$INSTALL" == "EW" ]; then
 					wget https://dl.eff.org/certbot-auto
 					chmod a+x certbot-auto
 				elif [ "$OSBRANCH" == "jessie" ]; then
-					if [ $(grep jessie-backports /etc/apt/sources.list) == "" ]; then
+					if [ "`grep jessie-backports /etc/apt/sources.list`" == "" ]; then
 						okAndSleep "Adding jessie backports"
 						echo "deb http://ftp.de.debian.org/debian jessie-backports main" >> /etc/apt/sources.list
 					fi
@@ -2128,7 +2138,7 @@ if [ "$INSTALL" == "EW" ]; then
 
 	RestartWebserver
 
-	if [ $(grep -o ./reboot.php /etc/crontab) == "" ]; then
+	if [ "`grep -o ./reboot.php /etc/crontab`" == "" ]; then
 		cyanMessage " "
 		okAndSleep "Installing Easy-WI Crontabs"
 		echo '0 */1 * * * easywi_web cd /home/easywi_web/htdocs && timeout 300 php ./reboot.php >/dev/null 2>&1
@@ -2184,12 +2194,12 @@ if [ "$INSTALL" == "VS" ]; then
 	fi
 
 	if [ -f $QUERY_WHITLIST_TXT ]; then
-		if [ $(grep '127.0.0.1' $QUERY_WHITLIST_TXT) == "" ]; then
+		if [ "`grep '127.0.0.1' $QUERY_WHITLIST_TXT`" == "" ]; then
 			echo "127.0.0.1" >> $QUERY_WHITLIST_TXT
 		fi
 
 		if [ "$LOCAL_IP" != "" ]; then
-			if [ $(grep -E '\b((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.|$)){4}\b' <<< $LOCAL_IP) != "" -a $(grep $LOCAL_IP $QUERY_WHITLIST_TXT) == "" ]; then
+			if [ "`grep -E '\b((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.|$)){4}\b' <<< $LOCAL_IP`" != "" -a "`grep $LOCAL_IP $QUERY_WHITLIST_TXT`" == "" ]; then
 				echo $LOCAL_IP >> $QUERY_WHITLIST_TXT
 			fi
 		fi
@@ -2214,7 +2224,7 @@ if [ "$INSTALL" == "VS" ]; then
 		fi
 
 		if [ "$IP_ADDRESS" != "" ]; then
-			if [ $(grep -E '\b((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.|$)){4}\b' <<< $IP_ADDRESS) != "" -a $(grep $IP_ADDRESS $QUERY_WHITLIST_TXT) == "" ]; then
+			if [ "`grep -E '\b((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.|$)){4}\b' <<< $IP_ADDRESS`" != "" -a "`grep $IP_ADDRESS $QUERY_WHITLIST_TXT`" == "" ]; then
 				echo $IP_ADDRESS >> $QUERY_WHITLIST_TXT
 			fi
 		fi
@@ -2227,7 +2237,7 @@ if [ "$INSTALL" == "VS" ]; then
 		chown -cR $MASTERUSER:$MASTERUSER .ts3server_license_accepted 2>&1 >/dev/null
 	fi
 
-	QUERY_PASSWORD=$(< /dev/urandom tr -dc A-Za-z0-9 | head -c12)
+	QUERY_PASSWORD=`< /dev/urandom tr -dc A-Za-z0-9 | head -c12`
 
 	greenMessage " "
 	greenMessage "Starting the TS3 server for the first time and shutting it down again as the password will be visible in the process tree."
@@ -2245,10 +2255,10 @@ if [ "$INSTALL" == "MY" ]; then
 	cyanMessage "Please enter the name of the database user, which does not exist yet."
 	read MYSQL_USER
 
-	MYSQL_USER_PASSWORD=$(< /dev/urandom tr -dc A-Za-z0-9 | head -c18)
+	MYSQL_USER_PASSWORD=`< /dev/urandom tr -dc A-Za-z0-9 | head -c18`
 
 	if [ "$EXTERNAL_INSTALL" == "No" ]; then
-		if [ $(ps fax | grep 'mysqld' | grep -v 'grep') != "" ]; then
+		if [ "`ps fax | grep 'mysqld' | grep -v 'grep'`" != "" ]; then
 			mysql -uroot -p$MYSQL_ROOT_PASSWORD -e exit 2> /dev/null
 			ERROR_CODE=$?
 
@@ -2294,17 +2304,17 @@ fi
 
 # Firewall CentOS
 if [ "$OS" == "centos" ]; then
-	if ([ $(rpm -qa firewalld) != "" -a $(systemctl status firewalld 2>/dev/null | egrep -o 'inactive') == "" ]); then
+	if ([ "`rpm -qa firewalld`" != "" -a "`systemctl status firewalld 2>/dev/null | egrep -o 'inactive'`" == "" ]); then
 		yellowMessage " "
 		yellowMessage "Adding Firewall Rules for:"
 
 		if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" ]; then
-			if [ $(firewall-cmd --zone=public --list-all | egrep -o 'http') == "" ]; then
+			if [ "`firewall-cmd --zone=public --list-all | egrep -o 'http'`" == "" ]; then
 				greenMessage " - HTTP Port: 80/tcp"
 				firewall-cmd --zone=public --permanent --add-service=http 1> /dev/null
 				FIREWALL="Yes"
 			fi
-			if [ "$SSL" == "Yes" -a $(firewall-cmd --zone=public --list-all | egrep -o '443') == "" ]; then
+			if [ "$SSL" == "Yes" -a "`firewall-cmd --zone=public --list-all | egrep -o '443'`" == "" ]; then
 				greenMessage " - HTTPS Port: 443/tcp"
 				firewall-cmd --zone=public --permanent --add-port=443/tcp 1> /dev/null
 				FIREWALL="Yes"
@@ -2313,7 +2323,7 @@ if [ "$OS" == "centos" ]; then
 
 		if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" -o "$INSTALL" == "GS" ]; then
 			if [ "$PROFTP_INSTALL" != "NO" ]; then
-				if [ $(firewall-cmd --zone=public --list-all | egrep -o 'ftp') == "" ]; then
+				if [ "`firewall-cmd --zone=public --list-all | egrep -o 'ftp'`" == "" ]; then
 					greenMessage " - FTP Port: 21/tcp"
 					firewall-cmd --zone=public --permanent --add-port=21/tcp 1> /dev/null
 					firewall-cmd --zone=public --permanent --add-service=ftp 1> /dev/null
@@ -2324,7 +2334,7 @@ if [ "$OS" == "centos" ]; then
 
 		if [ "$INSTALL" == "WR" -o "$INSTALL" == "MY" ]; then
 			if [ "$EXTERNAL_INSTALL" == "Yes" -a "$SQL" != "None" ]; then
-				if [ $(firewall-cmd --zone=public --list-all | egrep -o 'mysql') == "" ]; then
+				if [ "`firewall-cmd --zone=public --list-all | egrep -o 'mysql'`" == "" ]; then
 					greenMessage " - MySQL Port: 3306/tcp"
 					firewall-cmd --zone=public --permanent --add-service=mysql 1> /dev/null
 					FIREWALL="Yes"
@@ -2333,7 +2343,7 @@ if [ "$OS" == "centos" ]; then
 		fi
 
 		if [ "$INSTALL" == "VS" ]; then
-			if [ $(firewall-cmd --zone=public --list-all | egrep -o '9987') == "" ]; then
+			if [ "`firewall-cmd --zone=public --list-all | egrep -o '9987'`" == "" ]; then
 				greenMessage " - Teamspeak Port: 10011/tcp, 30033/tcp, 9987/udp"
 				firewall-cmd --zone=public --permanent --add-port=10011/tcp 1> /dev/null
 				firewall-cmd --zone=public --permanent --add-port=30033/tcp 1> /dev/null
@@ -2343,7 +2353,7 @@ if [ "$OS" == "centos" ]; then
 		fi
 
 		if [ "$INSTALL" == "GS" ]; then
-			if [ $(firewall-cmd --zone=public --list-all | egrep -o '4380') == "" ]; then
+			if [ "`firewall-cmd --zone=public --list-all | egrep -o '4380'`" == "" ]; then
 				greenMessage " - Steam Port: 4380/udp, 27000-27030/udp"
 				firewall-cmd --zone=public --permanent --add-port=4380/udp 1> /dev/null
 				firewall-cmd --zone=public --permanent --add-port=27000-27030/udp 1> /dev/null
