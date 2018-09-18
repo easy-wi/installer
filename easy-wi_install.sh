@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # DEBUG MODE
-DEBUG="OFF"
+DEBUG="ON"
 
 #    Author:     Ulrich Block <ulrich.block@easy-wi.com>,
 #                Alexander Doerwald <alexander.doerwald@easy-wi.com>
@@ -93,7 +93,7 @@ removeIfExists() {
 runSpinner() {
 	SPINNER=("-" "\\" "|" "/")
 
-	for SEQUENCE in `seq 1 $1`; do
+	for SEQUENCE in $(seq 1 $1); do
 		for I in "${SPINNER[@]}"; do
 			echo -ne "\b$I"
 			sleep 0.1
@@ -120,13 +120,13 @@ backUpFile() {
 
 checkInstall() {
 	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
-		if [ "`dpkg-query -s $1 2>/dev/null`" == "" ]; then
+		if [ $(dpkg-query -s $1 2>/dev/null) == "" ]; then
 			cyanMessage " "
 			okAndSleep "Installing package $1"
 			$INSTALLER -y install $1
 		fi
 	elif [ "$OS" == "centos" ]; then
-		if [ "`rpm -qa $1`" == "" ]; then
+		if [ $(rpm -qa $1) == "" ]; then
 			cyanMessage " "
 			okAndSleep "Installing package $1"
 			$INSTALLER -y install $1
@@ -239,10 +239,10 @@ doReboot() {
 if [ -f /etc/debian_version ]; then
 	INSTALLER="apt-get"
 	OS="debian"
-	if [ "`which dialog`" == "" ]; then
+	if [ $(which dialog) == "" ]; then
 		checkInstall dialog
 	fi
-	if [ "`which logger`" == "" ]; then
+	if [ $(which logger) == "" ]; then
 		apt-get --reinstall install bsdutils
 	fi
 elif [ -f /etc/centos-release ]; then
@@ -259,12 +259,12 @@ elif [ -f /etc/centos-release ]; then
 fi
 
 INSTALLER_VERSION="2.4"
-USERADD=`which useradd`
-USERMOD=`which usermod`
-USERDEL=`which userdel`
-GROUPADD=`which groupadd`
-MACHINE=`uname -m`
-LOCAL_IP=`ip route get 8.8.8.8 | awk '{print $NF; exit}'`
+USERADD=$(which useradd)
+USERMOD=$(which usermod)
+USERDEL=$(which userdel)
+GROUPADD=$(which groupadd)
+MACHINE=$(uname -m)
+LOCAL_IP=$(ip route get 8.8.8.8 | awk '{print $NF; exit}')
 
 if [ "$LOCAL_IP" == "" -o "$LOCAL_IP" == "0" ]; then
 	LOCAL_IP=`hostname -I | awk '{print $1}'`
