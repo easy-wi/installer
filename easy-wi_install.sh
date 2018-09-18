@@ -415,7 +415,7 @@ if [ "$OS" == "ubuntu" -a "$OSVERSION" -lt "1404" -o "$OS" == "debian" -a "$OSVE
 		OSBRANCH_NEW="jessie (Debian 8)"
 	fi
 
-	cyanMessage "Upgrade to "$OS" "$OSBRANCH_NEW"?"
+	cyanMessage 'Upgrade to "$OS" "$OSBRANCH_NEW"?'
 	OPTIONS=("Yes" "No" "Quit")
 	select OPTION in "${OPTIONS[@]}"; do
 		case "$REPLY" in
