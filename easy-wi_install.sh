@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# DEBUG MODE
 DEBUG="OFF"
 
 #    Author:     Ulrich Block <ulrich.block@easy-wi.com>,
@@ -133,6 +134,22 @@ checkInstall() {
 	fi
 }
 
+checkUnInstall() {
+	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
+		if [ "`dpkg-query -s $1 2>/dev/null`" == "" ]; then
+			cyanMessage " "
+			okAndSleep "Uninstalling package $1"
+			$INSTALLER -y remove $1
+		fi
+	elif [ "$OS" == "centos" ]; then
+		if [ "`rpm -qa $1`" == "" ]; then
+			cyanMessage " "
+			okAndSleep "Uninstalling package $1"
+			$INSTALLER -y remove $1
+		fi
+	fi
+}
+
 importKey() {
 	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 		apt-key adv --recv-keys --keyserver $1 $2
@@ -199,11 +216,35 @@ RestartDatabase() {
 	fi
 }
 
+doReboot() {
+	cyanMessage " "
+	cyanMessage "Do you want to restart now?"
+	OPTIONS=("Yes" "No" "Quit")
+	select OPTION in "${OPTIONS[@]}"; do
+		case "$REPLY" in
+			1|2 ) break;;
+			3 ) errorAndQuit;;
+			*) errorAndContinue;;
+		esac
+	done
+
+	if [ "$OPTION" == "Yes" ]; then
+		echo
+		redMessage $1
+		shutdown -r now
+		errorAndQuit
+	fi
+}
+
 if [ -f /etc/debian_version ]; then
 	INSTALLER="apt-get"
 	OS="debian"
-	DIALOG=`which dialog`
-	LOGGER=`which logger`
+	if [ "`which dialog`" == "" ]; then
+		checkInstall dialog
+	fi
+	if [ "`which logger`" == "" ]; then
+		apt-get --reinstall install bsdutils
+	fi
 elif [ -f /etc/centos-release ]; then
 	INSTALLER="yum"
 	OS="centos"
@@ -225,16 +266,8 @@ GROUPADD=`which groupadd`
 MACHINE=`uname -m`
 LOCAL_IP=`ip route get 8.8.8.8 | awk '{print $NF; exit}'`
 
-if [ "$LOCAL_IP" == "" ]; then
-	HOST_NAME=`getent hosts $LOCAL_IP | awk '{print tolower($2)}' | head -n 1`
-fi
-
-if [ "$HOST_NAME" == "" -o "$HOST_NAME" == "0" ]; then
-	HOST_NAME=`hostname -f | awk '{print tolower($0)}'`
-fi
-
 if [ "$LOCAL_IP" == "" -o "$LOCAL_IP" == "0" ]; then
-	LOCAL_IP="IP not found!"
+	LOCAL_IP=`hostname -I | awk '{print $1}'`
 fi
 
 cyanMessage " "
@@ -278,12 +311,6 @@ if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 	$INSTALLER -y upgrade
 	checkInstall debconf-utils
 	checkInstall lsb-release
-	if [ "$DIALOG" == "" ]; then
-		checkInstall dialog
-	fi
-	if [ "$LOGGER" == "" ]; then
-		apt-get --reinstall install bsdutils
-	fi
 elif [ "$OS" == "centos" ]; then
 	cyanMessage " "
 	cyanMessage "Update all obsolete packages."
@@ -294,6 +321,17 @@ elif [ "$OS" == "centos" ]; then
 	checkInstall yum-utils
 fi
 checkInstall curl
+
+if [ "$OS" == "ubuntu" -o "$OS" == "debian" ]; then
+	checkInstall cron
+	checkUnInstall bsd-mailx
+	checkUnInstall exim4
+	checkUnInstall exim4-base
+	checkUnInstall exim4-config
+	checkUnInstall exim4-daemon-light
+elif [ "$OS" == "centos" ]; then
+	checkInstall crontabs
+fi
 
 #CentOS - SELinux
 if [ "$OS" == "centos" ]; then
@@ -310,14 +348,14 @@ if [ "$OS" == "centos" ]; then
 			redMessage "Please reboot your Root/Vserver to disabled SELinux Security Function!"
 			redMessage "Otherwise, the WebInterface can not work."
 			redMessage " "
-			exit 0
+			doReboot "System is rebooting now for finish SELinux Security Function!"
 		fi
 	fi
 fi
 
 cyanMessage " "
 OS=`lsb_release -i 2> /dev/null | grep 'Distributor' | awk '{print tolower($3)}'`
-OSVERSION=`lsb_release -r 2> /dev/null | grep 'Release' | awk '{print $2}'`
+OSVERSION_TMP=`lsb_release -r 2> /dev/null | grep 'Release' | awk '{print $2}'`
 OSBRANCH=`lsb_release -c 2> /dev/null | grep 'Codename' | awk '{print $2}'`
 
 if [ "$MACHINE" == "x86_64" ]; then
@@ -338,15 +376,17 @@ else
 	okAndSleep "Detected branch: $OSBRANCH"
 fi
 
-if [ "$OSVERSION" == "" ]; then
+if [ "$OSVERSION_TMP" == "" ]; then
 	errorAndExit "Error: Could not detect version of OS. Aborting"
 else
-	okAndSleep "Detected version: $OSVERSION"
+	okAndSleep "Detected version: $OSVERSION_TMP"
 
 	if [ "$OS" == "ubuntu" ]; then
-		OSVERSION_TMP=`echo "$OSVERSION" | tr -d .`
+		OSVERSION=`echo "$OSVERSION_TMP" | tr -d .`
+	elif [ "$OS" == "debian" ]; then
+		OSVERSION=`echo "$OSVERSION_TMP"0 | tr -d . | cut -c 1-3`
 	elif [ "$OS" == "centos" -o "$OS" == "debian" ]; then
-		OSVERSION_TMP=`echo "$OSVERSION" | tr -d . | cut -c 1-2`
+		OSVERSION=`echo "$OSVERSION_TMP" | tr -d . | cut -c 1-2`
 	fi
 fi
 
@@ -356,22 +396,58 @@ else
 	okAndSleep "Detected architecture: $ARCH"
 fi
 
-if [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -lt "1404" -o "$OS" == "debian" -a "$OSVERSION_TMP" -lt "80" -o "$OS" == "centos" -a "$OSVERSION_TMP" -lt "60" ]; then
+if [ "$OS" == "ubuntu" -a "$OSVERSION" -lt "1404" -o "$OS" == "debian" -a "$OSVERSION" -lt "800" -o "$OS" == "centos" -a "$OSVERSION" -lt "60" ]; then
 	echo; echo
-	redMessage "Error: Your OS \"$OS - $OSVERSION\" is not more supported from Easy-WI Installer."
+	redMessage "Error: Your OS \"$OS - $OSVERSION_TMP\" is not more supported from Easy-WI Installer."
 	redMessage "Please Upgrade to a newer OS Version!"
 	redMessage " "
-	if [ "$OS" == "ubuntu" ]; then
-		redMessage "Command: do-release-upgrade"
+
+	if [ "$OS" == "centos" ]; then
+		redMessage "Reinstall CentOS to Version 7 or newer!"
+		redMessage "A Upgrade from your OS is not available."
 		redMessage " "
-	elif [ "$OS" == "debian" ]; then
-		redMessage "Command: apt-get update; apt-get upgrade; apt-get dist-upgrade"
-		redMessage " "
-	elif [ "$OS" == "centos" ]; then
-		redMessage "Command: yum check-update; yum update"
-		redMessage " "
+		errorAndQuit
 	fi
-	exit 0
+
+	if [ "$OS" == "ubuntu" ]; then
+		OSBRANCH_NEW="trusty (Ubuntu 14.04)"
+	else
+		OSBRANCH_NEW="jessie (Debian 8)"
+	fi
+
+	cyanMessage "Upgrade to "$OS" "$OSBRANCH_NEW"?"
+	OPTIONS=("Yes" "No" "Quit")
+	select OPTION in "${OPTIONS[@]}"; do
+		case "$REPLY" in
+			1|2 ) break;;
+			3 ) errorAndQuit;;
+			*) errorAndContinue;;
+		esac
+	done
+
+	if [ "$OPTION" == "Yes" ]; then
+		if [ "$OS" == "ubuntu" ]; then
+			checkInstall update-manager-core
+			do-release-upgrade
+		elif [ "$OS" == "debian" ]; then
+			sed -i "s/$OSBRANCH/jessie/g" /etc/apt/sources.list
+			$INSTALLER -y update
+			$INSTALLER -y upgrade
+			$INSTALLER -y dist-upgrade -u
+			$INSTALLER -y autoremove
+		fi
+		doReboot "System is rebooting now for finish Upgrade!"
+	else
+		if [ "$OS" == "ubuntu" ]; then
+			redMessage "Command: do-release-upgrade"
+			redMessage " "
+			errorAndQuit
+		elif [ "$OS" == "debian" ]; then
+			redMessage "Command: apt-get update; apt-get upgrade; apt-get dist-upgrade; apt-get autoremove"
+			redMessage " "
+			errorAndQuit
+		fi
+	fi
 fi
 
 yellowMessage " "
@@ -444,11 +520,11 @@ fi
 if [ "$INSTALL" == "EW" ]; then
 	cyanMessage " "
 	cyanMessage "At which URL/Domain should Easy-Wi be placed?"
-	OPTIONS=("$HOST_NAME" "$LOCAL_IP" "Other" "Quit")
+	OPTIONS=("$LOCAL_IP" "Other" "Quit")
 	select OPTION in "${OPTIONS[@]}"; do
 		case "$REPLY" in
-			1|2|3 ) break;;
-			4 ) errorAndQuit;;
+			1|2 ) break;;
+			3 ) errorAndQuit;;
 			*) errorAndContinue;;
 		esac
 	done
@@ -501,12 +577,11 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" ]; then
 				cyanMessage " "
 				okAndSleep "Adding entries to /etc/apt/sources.list"
 
-				if [ "$OSBRANCH" == "jessie" -o "$OSBRANCH" == "stretch" ]; then
+				if [ "$OSBRANCH" == "jessie" -o "$OSBRANCH" == "stretch" -o "$OSBRANCH" == "trusty" ]; then
 					checkInstall software-properties-common
 				fi
 
 				add-apt-repository "deb http://packages.dotdeb.org $OSBRANCH all"
-				add-apt-repository "deb-src http://packages.dotdeb.org $OSBRANCH all"
 				curl --remote-name https://www.dotdeb.org/dotdeb.gpg
 				apt-key add dotdeb.gpg
 				removeIfExists dotdeb.gpg
@@ -776,9 +851,13 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "MY" ]; then
 	fi
 
 	if [ "`ps fax | grep 'mysqld' | grep -v 'grep'`" != "" ]; then
-		cyanMessage " "
-		cyanOneLineMessage "Please provide the "; greenOneLineMessage "root "; cyanMessage "password for the MySQL Database."
-		read MYSQL_ROOT_PASSWORD
+		if [ -f /root/database_root_login.txt ]; then
+			MYSQL_ROOT_PASSWORD=$(grep "Password:" /root/database_root_login.txt | awk '{print $2}')
+		else
+			cyanMessage " "
+			cyanOneLineMessage "Please provide the "; greenOneLineMessage "root "; cyanMessage "password for the MySQL Database."
+			read MYSQL_ROOT_PASSWORD
+		fi
 
 		mysql -uroot -p$MYSQL_ROOT_PASSWORD -e exit 2> /dev/null
 		ERROR_CODE=$?
@@ -805,17 +884,17 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "MY" ]; then
 		if ([ "$OS" == "debian" -o "$OS" == "ubuntu" ] && [ "`grep '/mariadb/' /etc/apt/sources.list`" == "" ]); then
 			checkInstall software-properties-common
 
-			if [ "$OS" == "debian" -a "$OSVERSION_TMP" -ge "90" ]; then
+			if [ "$OS" == "debian" -a "$OSVERSION" -ge "900" ]; then
 				checkInstall dirmngr
 			fi
 
-			if [ "$OS" == "debian" -a "$OSVERSION_TMP" -ge "90" ]; then
+			if [ "$OS" == "debian" -a "$OSVERSION" -ge "900" ]; then
 				importKey keyserver.ubuntu.com 0xF1656F24C74CD1D8
-			elif [ "$OS" == "debian" -a "$OSVERSION_TMP" -ge "80" ]; then
+			elif [ "$OS" == "debian" -a "$OSVERSION" -ge "800" ]; then
 				importKey keyserver.ubuntu.com 0xcbcb082a1bb943db
-			elif [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1410" ]; then
+			elif [ "$OS" == "ubuntu" -a "$OSVERSION" -ge "1410" ]; then
 				importKey hkp://keyserver.ubuntu.com:80 0xF1656F24C74CD1D8
-			elif [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -lt "1410" ]; then
+			elif [ "$OS" == "ubuntu" -a "$OSVERSION" -lt "1410" ]; then
 				importKey hkp://keyserver.ubuntu.com:80 0xcbcb082a1bb943db
 			fi
 
@@ -865,7 +944,7 @@ gpgcheck=1' > /etc/yum.repos.d/MariaDB.repo
 		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 			checkInstall mariadb-server
 			checkInstall mariadb-client
-			if ([ "`printf "${OSVERSION_TMP}\n8.0" | sort -V | tail -n 1`" == "8.0" -o "$OS" == "ubuntu" ] && [ "`grep '/mariadb/' /etc/apt/sources.list`" == "" ]); then
+			if ([ "`printf "${OSVERSION}\n80" | sort -V | tail -n 1`" == "80" -o "$OS" == "ubuntu" ] && [ "`grep '/mariadb/' /etc/apt/sources.list`" == "" ]); then
 				checkInstall mysql-common
 			else
 				checkInstall mariadb-common
@@ -877,10 +956,14 @@ gpgcheck=1' > /etc/yum.repos.d/MariaDB.repo
 	fi
 
 	if [ "$OS" == "debian" -o "$OS" == "ubuntu" -a -f /etc/mysql/my.cnf ]; then
-		backUpFile /etc/mysql/my.cnf
+		if [ ! -f /etc/mysql/my.cnf.easy-install.backup ]; then
+			backUpFile /etc/mysql/my.cnf
+		fi
 	elif [ "$OS" == "centos" -a -f /etc/my.cnf -a -f /usr/share/mysql/my-medium.cnf ]; then
-		backUpFile /etc/my.cnf
-		cp /usr/share/mysql/my-medium.cnf -R /etc/my.cnf
+		if [ ! -f /etc/my.cnf.easy-install.backup ]; then
+			backUpFile /etc/my.cnf
+			cp /usr/share/mysql/my-medium.cnf -R /etc/my.cnf
+		fi
 	else
 		errorAndExit "$SQL Database not fully installed!"
 	fi
@@ -939,17 +1022,17 @@ _EOF_
 			read LOCAL_IP
 		fi
 
-		if [ "$LOCAL_IP" != "" -a -f "$MYSQL_CONF" ]; then
-			if [ "`grep 'bind-address' $MYSQL_CONF`" ]; then
+		if [ "$LOCAL_IP" != "" -a -f "$MYSQL_CONF" -a ! "$MYSQL_CONF".easy-install.backup ]; then
+			if [ "`grep 'bind-address' $MYSQL_CONF | awk '{print $3}'`" != "0.0.0.0" ]; then
 				sed -i "s/bind-address.*/bind-address = 0.0.0.0/g" $MYSQL_CONF
-			else
+			elif [ "`grep 'bind-address' $MYSQL_CONF`" == "" ]; then
 				sed -i "/\[mysqld\]/abind-address = 0.0.0.0" $MYSQL_CONF
 			fi
 		fi
 	elif [ "$EXTERNAL_INSTALL" == "No" ]; then
-		if [ "`cat $MYSQL_CONF | grep 'bind-address'`" == "" ]; then
+		if [ "`grep 'bind-address' $MYSQL_CONF`" == "" ]; then
 			sed -i "/\[mysqld\]/abind-address = 127.0.0.1" $MYSQL_CONF
-		elif [ "`cat $MYSQL_CONF | grep 'bind-address = 0.0.0.0'`" == "" ]; then
+		elif [ "`grep 'bind-address = 0.0.0.0' $MYSQL_CONF`" == "" -a ! "$MYSQL_CONF".easy-install.backup ]; then
 			sed -i "s/bind-address.*/bind-address = 127.0.0.1/g" $MYSQL_CONF
 		fi
 	fi
@@ -961,7 +1044,7 @@ _EOF_
 			sed -i -e "51s/key_buffer[[:space:]]*=/key_buffer_size = /g" $MYSQL_CONF
 			sed -i -e "57s/myisam-recover[[:space:]]*=/myisam-recover-options = /g" $MYSQL_CONF
 		fi
-		if [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1603" -a ! -f /etc/mysql/conf.d/disable_strict_mode.cnf ]; then
+		if [ "$OS" == "ubuntu" -a "$OSVERSION" -ge "1603" -a ! -f /etc/mysql/conf.d/disable_strict_mode.cnf ]; then
 			echo '[mysqld]' > /etc/mysql/conf.d/disable_strict_mode.cnf
 			echo 'sql_mode=IGNORE_SPACE,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION' >> /etc/mysql/conf.d/disable_strict_mode.cnf
 		fi
@@ -979,41 +1062,41 @@ if [ "$INSTALL" == "EW" ]; then
 	cyanMessage " "
 	okAndSleep "Please note that Easy-Wi will install required PHP packages."
 	PHPINSTALL="Yes"
-elif [ "$INSTALL" == "WR" -a "`rpm -qa php 2>/dev/null`" == "" -a "`dpkg -l 2>/dev/null | egrep -o "php-common"`" == "" ]; then
-	cyanMessage " "
-	cyanMessage "Install/Update PHP?"
-	cyanMessage "Select \"None\" in case this server should host only Fastdownload webspace."
+elif [ "$INSTALL" == "WR" ]; then
+	if [ "`rpm -qa php 2>/dev/null`" == "" -a "`dpkg -l 2>/dev/null | egrep -o "php-common"`" == "" ]; then
+		cyanMessage " "
+		cyanMessage "Install/Update PHP?"
+		cyanMessage "Select \"None\" in case this server should host only Fastdownload webspace."
 
-	OPTIONS=("Yes" "No" "None" "Quit")
-	select PHPINSTALL in "${OPTIONS[@]}"; do
-		case "$REPLY" in
-			1|2|3 ) break;;
-			4 ) errorAndQuit;;
-			*) errorAndContinue;;
-		esac
-	done
+		OPTIONS=("Yes" "No" "None" "Quit")
+		select PHPINSTALL in "${OPTIONS[@]}"; do
+			case "$REPLY" in
+				1|2|3 ) break;;
+				4 ) errorAndQuit;;
+				*) errorAndContinue;;
+			esac
+		done
+	fi
 else
 	PHPINSTALL="None"
 fi
 
 if [ "$PHPINSTALL" == "Yes" ]; then
-	if [ "$OS" == "debian" -a "$OSVERSION_TMP" -ge "85" -o "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1604" -a "$OSVERSION_TMP" -lt "1610" ]; then
+	if [ "$OS" == "ubuntu" -a "$OSVERSION" -lt "1604" ]; then
+		checkInstall software-properties-common
+		checkInstall language-pack-en-base
+		LC_ALL=C.UTF-8 add-apt-repository -y ppa:ondrej/php
+		USE_PHP_VERSION='5.6'
+		RUNUPDATE="1"
+	elif [ "$OS" == "debian" -a "$OSVERSION" -ge "850" -o "$OS" == "ubuntu" -a "$OSVERSION" -ge "1604" -a "$OSVERSION" -lt "1610" ]; then
 		USE_PHP_VERSION='7.0'
-	elif [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1610" -a "$OSVERSION_TMP" -lt "1803" ]; then
+	elif [ "$OS" == "ubuntu" -a "$OSVERSION" -ge "1610" -a "$OSVERSION" -lt "1803" ]; then
 		USE_PHP_VERSION='7.1'
-	elif [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1803" ]; then
+	elif [ "$OS" == "ubuntu" -a "$OSVERSION" -ge "1803" ]; then
 		USE_PHP_VERSION='7.2'
 	elif [ "$OS" == "centos" ]; then
 		checkInstall http://rpms.remirepo.net/enterprise/remi-release-7.rpm
 		yum-config-manager --enable remi-php71
-		RUNUPDATE="1"
-	elif [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -lt "1604" ]; then
-		if [ "`which add-apt-repository`" == "" ]; then
-			checkInstall add-apt-repository
-		fi
-		checkInstall language-pack-en-base
-		LC_ALL=C.UTF-8 add-apt-repository -y ppa:ondrej/php
-		USE_PHP_VERSION='5.6'
 		RUNUPDATE="1"
 	else
 		USE_PHP_VERSION='5'
@@ -1033,17 +1116,19 @@ if [ "$PHPINSTALL" == "Yes" ]; then
 		checkInstall php${USE_PHP_VERSION}-common
 		checkInstall php${USE_PHP_VERSION}-curl
 		checkInstall php${USE_PHP_VERSION}-gd
-		if [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -lt "1803" -o "$OS" == "debian" ]; then
+		if [ "$OS" == "ubuntu" -a "$OSVERSION" -lt "1803" -o "$OS" == "debian" ]; then
 			checkInstall php${USE_PHP_VERSION}-mcrypt
-		elif [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -ge "1804" ]; then
+		elif [ "$OS" == "ubuntu" -a "$OSVERSION" -ge "1804" ]; then
 			checkInstall libsodium-dev
 		fi
 		checkInstall php${USE_PHP_VERSION}-mysql
 		checkInstall php${USE_PHP_VERSION}-cli
-		checkInstall php${USE_PHP_VERSION}-xml
-		checkInstall php${USE_PHP_VERSION}-mbstring
-		checkInstall php${USE_PHP_VERSION}-zip
-		if [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -lt "1604" ]; then
+		if [ "$OS" == "debian" -a "$OSVERSION" -ge "850" -o "$OS" == "ubuntu" ]; then
+			checkInstall php${USE_PHP_VERSION}-xml
+			checkInstall php${USE_PHP_VERSION}-mbstring
+			checkInstall php${USE_PHP_VERSION}-zip
+		fi
+		if [ "$OS" == "ubuntu" -a "$OSVERSION" -lt "1604" ]; then
 			checkInstall php${USE_PHP_VERSION}-fpm
 		fi
 	elif [ "$OS" == "centos" ]; then
@@ -1153,7 +1238,7 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
 				ln -s /etc/proftpd/proftpd.conf proftpd.conf
 			fi
 			backUpFile /etc/proftpd/proftpd.conf
-			if [ "`cat /etc/proftpd/proftpd.conf | grep 'Include'`" == "" ]; then
+			if [ "`grep 'Include' /etc/proftpd/proftpd.conf`" == "" ]; then
 				echo "Include /etc/proftpd/conf.d/" >> /etc/proftpd/proftpd.conf
 				makeDir /etc/proftpd/conf.d
 			fi
@@ -1270,79 +1355,81 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
 fi
 
 if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
-	if [ ! -f /home/aquota.user ]; then
-		cyanMessage " "
-		cyanMessage "Install Quota?"
+	if [ "$OS" != "centos" ]; then
+		if [ ! -f /home/aquota.user ]; then
+			cyanMessage " "
+			cyanMessage "Install Quota?"
 
-		OPTIONS=("Yes" "No" "Quit")
-		select QUOTAINSTALL in "${OPTIONS[@]}"; do
-			case "$REPLY" in
-				1|2 ) break;;
-				3 ) errorAndQuit;;
-				*) errorAndContinue;;
-			esac
-		done
-	else
-		QUOTAINSTALL="No"
-	fi
-
-	if [ "$QUOTAINSTALL" == "Yes" ]; then
-		cyanMessage " "
-		checkInstall quota
-
-		removeIfExists /root/tempfstab
-		removeIfExists /root/tempmountpoints
-
-		cat /etc/fstab | while read LINE; do
-			if [[ `echo $LINE | grep '/' | egrep -v '#|boot|proc|swap|floppy|cdrom|usrquota|usrjquota|/sys|/shm|/pts'` ]]; then
-				CURRENTOPTIONS=`echo $LINE | awk '{print $4}'`
-				echo $LINE | sed "s/$CURRENTOPTIONS/$CURRENTOPTIONS,usrjquota=aquota.user,jqfmt=vfsv0/g" >> /root/tempfstab
-				echo $LINE | awk '{print $2}' >> /root/tempmountpoints
-			else
-				echo $LINE >> /root/tempfstab
-			fi
-		done
-
-		cyanMessage " "
-		okAndSleep "Quota Table Output"
-		cyanMessage " "
-		cat /root/tempfstab
-
-		cyanMessage " "
-		cyanMessage "Please check above output and confirm it is correct. On confirmation the current /etc/fstab will be replaced in order to activate Quotas!"
-
-		OPTIONS=("Yes" "No" "Quit")
-		select QUOTAFSTAB in "${OPTIONS[@]}"; do
-			case "$REPLY" in
-				1|2 ) break;;
-				3 ) errorAndQuit;;
-				*) errorAndContinue;;
-			esac
-		done
-
-		cyanMessage " "
-		if [ "$QUOTAFSTAB" == "Yes" ]; then
-			backUpFile /etc/fstab
-			mv /root/tempfstab /etc/fstab
+			OPTIONS=("Yes" "No" "Quit")
+			select QUOTAINSTALL in "${OPTIONS[@]}"; do
+				case "$REPLY" in
+					1|2 ) break;;
+					3 ) errorAndQuit;;
+					*) errorAndContinue;;
+				esac
+			done
+		else
+			QUOTAINSTALL="No"
 		fi
 
-		removeIfExists /root/tempfstab
-		removeIfExists /aquota.user
-		touch /aquota.user
-		chmod 600 /aquota.user
+		if [ "$QUOTAINSTALL" == "Yes" ]; then
+			cyanMessage " "
+			checkInstall quota
 
-		if [ -f /root/tempmountpoints ]; then
-			cat /root/tempmountpoints | while read LINE; do
-				quotaoff -ugv $LINE
-				removeIfExists $LINE/aquota.user
-				okAndSleep "Remounting $LINE"
-				mount -o remount $LINE
+			removeIfExists /root/tempfstab
+			removeIfExists /root/tempmountpoints
 
-				quotacheck -vumc $LINE
-				quotaon -uv $LINE
+			cat /etc/fstab | while read LINE; do
+				if [[ `echo $LINE | grep '/' | egrep -v '#|boot|proc|swap|floppy|cdrom|usrquota|usrjquota|/sys|/shm|/pts'` ]]; then
+					CURRENTOPTIONS=`echo $LINE | awk '{print $4}'`
+					echo $LINE | sed "s/$CURRENTOPTIONS/$CURRENTOPTIONS,usrjquota=aquota.user,jqfmt=vfsv0/g" >> /root/tempfstab
+					echo $LINE | awk '{print $2}' >> /root/tempmountpoints
+				else
+					echo $LINE >> /root/tempfstab
+				fi
 			done
 
-			removeIfExists /root/tempmountpoints
+			cyanMessage " "
+			okAndSleep "Quota Table Output"
+			cyanMessage " "
+			cat /root/tempfstab
+
+			cyanMessage " "
+			cyanMessage "Please check above output and confirm it is correct. On confirmation the current /etc/fstab will be replaced in order to activate Quotas!"
+
+			OPTIONS=("Yes" "No" "Quit")
+			select QUOTAFSTAB in "${OPTIONS[@]}"; do
+				case "$REPLY" in
+					1|2 ) break;;
+					3 ) errorAndQuit;;
+					*) errorAndContinue;;
+				esac
+			done
+
+			cyanMessage " "
+			if [ "$QUOTAFSTAB" == "Yes" ]; then
+				backUpFile /etc/fstab
+				mv /root/tempfstab /etc/fstab
+			fi
+
+			removeIfExists /root/tempfstab
+			removeIfExists /aquota.user
+			touch /aquota.user
+			chmod 600 /aquota.user
+
+			if [ -f /root/tempmountpoints ]; then
+				cat /root/tempmountpoints | while read LINE; do
+					quotaoff -ugv $LINE
+					removeIfExists $LINE/aquota.user
+					okAndSleep "Remounting $LINE"
+					mount -o remount $LINE
+
+					quotacheck -vumc $LINE
+					quotaon -uv $LINE
+				done
+
+				removeIfExists /root/tempmountpoints
+			fi
 		fi
 	fi
 fi
@@ -1392,7 +1479,7 @@ _EOF_
 			echo " " >> $APACHE_CONFIG
 			echo '# Added to prevent the server signatur off in productive systems' >> $APACHE_CONFIG
 			echo 'ServerSignature off' >> $APACHE_CONFIG
-			echo " " >> $APACHE_CONFIG
+			echo "" >> $APACHE_CONFIG
 		fi
 
 		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
@@ -1402,15 +1489,12 @@ _EOF_
 		fi
 
 		if [ "`grep '/home/'$MASTERUSER'/sites-enabled/' $APACHE_CONFIG`" == "" ]; then
-			echo " " >> $APACHE_CONFIG
 			echo '# Load config files in the "/home/'$MASTERUSER'/sites-enabled" directory, if any.' >> $APACHE_CONFIG
 			if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 				if [[ "$APACHE_VERSION" =~ .*Apache/2.2.* ]]; then
-					sed -i "/Include sites-enabled\//a Include \/home\/$MASTERUSER\/sites-enabled\/" $APACHE_CONFIG
-					sed -i "/Include \/etc\/apache2\/sites-enabled\//a \/home\/$MASTERUSER\/sites-enabled\/" $APACHE_CONFIG
+					echo "Include /home/$MASTERUSER/sites-enabled/" >> $APACHE_CONFIG
 				else
-					sed -i "/IncludeOptional sites-enabled\//a IncludeOptional \/home\/$MASTERUSER\/sites-enabled\/*.conf" $APACHE_CONFIG
-					sed -i "/IncludeOptional \/etc\/apache2\/sites-enabled\//a IncludeOptional \/home\/$MASTERUSER\/sites-enabled\/*.conf" $APACHE_CONFIG
+					echo "IncludeOptional /home/$MASTERUSER/sites-enabled/*.conf" >> $APACHE_CONFIG
 				fi
 			elif [ "$OS" == "centos" ]; then
 				if [[ $APACHE_VERSION =~ .*Apache/2.2.* ]]; then
@@ -1564,7 +1648,7 @@ if [ "$INSTALL" == "GS" ]; then
 				apt install -t jessie-backports openjdk-8-jre-headless ca-certificates-java -y
 			fi
 
-			if [ "$OS" == "ubuntu" -a "$OSVERSION_TMP" -lt "1410" ]; then
+			if [ "$OS" == "ubuntu" -a "$OSVERSION" -lt "1410" ]; then
 				if [ "`which add-apt-repository`" == "" ]; then
 					checkInstall add-apt-repository
 				fi
@@ -1599,8 +1683,8 @@ if [ "$INSTALL" == "GS" ]; then
 	chmod -R 750 /home/$MASTERUSER/
 	chmod -R 770 /home/$MASTERUSER/logs/ /home/$MASTERUSER/temp/ /home/$MASTERUSER/fdl_data/
 
-	if [ "$OS" == "debian" -a "$OSVERSION_TMP" -lt "90" ]; then
-		if [ "`uname -m`" == "x86_64" -a "`cat /etc/debian_version | grep '6.'`" == "" ]; then
+	if [ "$OS" == "debian" -a "$OSVERSION" -lt "900" ]; then
+		if [ "`uname -m`" == "x86_64" -a "`grep '6.' /etc/debian_version`" == "" ]; then
 			dpkg --add-architecture i386
 		fi
 	fi
@@ -1625,7 +1709,6 @@ if [ "$INSTALL" == "GS" ]; then
 			$INSTALLER -y install libgcc1:i386
 			$INSTALLER -y install libreadline5:i386
 			$INSTALLER -y install libncursesw5:i386
-#			if [ "$OS" == "debian" -a "$OSVERSION_TMP" -gt "80" ]; then
 			if [ "`apt-cache search zlib1g-dev`" != "" ]; then
 				$INSTALLER -y install zlib1g-dev
 			else
@@ -1682,9 +1765,11 @@ if [ "$INSTALL" == "GS" ]; then
 		fi
 	fi
 
-	chown -cR $INSTALLMASTER:$INSTALLMASTER /home/$INSTALLMASTER >/dev/null 2>&1
+	chown -cR $MASTERUSER:$MASTERUSER /home/$MASTERUSER >/dev/null 2>&1
 
 	if [ -f /etc/crontab -a "`grep 'Minecraft can easily produce 1GB' /etc/crontab`" == "" ]; then
+		cyanMessage " "
+		okAndSleep "Installing Minecraft Crontabs"
 		if ionice -c3 true 2>/dev/null; then
 			IONICE="ionice -n 7 "
 		fi
@@ -1832,11 +1917,11 @@ if [ "$INSTALL" == "EW" ]; then
 					$INSTALLER -y update
 					$INSTALLER -y install certbot -t jessie-backports
 				else
-					$INSTALLER -y install certbot
+					checkInstall certbot
 				fi
 			elif [ "$OS" == "ubuntu" ]; then
-				if [ "`which add-apt-repository`" == "" ]; then
-					$INSTALLER -y install software-properties-common
+				if [ "$OSVERSION" -lt "1604" ]; then
+					checkInstall software-properties-common
 				fi
 				add-apt-repository -y ppa:certbot/certbot
 				$INSTALLER -y update
@@ -1868,7 +1953,7 @@ if [ "$INSTALL" == "EW" ]; then
 
 			cyanMessage " "
 			okAndSleep "Creating a self-signed SSL certificate."
-			if [ "$OS" == "debian" -a "$OSVERSION_TMP" -ge "85" ]; then
+			if [ "$OS" == "debian" -a "$OSVERSION" -ge "850" ]; then
 				openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout $SSL_DIR/$FILE_NAME.key -out $SSL_DIR/$FILE_NAME.crt -subj "/CN=$IP_DOMAIN"
 			else
 				openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout $SSL_DIR/$FILE_NAME.key -out $SSL_DIR/$FILE_NAME.crt -subj "/C=/ST=/L=/O=/OU=/CN=$IP_DOMAIN"
@@ -2034,7 +2119,9 @@ if [ "$INSTALL" == "EW" ]; then
 
 	RestartWebserver
 
-	if [ "`grep reboot.php /etc/crontab`" == "" ]; then
+	if [ "`grep -o ./reboot.php /etc/crontab`" == "" ]; then
+		cyanMessage " "
+		okAndSleep "Installing Easy-WI Crontabs"
 		echo '0 */1 * * * easywi_web cd /home/easywi_web/htdocs && timeout 300 php ./reboot.php >/dev/null 2>&1
 */5 * * * * easywi_web cd /home/easywi_web/htdocs && timeout 290 php ./statuscheck.php >/dev/null 2>&1
 */1 * * * * easywi_web cd /home/easywi_web/htdocs && timeout 290 php ./startupdates.php >/dev/null 2>&1
@@ -2135,31 +2222,19 @@ if [ "$INSTALL" == "VS" ]; then
 
 	greenMessage " "
 	greenMessage "Starting the TS3 server for the first time and shutting it down again as the password will be visible in the process tree."
-	su -c "./ts3server_startscript.sh start serveradmin_password=$QUERY_PASSWORD createinifile=1 inifile=ts3server.ini" $MASTERUSER
+	su -c "./ts3server_startscript.sh start serveradmin_password=$QUERY_PASSWORD" $MASTERUSER
 	runSpinner 25
 	su -c "./ts3server_startscript.sh stop" $MASTERUSER
 
 	greenMessage " "
 	greenMessage "Starting the TS3 server permanently."
-	su -c "./ts3server_startscript.sh start inifile=ts3server.ini" $MASTERUSER
+	su -c "./ts3server_startscript.sh start" $MASTERUSER
 fi
 
 if [ "$INSTALL" == "MY" ]; then
 	cyanMessage " "
 	cyanMessage "Please enter the name of the database user, which does not exist yet."
 	read MYSQL_USER
-
-	cyanMessage " "
-	cyanMessage "Is MySQL server installed on a different server."
-
-	OPTIONS=("Yes" "No" "Quit")
-	select EXTERNAL_INSTALL in "${OPTIONS[@]}"; do
-		case "$REPLY" in
-			1|2 ) break;;
-			3 ) errorAndQuit;;
-			*) errorAndContinue;;
-		esac
-	done
 
 	MYSQL_USER_PASSWORD=`< /dev/urandom tr -dc A-Za-z0-9 | head -c18`
 
@@ -2183,28 +2258,19 @@ if [ "$INSTALL" == "MY" ]; then
 			redMessage "Error: No Database Server running!"
 		fi
 	else
-		cyanMessage " "
-		cyanMessage "Please provide the IP for the MySQL Database."
-		read DATABASE_SERVER_IP
-
-		#IP / Domain check
-		if [ "`grep -E '\b((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.|$)){4}\b' <<< $DATABASE_SERVER_IP`" == "" -a "`grep -E '^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$' <<< $DATABASE_SERVER_IP`" == "" ]; then
-			errorAndExit "Error: $DATABASE_SERVER_IP is neither a domain nor an IPv4 address!"
-		fi
-
-		mysql -h $DATABASE_SERVER_IP -uroot -p$MYSQL_ROOT_PASSWORD -e exit 2> /dev/null
+		mysql -uroot -p$MYSQL_ROOT_PASSWORD -e exit 2> /dev/null
 		ERROR_CODE=$?
 
 		until [ $ERROR_CODE == 0 ]; do
 			cyanMessage " "
-			cyanOneLineMessage "Password incorrect, please provide the "; greenOneLineMessage "root password "; cyanMessage "for the MySQL Database."
+			cyanOneLineMessage "Password incorrect, please provide the "; greenOneLineMessage "root"; cyanMessage " password for the MySQL Database."
 			read MYSQL_ROOT_PASSWORD
 
-			mysql -h $DATABASE_HOST -uroot -p$MYSQL_ROOT_PASSWORD -e exit 2> /dev/null
+			mysql -uroot -p$MYSQL_ROOT_PASSWORD -e exit 2> /dev/null
 			ERROR_CODE=$?
 		done
 
-		mysql -h $DATABASE_SERVER_IP -u root -p"$MYSQL_ROOT_PASSWORD" -e "CREATE USER '$MYSQL_USER'@'%' IDENTIFIED BY '$MYSQL_USER_PASSWORD';GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, RELOAD, PROCESS, FILE, REFERENCES, INDEX, ALTER, SHOW DATABASES, SUPER, CREATE TEMPORARY TABLES, LOCK TABLES, CREATE VIEW, EVENT, TRIGGER, SHOW VIEW, CREATE ROUTINE, ALTER ROUTINE, CREATE USER, EXECUTE ON *.* TO '$MYSQL_USER'@'%' REQUIRE NONE WITH GRANT OPTION MAX_QUERIES_PER_HOUR 0 MAX_CONNECTIONS_PER_HOUR 0 MAX_UPDATES_PER_HOUR 0 MAX_USER_CONNECTIONS 0; FLUSH PRIVILEGES;" 2> /dev/null
+		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "CREATE USER '$MYSQL_USER'@'%' IDENTIFIED BY '$MYSQL_USER_PASSWORD';GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, RELOAD, PROCESS, FILE, REFERENCES, INDEX, ALTER, SHOW DATABASES, SUPER, CREATE TEMPORARY TABLES, LOCK TABLES, CREATE VIEW, EVENT, TRIGGER, SHOW VIEW, CREATE ROUTINE, ALTER ROUTINE, CREATE USER, EXECUTE ON *.* TO '$MYSQL_USER'@'%' REQUIRE NONE WITH GRANT OPTION MAX_QUERIES_PER_HOUR 0 MAX_CONNECTIONS_PER_HOUR 0 MAX_UPDATES_PER_HOUR 0 MAX_USER_CONNECTIONS 0; FLUSH PRIVILEGES;" 2> /dev/null
 	fi
 	unset MYSQL_ROOT_PASSWORD
 fi
