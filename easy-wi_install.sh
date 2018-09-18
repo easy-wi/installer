@@ -504,14 +504,21 @@ if [ "$OTHER_PANEL" != "" ]; then
 		yellowMessage "Warning an installation of the control panel $OTHER_PANEL has been detected."
 		yellowMessage "If you continue the installer might end up breaking $OTHER_PANEL or same parts of Easy-WI might not work."
 		OPTIONS=("Continue" "Quit")
-		select UPDATE_UPGRADE_SYSTEM in "${OPTIONS[@]}"; do
+		select OTHER_PANEL_CONTINUE in "${OPTIONS[@]}"; do
 			case "$REPLY" in
 				1 ) break;;
 				2 ) errorAndQuit;;
 				*) errorAndContinue;;
 			esac
 		done
+
+		if [ "$OTHER_PANEL_CONTINUE" == "Continue" ]; then
+			redMessage " "
+			redMessage "At your own risk!"
+			redMessage "Easy-WI does not support anyone in using other panels."
+		fi
 	else
+		redMessage " "
 		errorAndExit "Aborting as the risk of breaking the installed panel $OTHER_PANEL is too high."
 	fi
 fi
@@ -2402,7 +2409,7 @@ elif [ "$INSTALL" == "GS" ]; then
 		yellowMessage 'After adding: firewall-cmd --reload'
 		yellowMessage " "
 		cyanMessage 'Example:'
-		yellowMessage 'firewall-cmd --zone=public --permanent --add-port=27015/tcp'
+		yellowMessage 'firewall-cmd --zone=public --permanent --add-port=27015/udp'
 		yellowMessage 'firewall-cmd --reload'
 	fi
 	yellowMessage " "
