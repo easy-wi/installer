@@ -136,13 +136,13 @@ checkInstall() {
 
 checkUnInstall() {
 	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
-		if [ "`dpkg-query -s $1 2>/dev/null`" == "" ]; then
+		if [ $(dpkg-query -s $1 2>/dev/null) == "" ]; then
 			cyanMessage " "
 			okAndSleep "Uninstalling package $1"
 			$INSTALLER -y remove $1
 		fi
 	elif [ "$OS" == "centos" ]; then
-		if [ "`rpm -qa $1`" == "" ]; then
+		if [ $(rpm -qa $1) == "" ]; then
 			cyanMessage " "
 			okAndSleep "Uninstalling package $1"
 			$INSTALLER -y remove $1
@@ -303,22 +303,24 @@ select UPDATE_UPGRADE_SYSTEM in "${OPTIONS[@]}"; do
 	esac
 done
 
-cyanMessage " "
-yellowMessage "Please wait... Update is currently running."
-if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
+if [ "$UPDATE_UPGRADE_SYSTEM" == "Yes" ]; then
 	cyanMessage " "
-	$INSTALLER -y update
-	$INSTALLER -y upgrade
-	checkInstall debconf-utils
-	checkInstall lsb-release
-elif [ "$OS" == "centos" ]; then
-	cyanMessage " "
-	cyanMessage "Update all obsolete packages."
-	$INSTALLER -y update
-	checkInstall redhat-lsb
-	checkInstall epel-release
-	importKey /etc/pki/rpm-gpg/RPM-GPG-KEY*
-	checkInstall yum-utils
+	yellowMessage "Please wait... Update is currently running."
+	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
+		cyanMessage " "
+		$INSTALLER -y update
+		$INSTALLER -y upgrade
+		checkInstall debconf-utils
+		checkInstall lsb-release
+	elif [ "$OS" == "centos" ]; then
+		cyanMessage " "
+		cyanMessage "Update all obsolete packages."
+		$INSTALLER -y update
+		checkInstall redhat-lsb
+		checkInstall epel-release
+		importKey /etc/pki/rpm-gpg/RPM-GPG-KEY*
+		checkInstall yum-utils
+	fi
 fi
 checkInstall curl
 
