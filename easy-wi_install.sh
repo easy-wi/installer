@@ -666,7 +666,7 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" ]; then
 		if [ "$WEBSERVER" == "Lighttpd" ]; then
 			$USERADD -c "$WEBGROUPCOMMENT" -u $WEBGROUPTMPID -g $WEBGROUPTMPID -s /sbin/nologin -r -d $WEBGROUPPATH $WEBGROUPNAME
 		fi
-		WEBGROUPID=`getent group $WEBGROUPNAME | awk -F ':' '{print $3}'`
+		WEBGROUPID=$(getent group $WEBGROUPNAME | awk -F ':' '{print $3}')
 	fi
 
 	if [ "$INSTALL" == "EW" -o -d /home/easywi_web/htdocs/ ]; then
@@ -693,10 +693,10 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" ]; then
 		cyanMessage "Please name the group you want to use as webservergroup"
 		read WEBGROUP
 
-		WEBGROUPID=`getent group $WEBGROUP | awk -F ':' '{print $3}'`
+		WEBGROUPID=$(getent group $WEBGROUP | awk -F ':' '{print $3}')
 		if [ "$WEBGROUPID" == "" ]; then
 			$GROUPADD $WEBGROUP
-			WEBGROUPID=`getent group $WEBGROUP | awk -F ':' '{print $3}'`
+			WEBGROUPID=$(getent group $WEBGROUP | awk -F ':' '{print $3}')
 		fi
 	fi
 
@@ -714,7 +714,7 @@ if [ "$INSTALL" == "VS" ]; then
 
 	for VERSION in `curl -s "http://dl.4players.de/ts/releases/?C=M;O=D" | grep -Po '(?<=href=")[0-9]+(\.[0-9]+){2,3}(?=/")' | sort -Vr`; do
 		DOWNLOAD_URL_VERSION="http://dl.4players.de/ts/releases/$VERSION/teamspeak3-server_linux_$ARCH-$VERSION.tar.bz2"
-		STATUS=`curl -I $DOWNLOAD_URL_VERSION 2>&1 | grep "HTTP/" | awk '{print $2}'`
+		STATUS=$(curl -I $DOWNLOAD_URL_VERSION 2>&1 | grep "HTTP/" | awk '{print $2}')
 
 		if [ "$STATUS" == "200" ]; then
 			DOWNLOAD_URL=$DOWNLOAD_URL_VERSION
@@ -734,12 +734,12 @@ if [ "$INSTALL" != "MY" ]; then
 	cyanMessage "Please enter the name of the masteruser, which does not exist yet."
 	read MASTERUSER
 
-	CHECK_USER=`checkUser $MASTERUSER`
+	CHECK_USER=$(checkUser $MASTERUSER)
 
 	if [ "$CHECK_USER" != "1" ]; then
 		echo $CHECK_USER
 		read MASTERUSER
-		CHECK_USER=`checkUser $MASTERUSER`
+		CHECK_USER=$(checkUser $MASTERUSER)
 
 		if [ "$CHECK_USER" != "1" ]; then
 			echo $CHECK_USER
@@ -786,7 +786,7 @@ if [ "$INSTALL" != "MY" ]; then
 		cyanMessage "It is recommended but not required to set a password"
 		su -c "ssh-keygen -t rsa" $MASTERUSER
 
-		KEYNAME=`find -maxdepth 1 -name "*.pub" | head -n 1`
+		KEYNAME=$(find -maxdepth 1 -name "*.pub" | head -n 1)
 
 		if [ "$KEYNAME" != "" ]; then
 			su -c "cat $KEYNAME >> authorized_keys" $MASTERUSER
@@ -794,7 +794,7 @@ if [ "$INSTALL" != "MY" ]; then
 				if [ -d /home/easywi_web/htdocs/keys/ ]; then
 					cp /home/$MASTERUSER/.ssh/id_rsa.pub /home/easywi_web/htdocs/keys/$MASTERUSER.pub
 					cp /home/$MASTERUSER/.ssh/id_rsa /home/easywi_web/htdocs/keys/$MASTERUSER
-					WEBGROUPNAME2=`ls -ls /home/easywi_web/htdocs/keys/ | grep "easywi_web" | awk '{print $5}' | head -n1`
+					WEBGROUPNAME2=$(ls -ls /home/easywi_web/htdocs/keys/ | grep "easywi_web" | awk '{print $5}' | head -n1)
 					chown -cR easywi_web:$WEBGROUPNAME2 /home/easywi_web/htdocs/keys/ 2>&1 >/dev/null
 				fi
 			fi
@@ -879,7 +879,7 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "MY" ]; then
 			ERROR_CODE=$?
 		done
 	else
-		MYSQL_ROOT_PASSWORD=`< /dev/urandom tr -dc A-Za-z0-9 | head -c18`
+		MYSQL_ROOT_PASSWORD=$(< /dev/urandom tr -dc A-Za-z0-9 | head -c18)
 	fi
 
 	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
@@ -1046,7 +1046,7 @@ _EOF_
 		fi
 	fi
 
-	MYSQL_VERSION=`mysql -V | awk {'print $5'} | tr -d ,`
+	MYSQL_VERSION=$(mysql -V | awk {'print $5'} | tr -d ,)
 
 	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 		if [ $(grep -E 'key_buffer[[:space:]]*=' /etc/mysql/my.cnf) != "" -a $(printf "${MYSQL_VERSION}\n5.5" | sort -V | tail -n 1) != "5.5" ]; then
@@ -1492,9 +1492,9 @@ _EOF_
 		fi
 
 		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
-			APACHE_VERSION=`apache2 -v | grep 'Server version'`
+			APACHE_VERSION=$(apache2 -v | grep 'Server version')
 		elif [ "$OS" == "centos" ]; then
-			APACHE_VERSION=`httpd -v | grep 'Server version'`
+			APACHE_VERSION=$(httpd -v | grep 'Server version')
 		fi
 
 		if [ $(grep '/home/'$MASTERUSER'/sites-enabled/' $APACHE_CONFIG) == "" ]; then
@@ -1555,18 +1555,18 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
 
 	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 		if [ "$WEBSERVER" == "Lighttpd" ]; then
-			HTTPDBIN=`which lighttpd`
+			HTTPDBIN=$(which lighttpd)
 			HTTPDSCRIPT="/etc/init.d/lighttpd"
 		elif [ "$WEBSERVER" == "Apache" ]; then
-			HTTPDBIN=`which apache2`
+			HTTPDBIN=$(which apache2)
 			HTTPDSCRIPT="/etc/init.d/apache2"
 		fi
 	elif [ "$OS" == "centos" ]; then
 		if [ "$WEBSERVER" == "Lighttpd" ]; then
-			HTTPDBIN=`which lighttpd`
+			HTTPDBIN=$(which lighttpd)
 			HTTPDSCRIPT='lighttpd'
 		elif [ "$WEBSERVER" == "Apache" ]; then
-			HTTPDBIN=`which httpd`
+			HTTPDBIN=$(which httpd)
 			HTTPDSCRIPT='httpd'
 		fi
 	fi
@@ -1847,9 +1847,9 @@ if [ "$INSTALL" == "EW" ]; then
 	cyanMessage " "
 	okAndSleep "Downloading latest Easy-WI ${RELEASE_TYPE} version."
 	if [ "${RELEASE_TYPE}" == "Stable" ]; then
-		DOWNLOAD_URL=`wget -q --timeout=60 -O - https://api.github.com/repos/easy-wi/developer/releases/latest | grep -Po '(?<="zipball_url": ")([\w:/\-.]+)'`
+		DOWNLOAD_URL=$(wget -q --timeout=60 -O - https://api.github.com/repos/easy-wi/developer/releases/latest | grep -Po '(?<="zipball_url": ")([\w:/\-.]+)')
 	else
-		DOWNLOAD_URL=`wget -q --timeout=60 -O - https://api.github.com/repos/easy-wi/developer/tags | grep -Po '(?<="zipball_url": ")([\w:/\-.]+)' | head -n 1`
+		DOWNLOAD_URL=$(wget -q --timeout=60 -O - https://api.github.com/repos/easy-wi/developer/tags | grep -Po '(?<="zipball_url": ")([\w:/\-.]+)' | head -n 1)
 	fi
 
 	curl -L ${DOWNLOAD_URL} -o web.zip
@@ -1862,7 +1862,7 @@ if [ "$INSTALL" == "EW" ]; then
 	unzip -u web.zip >/dev/null 2>&1
 	removeIfExists web.zip
 
-	HEX_FOLDER=`ls | grep 'easy-wi-developer-' | head -n 1`
+	HEX_FOLDER=$(ls | grep 'easy-wi-developer-' | head -n 1)
 	if [ "${HEX_FOLDER}" != "" ]; then
 		mv ${HEX_FOLDER}/* ./
 		rm -rf ${HEX_FOLDER}
@@ -1873,7 +1873,7 @@ if [ "$INSTALL" == "EW" ]; then
 
 	chown -cR easywi_web:$WEBGROUPNAME /home/easywi_web >/dev/null 2>&1
 
-	DB_PASSWORD=`< /dev/urandom tr -dc A-Za-z0-9 | head -c18`
+	DB_PASSWORD=$(< /dev/urandom tr -dc A-Za-z0-9 | head -c18)
 	cyanMessage " "
 	okAndSleep "Creating database easy_wi and connected user easy_wi"
 	if [ "$MYSQL_ROOT_PASSWORD" == "" ]; then
@@ -2227,7 +2227,7 @@ if [ "$INSTALL" == "VS" ]; then
 		chown -cR $MASTERUSER:$MASTERUSER .ts3server_license_accepted 2>&1 >/dev/null
 	fi
 
-	QUERY_PASSWORD=`< /dev/urandom tr -dc A-Za-z0-9 | head -c12`
+	QUERY_PASSWORD=$(< /dev/urandom tr -dc A-Za-z0-9 | head -c12)
 
 	greenMessage " "
 	greenMessage "Starting the TS3 server for the first time and shutting it down again as the password will be visible in the process tree."
@@ -2245,7 +2245,7 @@ if [ "$INSTALL" == "MY" ]; then
 	cyanMessage "Please enter the name of the database user, which does not exist yet."
 	read MYSQL_USER
 
-	MYSQL_USER_PASSWORD=`< /dev/urandom tr -dc A-Za-z0-9 | head -c18`
+	MYSQL_USER_PASSWORD=$(< /dev/urandom tr -dc A-Za-z0-9 | head -c18)
 
 	if [ "$EXTERNAL_INSTALL" == "No" ]; then
 		if [ $(ps fax | grep 'mysqld' | grep -v 'grep') != "" ]; then
