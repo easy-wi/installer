@@ -244,20 +244,23 @@ doReboot() {
 	fi
 }
 
+cyanMessage " "
+yellowMessage "Please wait... Update is currently running."
+cyanMessage " "
 if [ -f /etc/debian_version ]; then
 	INSTALLER="apt-get"
 	OS="debian"
-	if [ $(which dialog) == "" ]; then
+	$INSTALLER -y update
+	if [ "`which dialog`" == "" ]; then
 		checkInstall dialog
 	fi
-	if [ $(which logger) == "" ]; then
+	if [ "`which logger`" == "" ]; then
 		apt-get --reinstall install bsdutils
 	fi
 elif [ -f /etc/centos-release ]; then
 	INSTALLER="yum"
 	OS="centos"
 	setenforce 0 >/dev/null 2>&1
-	cyanMessage " "
 	if [ "`rpm -qa wget`" == "" ]; then
 		checkInstall wget
 	fi
@@ -313,7 +316,8 @@ done
 
 if [ "$UPDATE_UPGRADE_SYSTEM" == "Yes" ]; then
 	cyanMessage " "
-	yellowMessage "Please wait... Update is currently running."
+	yellowMessage "Please wait... Update/Upgrade is currently running."
+	cyanMessage " "
 	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 		cyanMessage " "
 		$INSTALLER -y update
@@ -332,37 +336,28 @@ if [ "$UPDATE_UPGRADE_SYSTEM" == "Yes" ]; then
 fi
 checkInstall curl
 
-if [ "$OS" == "ubuntu" -o "$OS" == "debian" ]; then
-	checkInstall cron
-	checkUnInstall bsd-mailx
-	checkUnInstall exim4
-	checkUnInstall exim4-base
-	checkUnInstall exim4-config
-	checkUnInstall exim4-daemon-light
-elif [ "$OS" == "centos" ]; then
-	checkInstall crontabs
-fi
-
 #CentOS - SELinux
-if [ "$OS" == "centos" -a ! -f /tmp/easy-wi_reboot ]; then
-	if ([ ! -d /home/easywi_web -a "`find /home -type d -name 'masterserver'`" == "" -a "`find /home -type f -name 'ts3server'`" == "" ]); then
-		yellowMessage ""
-		yellowMessage "Note: Please update your fresh operating system and restart it!"
-		yellowMessage ""
-	fi
-	if [ -f /etc/selinux/config ]; then
-		if [ "`grep 'SELINUX=' /etc/selinux/config | sed -n '2 p'`" != "SELINUX=disabled" ]; then
-			backUpFile /etc/selinux/config
-			sed -i "s/SELINUX=enforcing/SELINUX=disabled/g" /etc/selinux/config
-			redMessage " "
-			redMessage "Please reboot your Root/Vserver to disabled SELinux Security Function!"
-			redMessage "Otherwise, the WebInterface can not work."
-			redMessage " "
-			doReboot "System is rebooting now for finish SELinux Security Function!"
+if [ "$OS" == "centos" ]; then
+	if [ ! -f /tmp/easy-wi_reboot ]; then
+		if ([ ! -d /home/easywi_web -a "`find /home -type d -name 'masterserver'`" == "" -a "`find /home -type f -name 'ts3server'`" == "" ]); then
+			yellowMessage ""
+			yellowMessage "Note: Please update your fresh operating system and restart it!"
+			yellowMessage ""
 		fi
+		if [ -f /etc/selinux/config ]; then
+			if [ "`grep 'SELINUX=' /etc/selinux/config | sed -n '2 p'`" != "SELINUX=disabled" ]; then
+				backUpFile /etc/selinux/config
+				sed -i "s/SELINUX=enforcing/SELINUX=disabled/g" /etc/selinux/config
+				redMessage " "
+				redMessage "Please reboot your Root/Vserver to disabled SELinux Security Function!"
+				redMessage "Otherwise, the WebInterface can not work."
+				redMessage " "
+				doReboot "System is rebooting now for finish SELinux Security Function!"
+			fi
+		fi
+	else
+		doReboot "System is rebooting now for finish SELinux Security Function!" "Please reboot your Root/Vserver to disabled SELinux Security Function!"
 	fi
-else
-	doReboot "System is rebooting now for finish SELinux Security Function!" "Please reboot your Root/Vserver to disabled SELinux Security Function!"
 fi
 
 cyanMessage " "
@@ -578,6 +573,17 @@ if [ "$INSTALL" == "EW" ]; then
 fi
 
 if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" ]; then
+	if [ "$OS" == "ubuntu" -o "$OS" == "debian" ]; then
+		checkInstall cron
+		checkUnInstall bsd-mailx
+		checkUnInstall exim4
+		checkUnInstall exim4-base
+		checkUnInstall exim4-config
+		checkUnInstall exim4-daemon-light
+	elif [ "$OS" == "centos" ]; then
+		checkInstall crontabs
+	fi
+
 	if [ "$OS" == "debian" ]; then
 		cyanMessage " "
 		cyanMessage "Use dotdeb.org repository for more up to date server and PHP versions?"
