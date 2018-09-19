@@ -575,11 +575,6 @@ fi
 if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" ]; then
 	if [ "$OS" == "ubuntu" -o "$OS" == "debian" ]; then
 		checkInstall cron
-		checkUnInstall bsd-mailx
-		checkUnInstall exim4
-		checkUnInstall exim4-base
-		checkUnInstall exim4-config
-		checkUnInstall exim4-daemon-light
 	elif [ "$OS" == "centos" ]; then
 		checkInstall crontabs
 	fi
