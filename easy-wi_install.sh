@@ -257,10 +257,14 @@ if [ -f /etc/debian_version ]; then
 	if [ "`which logger`" == "" ]; then
 		apt-get --reinstall install bsdutils
 	fi
+	if [ "`which apt-utils`" == "" ]; then
+		checkInstall apt-utils
+	fi
 elif [ -f /etc/centos-release ]; then
 	INSTALLER="yum"
 	OS="centos"
 	setenforce 0 >/dev/null 2>&1
+	$INSTALLER -y update
 	if [ "`rpm -qa wget`" == "" ]; then
 		checkInstall wget
 	fi
@@ -275,9 +279,15 @@ USERMOD=$(which usermod)
 USERDEL=$(which userdel)
 GROUPADD=$(which groupadd)
 MACHINE=$(uname -m)
-LOCAL_IP=$(ip route get 8.8.8.8 | awk '{print $NF; exit}')
+HOST_NAME=`hostname -f | awk '{print tolower($0)}'`
 
-if [ "$LOCAL_IP" == "" -o "$LOCAL_IP" == "0" ]; then
+if [ "$HOST_NAME" != "" -a "$HOST_NAME" != "localhost" ]; then
+	LOCAL_IP="$HOST_NAME"
+elif [ "$HOST_NAME" == "" -o "$HOST_NAME" == "0" -o "$HOST_NAME" == "localhost" ]; then
+	LOCAL_IP=$(ip route get 8.8.8.8 | awk '{print $NF; exit}')
+fi
+
+if [ "$LOCAL_IP" == "" -o "$LOCAL_IP" == "0" -o "$LOCAL_IP" == "localhost" ]; then
 	LOCAL_IP=`hostname -I | awk '{print $1}'`
 fi
 
@@ -316,11 +326,10 @@ done
 
 if [ "$UPDATE_UPGRADE_SYSTEM" == "Yes" ]; then
 	cyanMessage " "
-	yellowMessage "Please wait... Update/Upgrade is currently running."
+	yellowMessage "Please wait... Update is currently running."
 	cyanMessage " "
 	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 		cyanMessage " "
-		$INSTALLER -y update
 		$INSTALLER -y upgrade
 		checkInstall debconf-utils
 		checkInstall lsb-release
@@ -1827,9 +1836,11 @@ if [ "$INSTALL" == "EW" ]; then
 		cyanMessage " "
 		cyanMessage "Please provide the root password for the MySQL Database, to remove the old easywi database."
 		read MYSQL_ROOT_PASSWORD
-		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "DROP DATABASE easy_wi;"
-		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "DROP USER easy_wi@localhost;"
-		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "FLUSH PRIVILEGES;"
+		mysql --user=root --password="$MYSQL_ROOT_PASSWORD" <<_EOF_
+DELETE FROM mysql.user WHERE User='easy_wi';
+DROP DATABASE IF EXISTS easy_wi;
+FLUSH PRIVILEGES;
+_EOF_
 	fi
 
 	if [ "`id easywi_web 2> /dev/null`" == "" -a ! -d /home/easywi_web ]; then
@@ -2157,6 +2168,12 @@ if [ "$INSTALL" == "EW" ]; then
 fi
 
 if [ "$INSTALL" == "VS" ]; then
+	LOCAL_IP=$(ip route get 8.8.8.8 | awk '{print $NF; exit}')
+
+	if [ "$LOCAL_IP" == "" -o "$LOCAL_IP" == "0" -o "$LOCAL_IP" == "localhost" ]; then
+		LOCAL_IP=`hostname -I | awk '{print $1}'`
+	fi
+
 	if [ "$OS" == "centos" ]; then
 		checkInstall bzip2
 	fi
@@ -2204,6 +2221,13 @@ if [ "$INSTALL" == "VS" ]; then
 				echo $LOCAL_IP >> $QUERY_WHITLIST_TXT
 			fi
 		fi
+
+#####
+# alle IPs: ip a | grep inet | awk '{print $2}'
+# -> IP check ob mehrere IPs
+# -> wenn nur eine IP, dann Single Command
+# -> ansonsten per ts3server.ini die IP zuweisen
+#####
 
 		cyanMessage " "
 		cyanMessage "Please specify the IPv4 address of the Easy-WI web panel."
