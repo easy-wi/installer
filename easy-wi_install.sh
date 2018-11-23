@@ -1534,6 +1534,10 @@ _EOF_
 			fi
 		fi
 
+		if [ -f /etc/apache2/sites-enabled/000-default.conf ]; then
+			rm /etc/apache2/sites-enabled/000-default.conf
+		fi
+
 		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 			okAndSleep "Activating Apache mod_rewrite module."
 			a2enmod rewrite
