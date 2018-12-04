@@ -5,9 +5,9 @@ Quality Code: [![Codacy Badge](https://api.codacy.com/project/badge/Grade/577d1e
 Easy-Wi Installer
 
 Supported OS:
-  - Debian
-  - Ubuntu
-  - CentOS
+  - Debian (stable Installer up to Debian 8, newer include in unstable Installer)
+  - Ubuntu (stable Installer up to Ubuntu 16.10, newer include in unstable Installer)
+  - CentOS (only include in unstable Installer)
   
 ## Unstable Installer (Developer Version)
   
