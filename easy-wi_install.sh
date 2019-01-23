@@ -2493,6 +2493,9 @@ elif [ "$INSTALL" == "WR" ]; then
 			echo "Password: $MYSQL_ROOT_PASSWORD" >> /root/database_root_login.txt
 			greenOneLineMessage "Database root login data is saved in "; cyanOneLineMessage "\"/root/database_root_login.txt\""; greenMessage "."
 			redMessage "Please download and remove this file from this system!"
+			redMessage " "
+			redMessage "Don´t use root Login for Easy-WI or so!"
+			redMessage "The root Login is only for Expert User and Reseller!"
 		fi
 		greenMessage " "
 	fi
@@ -2512,6 +2515,9 @@ elif [ "$INSTALL" == "MY" ]; then
 			echo "Password: $MYSQL_ROOT_PASSWORD" >> /root/database_root_login.txt
 			greenOneLineMessage "Database root login data is saved in "; cyanOneLineMessage "\"/root/database_root_login.txt\""; greenMessage "."
 			redMessage "Please download and remove this file from this system!"
+			redMessage " "
+			redMessage "Don´t use root Login for Easy-WI or so!"
+			redMessage "The root Login is only for Expert User and Reseller!"
 		fi
 		greenMessage " "
 	fi
