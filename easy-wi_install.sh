@@ -1051,7 +1051,7 @@ _EOF_
 			read LOCAL_IP
 		fi
 
-		if [ "$LOCAL_IP" != "" -a -f "$MYSQL_CONF" -a ! "$MYSQL_CONF".easy-install.backup ]; then
+		if [ "$LOCAL_IP" != "" -a -f "$MYSQL_CONF" ]; then
 			if [ "`grep 'bind-address' $MYSQL_CONF | awk '{print $3}'`" != "0.0.0.0" ]; then
 				sed -i "s/bind-address.*/bind-address = 0.0.0.0/g" $MYSQL_CONF
 			elif [ "`grep 'bind-address' $MYSQL_CONF`" == "" ]; then
