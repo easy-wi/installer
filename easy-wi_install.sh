@@ -2486,7 +2486,7 @@ elif [ "$INSTALL" == "WR" ]; then
 	fi
 	greenMessage " "
 	if [ "$MYSQL_ROOT_PASSWORD" != "" ]; then
-		greenOneLineMessage "DB root user name are "; cyanOneLineMessage "root"; greenOneLineMessage " and the password is "; cyanMessage "$MYSQL_ROOT_PASSWORD"
+		# greenOneLineMessage "DB root user name are "; cyanOneLineMessage "root"; greenOneLineMessage " and the password is "; cyanMessage "$MYSQL_ROOT_PASSWORD"
 		if [ ! -f /root/database_root_login.txt ]; then
 			touch /root/database_root_login.txt
 			echo "User: root" > /root/database_root_login.txt
@@ -2508,7 +2508,7 @@ elif [ "$INSTALL" == "MY" ]; then
 		greenMessage " "
 	fi
 	if [ "$MYSQL_ROOT_PASSWORD" != "" -a "$SQL" != "None" ]; then
-		greenOneLineMessage "DB root user name are "; cyanOneLineMessage "root"; greenOneLineMessage " and the password is "; cyanMessage "$MYSQL_ROOT_PASSWORD"
+		# greenOneLineMessage "DB root user name are "; cyanOneLineMessage "root"; greenOneLineMessage " and the password is "; cyanMessage "$MYSQL_ROOT_PASSWORD"
 		if [ ! -f /root/database_root_login.txt ]; then
 			touch /root/database_root_login.txt
 			echo "User: root" > /root/database_root_login.txt
