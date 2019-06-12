@@ -345,6 +345,21 @@ if [ "$UPDATE_UPGRADE_SYSTEM" == "Yes" ]; then
 fi
 checkInstall curl
 
+yellowMessage ""
+yellowMessage "Note: locales will be changed to en_US.UTF-8 if needed!"
+yellowMessage ""
+if [ "$OS" == "centos" ]; then
+	if [ "`cat /etc/locale.conf | grep LANG=`" != "LANG=en_US.UTF-8" ]; then
+		localectl set-locale LANG=en_US.UTF-8
+	fi
+else
+	if ([ ! -f /etc/default/locale -o "`locale | grep LANG=`" != "LANG=en_US.UTF-8" ]); then
+		checkInstall locales
+		locale-gen en_US.UTF-8
+		update-locale LANG=en_US.UTF-8
+	fi
+fi
+
 #CentOS - SELinux
 if [ "$OS" == "centos" ]; then
 	if [ ! -f /tmp/easy-wi_reboot ]; then
