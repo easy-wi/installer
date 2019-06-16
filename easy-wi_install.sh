@@ -848,7 +848,7 @@ if [ "$INSTALL" == "WR" -o "$INSTALL" == "EW" ]; then
   makeDir /home/$MASTERUSER/skel
 	makeDir /home/$MASTERUSER/skel/htdocs
 	makeDir /home/$MASTERUSER/skel/logs
-	makeDir /home/$MASTERUSER/skel/session
+	makeDir /home/$MASTERUSER/skel/sessions
 	makeDir /home/$MASTERUSER/skel/tmp
 	chown -cR $MASTERUSER:$WEBGROUPNAME /home/$MASTERUSER >/dev/null 2>&1
 
