@@ -845,6 +845,7 @@ fi
 
 if [ "$INSTALL" == "WR" -o "$INSTALL" == "EW" ]; then
 	makeDir /home/$MASTERUSER/sites-enabled/
+  makeDir /home/$MASTERUSER/skel
 	makeDir /home/$MASTERUSER/skel/htdocs
 	makeDir /home/$MASTERUSER/skel/logs
 	makeDir /home/$MASTERUSER/skel/session
@@ -2543,7 +2544,7 @@ if [ -f /root/database_root_login.txt ]; then
 fi
 
 # clear password variable
-unset MYSQL_ROOT_PASSWORD MYSQL_USER_PASSWORD DB_PASSWORD QUERY_PASSWORD WEBGROUPNAME2 FIREWALL
+unset MYSQL_ROOT_PASSWORD MYSQL_USER_PASSWORD DB_PASSWORD QUERY_PASSWORD WEBGROUPNAME2 FIREWALL MASTERUSER
 
 cyanMessage " "
 
