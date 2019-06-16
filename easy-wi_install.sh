@@ -2433,9 +2433,6 @@ if [ "$INSTALL" == "EW" ]; then
 	greenMessage "Easy-WI Webpanel setup is done regarding architecture."
 	greenOneLineMessage "Please open "; cyanOneLineMessage "$PROTOCOL://$IP_DOMAIN/install/install.php"; greenMessage " and complete the installation dialog."
 	greenOneLineMessage "DB user and table name are "; cyanOneLineMessage "easy_wi"; greenOneLineMessage " and the password is "; cyanMessage "$DB_PASSWORD"
-	# greenMessage " "
-	# greenOneLineMessage "DB root user name are "; cyanOneLineMessage "root"; greenOneLineMessage " and the password is "; cyanMessage "$MYSQL_ROOT_PASSWORD"
-	# redMessage "Dont't use this Login for Easy-WI DB!"
 	redMessage " "
 	if [ ! -f /root/database_root_login.txt ]; then
 		touch /root/database_root_login.txt
@@ -2502,7 +2499,6 @@ elif [ "$INSTALL" == "WR" ]; then
 	fi
 	greenMessage " "
 	if [ "$MYSQL_ROOT_PASSWORD" != "" ]; then
-		# greenOneLineMessage "DB root user name are "; cyanOneLineMessage "root"; greenOneLineMessage " and the password is "; cyanMessage "$MYSQL_ROOT_PASSWORD"
 		if [ ! -f /root/database_root_login.txt ]; then
 			touch /root/database_root_login.txt
 			echo "User: root" > /root/database_root_login.txt
@@ -2524,7 +2520,6 @@ elif [ "$INSTALL" == "MY" ]; then
 		greenMessage " "
 	fi
 	if [ "$MYSQL_ROOT_PASSWORD" != "" -a "$SQL" != "None" ]; then
-		# greenOneLineMessage "DB root user name are "; cyanOneLineMessage "root"; greenOneLineMessage " and the password is "; cyanMessage "$MYSQL_ROOT_PASSWORD"
 		if [ ! -f /root/database_root_login.txt ]; then
 			touch /root/database_root_login.txt
 			echo "User: root" > /root/database_root_login.txt
