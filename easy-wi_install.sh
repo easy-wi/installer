@@ -81,7 +81,6 @@ errorAndExit() {
 
 errorAndContinue() {
 	redMessage "Invalid option."
-	continue
 }
 
 removeIfExists() {
@@ -226,8 +225,7 @@ doReboot() {
 	OPTIONS=("Yes" "No" "Quit")
 	select OPTION in "${OPTIONS[@]}"; do
 		case "$REPLY" in
-			1|2 ) break;;
-			3 ) errorAndQuit;;
+			1|2|3 ) break;;
 			*) errorAndContinue;;
 		esac
 	done
@@ -346,17 +344,17 @@ fi
 checkInstall curl
 
 yellowMessage ""
-yellowMessage "Note: locales will be changed to en_US.UTF-8 if needed!"
+yellowMessage "Note: locales added en_US.UTF-8 if needed!"
 yellowMessage ""
+checkInstall locales
 if [ "$OS" == "centos" ]; then
 	if [ "`cat /etc/locale.conf | grep LANG=`" != "LANG=en_US.UTF-8" ]; then
 		localectl set-locale LANG=en_US.UTF-8
 	fi
 else
-	if ([ ! -f /etc/default/locale -o "`locale | grep LANG=`" != "LANG=en_US.UTF-8" ]); then
-		checkInstall locales
-		locale-gen en_US.UTF-8
-		update-locale LANG=en_US.UTF-8
+	if [ "`grep en_US.UTF-8 /etc/locale.gen`" != "en_US.UTF-8 UTF-8" ]; then
+		sed -i "s/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/g" /etc/locale.gen
+		dpkg-reconfigure --frontend noninteractive locales
 	fi
 fi
 
@@ -380,7 +378,7 @@ if [ "$OS" == "centos" ]; then
 			fi
 		fi
 	else
-		doReboot "System is rebooting now for finish SELinux Security Function!" "Please reboot your Root/Vserver to disabled SELinux Security Function!"
+		doReboot "System is rebooting now for finish SELinux Security Function!" "Please reboot your Root/Vserver to disabled SELinux Security Function"
 	fi
 fi
 
