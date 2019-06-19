@@ -1870,7 +1870,7 @@ _EOF_
 	makeDir /home/easywi_web/htdocs
 	makeDir /home/easywi_web/logs
 	makeDir /home/easywi_web/tmp
-	makeDir /home/easywi_web/session
+	makeDir /home/easywi_web/sessions
 	chown -cR easywi_web:$WEBGROUPNAME /home/easywi_web >/dev/null 2>&1
 
 	if [ "`id easywi_web 2> /dev/null`" == "" ]; then
@@ -2079,7 +2079,7 @@ _EOF_
 		echo "php_admin_value[memory_limit] = 32M" >> $FILE_NAME_POOL
 		echo "php_admin_value[open_basedir] = /home/easywi_web/htdocs/:/home/easywi_web/tmp/" >> $FILE_NAME_POOL
 		echo "php_admin_value[upload_tmp_dir] = /home/easywi_web/tmp" >> $FILE_NAME_POOL
-		echo "php_admin_value[session.save_path] = /home/easywi_web/session" >> $FILE_NAME_POOL
+		echo "php_admin_value[session.save_path] = /home/easywi_web/sessions" >> $FILE_NAME_POOL
 
 		chown $MASTERUSER:$WEBGROUPNAME $FILE_NAME_POOL
 	fi
@@ -2136,7 +2136,7 @@ _EOF_
 		echo '       php_admin_flag log_errors on' >> $FILE_NAME_VHOST
 		echo '       php_admin_flag mod_rewrite on' >> $FILE_NAME_VHOST
 		echo '       php_admin_value open_basedir "/home/easywi_web/htdocs/:/home/easywi_web/tmp"' >> $FILE_NAME_VHOST
-		echo '       php_admin_value session.save_path "/home/easywi_web/session"' >> $FILE_NAME_VHOST
+		echo '       php_admin_value session.save_path "/home/easywi_web/sessions"' >> $FILE_NAME_VHOST
 		echo '       php_admin_value upload_tmp_dir "/home/easywi_web/tmp"' >> $FILE_NAME_VHOST
 		echo '       php_admin_value upload_max_size 32M' >> $FILE_NAME_VHOST
 		echo '       php_admin_value memory_limit 32M' >> $FILE_NAME_VHOST
