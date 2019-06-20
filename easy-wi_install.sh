@@ -1748,13 +1748,18 @@ if [ "$INSTALL" == "GS" ]; then
 			$INSTALLER -y install zlib1g
 			$INSTALLER -y install lib32z1
 			$INSTALLER -y install lib32gcc1
-			$INSTALLER -y install lib32readline5
+			if [ "$OS" == "debian" -a "$OSVERSION" -gt "900" -o "$OS" == "ubuntu" -a "$OSVERSION" -gt "1803" ]; then
+				$INSTALLER -y install lib32readline7
+				$INSTALLER -y install libreadline7:i386
+			else
+				$INSTALLER -y install lib32readline5
+				$INSTALLER -y install libreadline5:i386
+			fi
 			$INSTALLER -y install lib32ncursesw5
 			$INSTALLER -y install lib32stdc++6
 			$INSTALLER -y install lib64stdc++6
 			$INSTALLER -y install libstdc++6
 			$INSTALLER -y install libgcc1:i386
-			$INSTALLER -y install libreadline5:i386
 			$INSTALLER -y install libncursesw5:i386
 			if [ "`apt-cache search zlib1g-dev`" != "" ]; then
 				$INSTALLER -y install zlib1g-dev
@@ -1762,7 +1767,11 @@ if [ "$INSTALL" == "GS" ]; then
 				$INSTALLER -y install zlib1g:i386
 			fi
 		else
-			$INSTALLER -y install libreadline5 libncursesw5
+			if [ "$OS" == "debian" -a "$OSVERSION" -gt "900" -o "$OS" == "ubuntu" -a "$OSVERSION" -gt "1803" ]; then
+				$INSTALLER -y install libreadline7 libncursesw5
+			else
+				$INSTALLER -y install libreadline5 libncursesw5
+			fi
 		fi
 	elif [ "$OS" == "centos" ]; then
 		cyanMessage " "
