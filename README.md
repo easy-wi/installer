@@ -5,16 +5,9 @@ Quality Code: [![Codacy Badge](https://api.codacy.com/project/badge/Grade/577d1e
 Easy-Wi Installer
 
 Supported OS:
-  - Debian (stable Installer up to Debian 8, newer include in unstable Installer)
-  - Ubuntu (stable Installer up to Ubuntu 16.10, newer include in unstable Installer)
-  - CentOS (only include in unstable Installer)
-  
-## Unstable Installer (Developer Version)
-  
-```sh 
-wget https://raw.githubusercontent.com/easy-wi/installer/master/easy-wi_install.sh
-bash ./easy-wi_install.sh
-```
+  - Debian 8 and newer
+  - Ubuntu 16.10 and newer
+  - CentOS 7 and newer
 
 ## Stable Installer
   
@@ -24,4 +17,11 @@ wget -O installer.tar.gz https://github.com/easy-wi/installer/archive/$LATEST_VE
 tar zxf installer.tar.gz && mv ./installer-*/easy-wi_install.sh ./
 rm -r installer.tar.gz installer-*/
 bash easy-wi_install.sh
+```
+
+## Unstable Installer (Developer Version)
+  
+```sh 
+wget https://raw.githubusercontent.com/easy-wi/installer/master/easy-wi_install.sh
+bash ./easy-wi_install.sh
 ```
