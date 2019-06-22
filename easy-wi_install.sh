@@ -346,12 +346,12 @@ checkInstall curl
 yellowMessage ""
 yellowMessage "Note: locales added en_US.UTF-8 if needed!"
 yellowMessage ""
-checkInstall locales
 if [ "$OS" == "centos" ]; then
 	if [ "`cat /etc/locale.conf | grep LANG=`" != "LANG=en_US.UTF-8" ]; then
 		localectl set-locale LANG=en_US.UTF-8
 	fi
 else
+	checkInstall locales
 	if [ "`grep en_US.UTF-8 /etc/locale.gen`" != "en_US.UTF-8 UTF-8" ]; then
 		sed -i "s/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/g" /etc/locale.gen
 		dpkg-reconfigure --frontend noninteractive locales
