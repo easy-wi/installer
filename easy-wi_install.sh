@@ -1291,20 +1291,22 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
 			sed -i 's/Umask.*/Umask 037 027/g' /etc/proftpd/proftpd.conf
 		elif [ -f /etc/proftpd/proftpd.conf -a "$INSTALL" == "GS" ]; then
 			sed -i 's/Umask.*/Umask 077 077/g' /etc/proftpd/proftpd.conf
+		fi
 
-			cyanMessage " "
-			cyanMessage "Install/Update ProFTPD Rules?"
+		cyanMessage " "
+		cyanMessage "Install/Update ProFTPD Rules?"
 
-			OPTIONS=("Yes" "No" "Quit")
-			select OPTION in "${OPTIONS[@]}"; do
-				case "$REPLY" in
-					1|2 ) break;;
-					3 ) errorAndQuit;;
-					*) errorAndContinue;;
-				esac
-			done
+		OPTIONS=("Yes" "No" "Quit")
+		select OPTION in "${OPTIONS[@]}"; do
+			case "$REPLY" in
+				1|2 ) break;;
+				3 ) errorAndQuit;;
+				*) errorAndContinue;;
+			esac
+		done
 
-			if [ "$OPTION" == "Yes" -a "`grep '<Directory \/home\/\*\/pserver\/\*>' /etc/proftpd/proftpd.conf`" == "" -a ! -f /etc/proftpd/conf.d/easy-wi.conf ]; then
+		if [ "$OPTION" == "Yes" ]; then
+			if [ "$INSTALL" == "GS" -a "`grep '<Directory \/home\/\*\/pserver\/\*>' /etc/proftpd/proftpd.conf`" == "" -a ! -f /etc/proftpd/conf.d/easy-wi.conf ]; then
 				makeDir /etc/proftpd/conf.d/
 				chmod 755 /etc/proftpd/conf.d/
 
@@ -1379,7 +1381,9 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
     </Limit>
 </Directory>" >> /etc/proftpd/conf.d/easy-wi.conf
 				done
+			fi
 
+			if [ "$INSTALL" != "GS" -a "`grep '<Directory \/home\/\web-\*\/htdocs\/\*>' /etc/proftpd/conf.d/easy-wi.conf`" == "" ]; then
 				# FastDL/Webspace
 				echo "
 <Directory /home/web-*/htdocs/*>
