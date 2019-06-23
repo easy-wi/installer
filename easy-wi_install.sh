@@ -1384,7 +1384,6 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
 			fi
 
 			if [ "$INSTALL" != "GS" -a "`grep '<Directory \/home\/\web-\*\/htdocs\/\*>' /etc/proftpd/conf.d/easy-wi.conf`" == "" ]; then
-				# FastDL/Webspace
 				echo "
 <Directory /home/web-*/htdocs/*>
     Umask 022 022
