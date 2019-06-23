@@ -1379,6 +1379,16 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
     </Limit>
 </Directory>" >> /etc/proftpd/conf.d/easy-wi.conf
 				done
+
+				# FastDL
+				echo "
+<Directory /home/web-*/htdocs/*>
+    Umask 022 022
+    <Limit RNFR RNTO STOR DELE MKD RMD>
+        AllowAll
+    </Limit>
+</Directory>
+" >> /etc/proftpd/conf.d/easy-wi.conf
 			fi
 		fi
 
