@@ -1380,7 +1380,7 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
 </Directory>" >> /etc/proftpd/conf.d/easy-wi.conf
 				done
 
-				# FastDL
+				# FastDL/Webspace
 				echo "
 <Directory /home/web-*/htdocs/*>
     Umask 022 022
