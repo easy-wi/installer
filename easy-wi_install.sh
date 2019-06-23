@@ -1383,8 +1383,18 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
 				done
 			fi
 
-			if [ "$INSTALL" != "GS" -a "`grep '<Directory \/home\/\web-\*\/htdocs\/\*>' /etc/proftpd/conf.d/easy-wi.conf`" == "" ]; then
-				echo "
+			if [ "$INSTALL" != "GS" ]; then
+      	if [ ! -f /etc/proftpd/conf.d/easy-wi.conf ]; then
+					echo "
+<Directory /home/web-*/htdocs/*>
+    Umask 022 022
+    <Limit RNFR RNTO STOR DELE MKD RMD>
+        AllowAll
+    </Limit>
+</Directory>
+" > /etc/proftpd/conf.d/easy-wi.conf
+      	elif [ "`grep '<Directory \/home\/\web-\*\/htdocs\/\*>' /etc/proftpd/conf.d/easy-wi.conf`" == "" ]; then
+					echo "
 <Directory /home/web-*/htdocs/*>
     Umask 022 022
     <Limit RNFR RNTO STOR DELE MKD RMD>
@@ -1392,6 +1402,7 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
     </Limit>
 </Directory>
 " >> /etc/proftpd/conf.d/easy-wi.conf
+				fi
 			fi
 		fi
 
