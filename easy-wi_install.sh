@@ -1615,34 +1615,28 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
 		echo "$MASTERUSER ALL = (ALL, !root:$MASTERUSER) NOPASSWD: /bin/bash /home/$MASTERUSER/temp/*.sh" >> /etc/sudoers
 	fi
 
-	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
-		if [ "$WEBSERVER" == "Lighttpd" ]; then
-			HTTPDBIN=`which lighttpd`
-			HTTPDSCRIPT="/etc/init.d/lighttpd"
-		elif [ "$WEBSERVER" == "Apache" ]; then
-			HTTPDBIN=`which apache2`
-			HTTPDSCRIPT="/etc/init.d/apache2"
-		fi
-	elif [ "$OS" == "centos" ]; then
-		if [ "$WEBSERVER" == "Lighttpd" ]; then
-			HTTPDBIN=`which lighttpd`
-			HTTPDSCRIPT='lighttpd'
-		elif [ "$WEBSERVER" == "Apache" ]; then
-			HTTPDBIN=`which httpd`
-			HTTPDSCRIPT='httpd'
-		fi
-	fi
-
-	if [ "$HTTPDBIN" != "" -a -f /etc/sudoers ]; then
-		if [ "`grep $MASTERUSER /etc/sudoers | grep $HTTPDBIN`" == "" ]; then
-			echo "$MASTERUSER ALL = NOPASSWD: $HTTPDBIN" >> /etc/sudoers
+	if [ "$INSTALL" == "WR" ]; then
+		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
+			if [ "$WEBSERVER" == "Lighttpd" ]; then
+				HTTPDBIN=`lighttpd`
+				HTTPDSCRIPT="/etc/init.d/lighttpd reload"
+			elif [ "$WEBSERVER" == "Apache" ]; then
+				HTTPDBIN=`apache2`
+				HTTPDSCRIPT="/etc/init.d/apache2 reload"
+			fi
+		elif [ "$OS" == "centos" ]; then
+			if [ "$WEBSERVER" == "Lighttpd" ]; then
+				HTTPDBIN=`lighttpd`
+				HTTPDSCRIPT='/bin/systemctl reload lighttpd'
+			elif [ "$WEBSERVER" == "Apache" ]; then
+				HTTPDBIN=`httpd`
+				HTTPDSCRIPT='/bin/systemctl reload httpd'
+			fi
 		fi
 
-		if [ "`grep $MASTERUSER /etc/sudoers | grep 'reload $HTTPDSCRIPT'`" == "" ]; then
-			if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
+		if [ "`which $HTTPDBIN`" != "" -a -f /etc/sudoers ]; then
+			if [ "`grep $MASTERUSER /etc/sudoers | grep $HTTPDBIN`" == "" ]; then
 				echo "$MASTERUSER ALL = NOPASSWD: $HTTPDSCRIPT" >> /etc/sudoers
-			else
-				echo "$MASTERUSER ALL = NOPASSWD: /bin/systemctl reload $HTTPDSCRIPT" >> /etc/sudoers
 			fi
 		fi
 	fi
@@ -1668,12 +1662,8 @@ if [ "$INSTALL" == "WR" ]; then
 	cyanMessage "sudo $USERDEL %cmd%"
 
 	if [ "$HTTPDSCRIPT" != "" ]; then
-		greenOneLineMessage "The HTTPD restart command is: "
-		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
-			cyanMessage "sudo $HTTPDSCRIPT reload"
-		else
-			cyanMessage "sudo /bin/systemctl reload $HTTPDSCRIPT"
-		fi
+		greenOneLineMessage "The Webserver restart command is: "
+		cyanMessage "sudo $HTTPDSCRIPT"
 	fi
 fi
 
