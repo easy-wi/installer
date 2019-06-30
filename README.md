@@ -25,3 +25,10 @@ bash easy-wi_install.sh
 wget https://raw.githubusercontent.com/easy-wi/installer/master/easy-wi_install.sh
 bash ./easy-wi_install.sh
 ```
+
+## Support Channel
+Discord: [Easy-WI Discord Channel](https://discord.gg/quJvvfF)
+
+Gitter: [Easy-WI Gitter Channel](https://gitter.im/easy-wi/Lobby?utm_source=share-link&utm_medium=link&utm_campaign=share-link)
+
+Github: [Easy-WI Github Channel](https://github.com/easy-wi/developer/issues)
