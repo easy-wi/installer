@@ -414,7 +414,7 @@ else
 		OSVERSION=$(echo "$OSVERSION_TMP" | tr -d .)
 	elif [ "$OS" == "debian" ]; then
 		OSVERSION=$(echo "$OSVERSION_TMP" | tr -d . | cut -c 1-3)
-	elif [ "$OS" == "centos" -o "$OS" == "debian" ]; then
+	elif [ "$OS" == "centos" ]; then
 		OSVERSION=$(echo "$OSVERSION_TMP" | tr -d . | cut -c 1-2)
 	fi
 fi
