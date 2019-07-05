@@ -22,7 +22,7 @@ bash easy-wi_install.sh
 ## Unstable Installer (Developer Version)
   
 ```sh 
-wget https://raw.githubusercontent.com/easy-wi/installer/master/easy-wi_install.sh
+wget --no-check-certificate https://raw.githubusercontent.com/easy-wi/installer/master/easy-wi_install.sh
 bash ./easy-wi_install.sh
 ```
 
