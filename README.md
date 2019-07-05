@@ -16,14 +16,24 @@ LATEST_VERSION=`wget -q --timeout=60 -O - https://api.github.com/repos/easy-wi/i
 wget -O installer.tar.gz https://github.com/easy-wi/installer/archive/$LATEST_VERSION.tar.gz
 tar zxf installer.tar.gz && mv ./installer-*/easy-wi_install.sh ./
 rm -r installer.tar.gz installer-*/
-sudo bash easy-wi_install.sh
+
+if you runnig as user (not root):
+sudo bash ./easy-wi_install.sh
+
+if you runnig as root:
+bash ./easy-wi_install.sh
 ```
 
 ## Unstable Installer (Developer Version)
   
 ```sh 
 wget --no-check-certificate https://raw.githubusercontent.com/easy-wi/installer/master/easy-wi_install.sh
+
+if you runnig as user (not root):
 sudo bash ./easy-wi_install.sh
+
+if you runnig as root:
+bash ./easy-wi_install.sh
 ```
 
 ## Support Channel
