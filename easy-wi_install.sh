@@ -2298,9 +2298,9 @@ if [ "$INSTALL" == "VS" ]; then
 		redMessage "Cannot edit the file $QUERY_WHITLIST_TXT, please maintain it manually."
 	fi
 
-	if [ ! -f .ts3server_license_accepted ]; then
-		touch .ts3server_license_accepted
-		chown -cR $MASTERUSER:$MASTERUSER .ts3server_license_accepted 2>&1 >/dev/null
+	if [ ! -f /home/$MASTERUSER/.ts3server_license_accepted ]; then
+		su -c "touch .ts3server_license_accepted" $MASTERUSER
+		chown -cR $MASTERUSER:$MASTERUSER /home/$MASTERUSER/.ts3server_license_accepted 2>&1 >/dev/null
 	fi
 
 	QUERY_PASSWORD=`< /dev/urandom tr -dc A-Za-z0-9 | head -c12`
