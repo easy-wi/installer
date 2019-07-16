@@ -418,7 +418,7 @@ else
 		if [ "$OSVERSION_TMP" == "10" ]; then
 			OSVERSION=$(echo "$OSVERSION_TMP"0)
 		else
-			OSVERSION=$(echo "$OSVERSION_TMP" | tr -d . | cut -c 1-3)
+			OSVERSION=$(echo "$OSVERSION_TMP" | tr -d . | cut -c 1-2)
 		fi
 	fi
 fi
@@ -931,13 +931,13 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "MY" ]; then
 		if ([ "$OS" == "debian" -o "$OS" == "ubuntu" ] && [ "`grep '/mariadb/' /etc/apt/sources.list`" == "" ]); then
 			checkInstall software-properties-common
 
-			if [ "$OS" == "debian" -a "$OSVERSION" -ge "900" ]; then
+			if [ "$OS" == "debian" -a "$OSVERSION" -ge "90" ]; then
 				checkInstall dirmngr
 			fi
 
-			if [ "$OS" == "debian" -a "$OSVERSION" -ge "900" ]; then
+			if [ "$OS" == "debian" -a "$OSVERSION" -ge "90" ]; then
 				importKey keyserver.ubuntu.com 0xF1656F24C74CD1D8
-			elif [ "$OS" == "debian" -a "$OSVERSION" -ge "800" ]; then
+			elif [ "$OS" == "debian" -a "$OSVERSION" -ge "80" ]; then
 				importKey keyserver.ubuntu.com 0xcbcb082a1bb943db
 			elif [ "$OS" == "ubuntu" -a "$OSVERSION" -ge "1410" ]; then
 				importKey hkp://keyserver.ubuntu.com:80 0xF1656F24C74CD1D8
@@ -1135,12 +1135,14 @@ if [ "$PHPINSTALL" == "Yes" ]; then
 		LC_ALL=C.UTF-8 add-apt-repository -y ppa:ondrej/php
 		USE_PHP_VERSION='5.6'
 		RUNUPDATE="1"
-	elif [ "$OS" == "debian" -a "$OSVERSION" -ge "850" -o "$OS" == "ubuntu" -a "$OSVERSION" -ge "1604" -a "$OSVERSION" -lt "1610" ]; then
+	elif [ "$OS" == "debian" -a "$OSVERSION" -ge "85" -o "$OS" == "ubuntu" -a "$OSVERSION" -ge "1604" -a "$OSVERSION" -lt "1610" ]; then
 		USE_PHP_VERSION='7.0'
 	elif [ "$OS" == "ubuntu" -a "$OSVERSION" -ge "1610" -a "$OSVERSION" -lt "1803" ]; then
 		USE_PHP_VERSION='7.1'
 	elif [ "$OS" == "ubuntu" -a "$OSVERSION" -ge "1803" ]; then
 		USE_PHP_VERSION='7.2'
+	elif [ "$OS" == "debian" -a "$OSVERSION" -ge "100" ]; then
+		USE_PHP_VERSION='7.3'
 	elif [ "$OS" == "centos" ]; then
 		checkInstall http://rpms.remirepo.net/enterprise/remi-release-7.rpm
 		yum-config-manager --enable remi-php71
@@ -1170,7 +1172,7 @@ if [ "$PHPINSTALL" == "Yes" ]; then
 		fi
 		checkInstall php${USE_PHP_VERSION}-mysql
 		checkInstall php${USE_PHP_VERSION}-cli
-		if [ "$OS" == "debian" -a "$OSVERSION" -ge "850" -o "$OS" == "ubuntu" ]; then
+		if [ "$OS" == "debian" -a "$OSVERSION" -ge "85" -o "$OS" == "ubuntu" ]; then
 			checkInstall php${USE_PHP_VERSION}-xml
 			checkInstall php${USE_PHP_VERSION}-mbstring
 			checkInstall php${USE_PHP_VERSION}-zip
@@ -1748,7 +1750,7 @@ if [ "$INSTALL" == "GS" ]; then
 	chmod -R 750 /home/$MASTERUSER/
 	chmod -R 770 /home/$MASTERUSER/logs/ /home/$MASTERUSER/temp/ /home/$MASTERUSER/fdl_data/
 
-	if [ "$OS" == "debian" -a "$OSVERSION" -lt "900" ]; then
+	if [ "$OS" == "debian" -a "$OSVERSION" -lt "90" ]; then
 		if [ "`uname -m`" == "x86_64" -a "`grep '6.' /etc/debian_version`" == "" ]; then
 			dpkg --add-architecture i386
 		fi
@@ -1766,7 +1768,7 @@ if [ "$INSTALL" == "GS" ]; then
 			$INSTALLER -y install zlib1g
 			$INSTALLER -y install lib32z1
 			$INSTALLER -y install lib32gcc1
-			if [ "$OS" == "debian" -a "$OSVERSION" -gt "900" -o "$OS" == "ubuntu" -a "$OSVERSION" -gt "1803" ]; then
+			if [ "$OS" == "debian" -a "$OSVERSION" -gt "90" -o "$OS" == "ubuntu" -a "$OSVERSION" -gt "1803" ]; then
 				$INSTALLER -y install lib32readline7
 				$INSTALLER -y install libreadline7:i386
 			else
@@ -1785,7 +1787,7 @@ if [ "$INSTALL" == "GS" ]; then
 				$INSTALLER -y install zlib1g:i386
 			fi
 		else
-			if [ "$OS" == "debian" -a "$OSVERSION" -gt "900" -o "$OS" == "ubuntu" -a "$OSVERSION" -gt "1803" ]; then
+			if [ "$OS" == "debian" -a "$OSVERSION" -gt "90" -o "$OS" == "ubuntu" -a "$OSVERSION" -gt "1803" ]; then
 				$INSTALLER -y install libreadline7 libncursesw5
 			else
 				$INSTALLER -y install libreadline5 libncursesw5
@@ -2029,7 +2031,7 @@ _EOF_
 
 			cyanMessage " "
 			okAndSleep "Creating a self-signed SSL certificate."
-			if [ "$OS" == "debian" -a "$OSVERSION" -ge "850" ]; then
+			if [ "$OS" == "debian" -a "$OSVERSION" -ge "85" ]; then
 				openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout $SSL_DIR/$FILE_NAME.key -out $SSL_DIR/$FILE_NAME.crt -subj "/CN=$IP_DOMAIN"
 			else
 				openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout $SSL_DIR/$FILE_NAME.key -out $SSL_DIR/$FILE_NAME.crt -subj "/C=/ST=/L=/O=/OU=/CN=$IP_DOMAIN"
