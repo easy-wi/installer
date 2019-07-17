@@ -249,6 +249,9 @@ if [ -f /etc/debian_version ]; then
 	INSTALLER="apt-get"
 	OS="debian"
 	$INSTALLER -y update
+	if [ "`which wget`" == "" ]; then
+		checkInstall wget
+	fi
 	if [ "`which dialog`" == "" ]; then
 		checkInstall dialog
 	fi
@@ -605,7 +608,7 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "WR" ]; then
 		checkInstall crontabs
 	fi
 
-	if [ "$OS" == "debian" ]; then
+	if [ "$OS" == "debian" -a "$OSVERSION" -lt "100" ]; then
 		cyanMessage " "
 		cyanMessage "Use dotdeb.org repository for more up to date server and PHP versions?"
 
@@ -876,7 +879,7 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "MY" ]; then
 		okAndSleep "Please note that Easy-Wi requires a MySQL or MariaDB installed and will install MySQL if no DB is installed"
 	fi
 
-	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
+	if [ "$OS" == "debian" -a "$OSVERSION" -lt "100" -o "$OS" == "ubuntu" ]; then
 		if [ "`ps fax | grep 'mysqld' | grep -v 'grep'`" == "" ]; then
 			cyanMessage " "
 			cyanMessage "Please select if an which database server to install."
@@ -895,6 +898,8 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "MY" ]; then
 			SQL="MariaDB"
 			SQL_VERSION="10"
 		fi
+	else
+		SQL="MariaDB"
 	fi
 
 	if [ "`ps fax | grep 'mysqld' | grep -v 'grep'`" != "" ]; then
@@ -1135,14 +1140,14 @@ if [ "$PHPINSTALL" == "Yes" ]; then
 		LC_ALL=C.UTF-8 add-apt-repository -y ppa:ondrej/php
 		USE_PHP_VERSION='5.6'
 		RUNUPDATE="1"
+	elif [ "$OS" == "debian" -a "$OSVERSION" -ge "100" ]; then
+		USE_PHP_VERSION='7.3'
 	elif [ "$OS" == "debian" -a "$OSVERSION" -ge "85" -o "$OS" == "ubuntu" -a "$OSVERSION" -ge "1604" -a "$OSVERSION" -lt "1610" ]; then
 		USE_PHP_VERSION='7.0'
 	elif [ "$OS" == "ubuntu" -a "$OSVERSION" -ge "1610" -a "$OSVERSION" -lt "1803" ]; then
 		USE_PHP_VERSION='7.1'
 	elif [ "$OS" == "ubuntu" -a "$OSVERSION" -ge "1803" ]; then
 		USE_PHP_VERSION='7.2'
-	elif [ "$OS" == "debian" -a "$OSVERSION" -ge "100" ]; then
-		USE_PHP_VERSION='7.3'
 	elif [ "$OS" == "centos" ]; then
 		checkInstall http://rpms.remirepo.net/enterprise/remi-release-7.rpm
 		yum-config-manager --enable remi-php71
@@ -1165,7 +1170,7 @@ if [ "$PHPINSTALL" == "Yes" ]; then
 		checkInstall php${USE_PHP_VERSION}-common
 		checkInstall php${USE_PHP_VERSION}-curl
 		checkInstall php${USE_PHP_VERSION}-gd
-		if [ "$OS" == "ubuntu" -a "$OSVERSION" -lt "1803" -o "$OS" == "debian" ]; then
+		if [ "$OS" == "ubuntu" -a "$OSVERSION" -lt "1803" -o "$OS" == "debian" -a "OSVERSION" -lt "100" ]; then
 			checkInstall php${USE_PHP_VERSION}-mcrypt
 		elif [ "$OS" == "ubuntu" -a "$OSVERSION" -ge "1804" ]; then
 			checkInstall libsodium-dev
