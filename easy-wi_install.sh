@@ -3,8 +3,8 @@
 # DEBUG MODE
 DEBUG="OFF"
 
-#    Author:     Ulrich Block <ulrich.block@easy-wi.com>,
-#                Alexander Doerwald <alexander.doerwald@easy-wi.com>
+#    Author:     Ulrich Block <support@easy-wi.com>,
+#                Alexander Doerwald <support@easy-wi.com>
 #
 #    This file is part of Easy-WI.
 #
