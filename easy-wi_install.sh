@@ -951,13 +951,13 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "MY" ]; then
 			fi
 
 			if [ "`apt-cache search mariadb-server-10.2`" == "" ]; then
-				add-apt-repository "deb http://mirror.netcologne.de/mariadb/repo/10.2/$OS $OSBRANCH main"
+				add-apt-repository "deb http://mirror.23media.de/mariadb/repo/10.2 main"
 				RUNUPDATE=1
 			fi
 
 			if [ "$OS" == "debian" -a "$DOTDEB" == "Yes" ]; then
 				echo "Package: *" > /etc/apt/preferences.d/mariadb.pref
-				echo "Pin: origin mirror.netcologne.de" >> /etc/apt/preferences.d/mariadb.pref
+				echo "Pin: origin mirror.23media.de" >> /etc/apt/preferences.d/mariadb.pref
 				echo "Pin-Priority: 1000" >> /etc/apt/preferences.d/mariadb.pref
 				RUNUPDATE=1
 			fi
