@@ -1143,7 +1143,9 @@ if [ "$PHPINSTALL" == "Yes" ]; then
 	elif [ "$OS" == "debian" -a "$OSVERSION" -ge "100" ]; then
 		USE_PHP_VERSION='7.3'
 	elif [ "$OS" == "debian" -a "$OSVERSION" -ge "85" -o "$OS" == "ubuntu" -a "$OSVERSION" -ge "1604" -a "$OSVERSION" -lt "1610" ]; then
+		apt-add-repository -y ppa:ondrej/php
 		USE_PHP_VERSION='7.0'
+		RUNUPDATE="1"
 	elif [ "$OS" == "ubuntu" -a "$OSVERSION" -ge "1610" -a "$OSVERSION" -lt "1803" ]; then
 		USE_PHP_VERSION='7.1'
 	elif [ "$OS" == "ubuntu" -a "$OSVERSION" -ge "1803" ]; then
