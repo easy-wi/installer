@@ -17,10 +17,10 @@ wget -O installer.tar.gz https://github.com/easy-wi/installer/archive/$LATEST_VE
 tar zxf installer.tar.gz && mv ./installer-*/easy-wi_install.sh ./
 rm -r installer.tar.gz installer-*/
 
-if you runnig as user (not root):
+#if you runnig as user (not root):
 sudo bash ./easy-wi_install.sh
 
-if you runnig as root:
+#if you runnig as root:
 bash ./easy-wi_install.sh
 ```
 
@@ -29,10 +29,10 @@ bash ./easy-wi_install.sh
 ```sh 
 wget --no-check-certificate https://raw.githubusercontent.com/easy-wi/installer/master/easy-wi_install.sh
 
-if you runnig as user (not root):
+#if you runnig as user (not root):
 sudo bash ./easy-wi_install.sh
 
-if you runnig as root:
+#if you runnig as root:
 bash ./easy-wi_install.sh
 ```
 
