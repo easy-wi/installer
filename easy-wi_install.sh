@@ -951,7 +951,7 @@ if [ "$INSTALL" == "EW" -o "$INSTALL" == "MY" ]; then
 			fi
 
 			if [ "`apt-cache search mariadb-server-10.2`" == "" ]; then
-				add-apt-repository "deb http://mirror.23media.de/mariadb/repo/10.2 main"
+				add-apt-repository "deb http://mirror.23media.de/mariadb/repo/10.2/$OS $OSBRANCH main"
 				RUNUPDATE=1
 			fi
 
