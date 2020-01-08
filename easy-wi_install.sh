@@ -1716,6 +1716,12 @@ if [ "$INSTALL" == "GS" ]; then
 				okAndSleep "Adding jessie backports"
 				echo "deb http://ftp.de.debian.org/debian jessie-backports main" >> /etc/apt/sources.list
 				$INSTALLER -y update
+			elif [ "$OSBRANCH" == "buster" -a "`grep adoptopenjdk /etc/apt/sources.list`" == "" ]; then
+				okAndSleep "Adding AdoptOpenJDK backports"
+				apt install apt-transport-https ca-certificates dirmngr gnupg software-properties-common -y
+				wget -qO - https://adoptopenjdk.jfrog.io/adoptopenjdk/api/gpg/key/public | sudo apt-key add -
+				add-apt-repository --yes https://adoptopenjdk.jfrog.io/adoptopenjdk/deb/
+				$INSTALLER -y update
 			fi
 
 			if [ "$OSBRANCH" == "jessie" ]; then
@@ -1733,7 +1739,11 @@ if [ "$INSTALL" == "GS" ]; then
 				$INSTALLER -y update
 			fi
 
-			checkInstall openjdk-8-jdk
+			if [ "$OSBRANCH" != "buster" ]; then
+				checkInstall openjdk-8-jdk
+			else
+				checkInstall adoptopenjdk-8-hotspot
+			fi
 		elif [ "$OS" == "centos" ]; then
 			checkInstall java-1.8.0-openjdk
 		fi
