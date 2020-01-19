@@ -1783,11 +1783,12 @@ EOF
 
 			$INSTALLER -y install zlib1g
 			$INSTALLER -y install libc6-i386
-			$INSTALLER -y install lib32z1
 			if [ "$OS" == "debian" -a "$OSVERSION" -gt "90" -o "$OS" == "ubuntu" -a "$OSVERSION" -gt "1803" ]; then
+				$INSTALLER -y install lib32z1
 				$INSTALLER -y install lib32readline7
 				$INSTALLER -y install libreadline7:i386
 			else
+				$INSTALLER -y install ia32-libs
 				$INSTALLER -y install lib32gcc1
 				$INSTALLER -y install lib32readline5
 				$INSTALLER -y install libreadline5:i386
