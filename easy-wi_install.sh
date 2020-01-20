@@ -1801,13 +1801,9 @@ EOF
       $INSTALLER -y install libtinfo5:i386
       $INSTALLER -y install libncurses5:i386
 			$INSTALLER -y install libncursesw5:i386
-      $INSTALLER -y install libncurses5-dev
-      $INSTALLER -y install libncursesw5-dev
-			if [ -n "`apt-cache search zlib1g-dev`" ]; then
-				$INSTALLER -y install zlib1g-dev
-			else
-				$INSTALLER -y install zlib1g:i386
-			fi
+			$INSTALLER -y install libncurses5-dev
+			$INSTALLER -y install libncursesw5-dev
+			$INSTALLER -y install zlib1g:i386
 		else
 			if [ "$OS" == "debian" -a "$OSVERSION" -gt "90" -o "$OS" == "ubuntu" -a "$OSVERSION" -gt "1803" ]; then
 				$INSTALLER -y install libreadline7 libncursesw5
