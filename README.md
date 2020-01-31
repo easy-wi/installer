@@ -9,7 +9,7 @@ Supported OS:
   - Ubuntu 16.10 and newer
   - CentOS 7 and newer
 
-## Stable Installer up to Debian 8, Ubuntu 16.10 and CentOS 7
+## Stable Installer
   
 ```sh
 LATEST_VERSION=`wget -q --timeout=60 -O - https://api.github.com/repos/easy-wi/installer/releases/latest | grep -Po '(?<="tag_name": ")([0-9]\.[0-9]+)'` &&
