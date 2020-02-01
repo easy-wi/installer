@@ -9,6 +9,8 @@ Supported OS:
   - Ubuntu 16.10 and newer
   - CentOS 7 and newer
 
+___
+
 ## Stable Installer up to Debian 8, Ubuntu 16.10 and CentOS 7
   
 ```sh
@@ -24,6 +26,8 @@ sudo bash ./easy-wi_install.sh
 bash ./easy-wi_install.sh
 ```
 
+___
+
 ## Unstable Installer (Developer Version)
   
 ```sh 
@@ -35,6 +39,8 @@ sudo bash ./easy-wi_install.sh
 #if you runnig as root:
 bash ./easy-wi_install.sh
 ```
+
+___
 
 ## Support Channel
 Discord: [Easy-WI Discord Channel](https://discord.gg/quJvvfF)
