@@ -1338,7 +1338,7 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
 		done
 
 		if [ "$OPTION" == "Yes" ]; then
-			if [ "$INSTALL" == "GS" -a "`grep '<Directory \/home\/\*\/pserver\/\*>' /etc/proftpd/proftpd.conf`" -a ! -f /etc/proftpd/conf.d/easy-wi.conf ]; then
+			if [ "$INSTALL" == "GS" -a "`grep '<Directory \/home\/\*\/pserver\/\*>' /etc/proftpd/proftpd.conf`" -a ! -f /etc/proftpd/conf.d/easy-wi-game.conf ]; then
 				makeDir /etc/proftpd/conf.d/
 				chmod 755 /etc/proftpd/conf.d/
 
@@ -1350,8 +1350,8 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
     <Limit RNTO RNFR STOR DELE CHMOD SITE_CHMOD MKD RMD>
         DenyAll
     </Limit>
-</Directory>" > /etc/proftpd/conf.d/easy-wi.conf
-				echo "<Directory /home/$MASTERUSER>" >> /etc/proftpd/conf.d/easy-wi.conf
+</Directory>" > /etc/proftpd/conf.d/easy-wi-game.conf
+				echo "<Directory /home/$MASTERUSER>" >> /etc/proftpd/conf.d/easy-wi-game.conf
 				echo "    HideFiles (^\..+|\.ssh|\.bash_history|\.bash_logout|\.bashrc|\.profile)$
     PathDenyFilter (^\..+|\.ssh|\.bash_history|\.bash_logout|\.bashrc|\.profile)$
     HideNoAccess on
@@ -1376,7 +1376,7 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
     HideFiles (^\..+|srcds_run|srcds_linux|hlds_run|hlds_amd|hlds_i686|\.rc|\.sh|\.7z|\.dll)$
     PathDenyFilter (^\..+|srcds_run|srcds_linux|hlds_run|hlds_amd|hlds_i686|\.rc|\.sh|\.7z|\.dll)$
     HideNoAccess on
-</Directory>" >> /etc/proftpd/conf.d/easy-wi.conf
+</Directory>" >> /etc/proftpd/conf.d/easy-wi-game.conf
 
 				GAMES=("ark" "arma3" "bukkit" "hexxit" "mc" "mtasa" "projectcars" "rust" "samp" "spigot" "teeworlds" "tekkit" "tekkit-classic")
 				for GAME in ${GAMES[@]}; do
@@ -1385,7 +1385,7 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
     <Limit RNFR RNTO STOR DELE MKD RMD>
         AllowAll
     </Limit>
-</Directory>" >> /etc/proftpd/conf.d/easy-wi.conf
+</Directory>" >> /etc/proftpd/conf.d/easy-wi-game.conf
 				done
 
 				GAME_MODS=("csgo" "cstrike" "czero" "orangebox" "dod" "garrysmod")
@@ -1395,7 +1395,7 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
     <Limit RNFR RNTO STOR DELE MKD RMD>
         AllowAll
     </Limit>
-</Directory>" >> /etc/proftpd/conf.d/easy-wi.conf
+</Directory>" >> /etc/proftpd/conf.d/easy-wi-game.conf
 				done
 
 				FOLDERS=("addons" "cfg" "maps")
@@ -1411,12 +1411,12 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
     <Limit RNFR RNTO STOR DELE MKD RMD>
         AllowAll
     </Limit>
-</Directory>" >> /etc/proftpd/conf.d/easy-wi.conf
+</Directory>" >> /etc/proftpd/conf.d/easy-wi-game.conf
 				done
 			fi
 
 			if [ "$INSTALL" != "GS" ]; then
-      	if [ ! -f /etc/proftpd/conf.d/easy-wi.conf ]; then
+      	if [ ! -f /etc/proftpd/conf.d/easy-wi-web.conf ]; then
 					echo "
 <Directory /home/web-*/htdocs/*>
     Umask 022 022
@@ -1424,8 +1424,8 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
         AllowAll
     </Limit>
 </Directory>
-" >> /etc/proftpd/conf.d/easy-wi.conf
-      	elif [ -z "`grep '<Directory \/home\/\web-\*\/htdocs\/\*>' /etc/proftpd/conf.d/easy-wi.conf`" ]; then
+" >> /etc/proftpd/conf.d/easy-wi-web.conf
+      	elif [ -z "`grep '<Directory \/home\/\web-\*\/htdocs\/\*>' /etc/proftpd/conf.d/easy-wi-web.conf`" ]; then
 					echo "
 <Directory /home/web-*/htdocs/*>
     Umask 022 022
@@ -1433,7 +1433,7 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
         AllowAll
     </Limit>
 </Directory>
-" >> /etc/proftpd/conf.d/easy-wi.conf
+" >> /etc/proftpd/conf.d/easy-wi-web.conf
 				fi
 			fi
 		fi
