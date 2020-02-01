@@ -1424,7 +1424,7 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
         AllowAll
     </Limit>
 </Directory>
-" > /etc/proftpd/conf.d/easy-wi.conf
+" >> /etc/proftpd/conf.d/easy-wi.conf
       	elif [ -z "`grep '<Directory \/home\/\web-\*\/htdocs\/\*>' /etc/proftpd/conf.d/easy-wi.conf`" ]; then
 					echo "
 <Directory /home/web-*/htdocs/*>
