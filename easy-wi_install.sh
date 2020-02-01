@@ -291,7 +291,7 @@ elif [ -f /etc/centos-release ]; then
 	fi
 fi
 
-INSTALLER_VERSION="2.5"
+INSTALLER_VERSION="2.6"
 USERADD=$(which useradd)
 USERMOD=$(which usermod)
 USERDEL=$(which userdel)
