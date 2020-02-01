@@ -14,8 +14,7 @@ ___
 ## Stable Installer up to Debian 8, Ubuntu 16.10 and CentOS 7
   
 ```sh
-LATEST_VERSION=`wget -q --timeout=60 -O - https://api.github.com/repos/easy-wi/installer/releases/latest | grep -Po '(?<="tag_name": ")([0-9]\.[0-9]+)'` &&
-wget -O installer.tar.gz https://github.com/easy-wi/installer/archive/$LATEST_VERSION.tar.gz
+LATEST_VERSION=`wget -O installer.tar.gz https://github.com/easy-wi/installer/archive/2.3.tar.gz
 tar zxf installer.tar.gz && mv ./installer-*/easy-wi_install.sh ./
 rm -r installer.tar.gz installer-*/
 
