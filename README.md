@@ -11,12 +11,10 @@ Supported OS:
 
 ___
 
-## Stable Installer up to Debian 8, Ubuntu 16.10 and CentOS 7
+## Unstable Installer (Developer Version)
   
-```sh
-LATEST_VERSION=`wget -O installer.tar.gz https://github.com/easy-wi/installer/archive/2.3.tar.gz
-tar zxf installer.tar.gz && mv ./installer-*/easy-wi_install.sh ./
-rm -r installer.tar.gz installer-*/
+```sh 
+wget --no-check-certificate https://raw.githubusercontent.com/easy-wi/installer/master/easy-wi_install.sh
 
 #if you runnig as user (not root):
 sudo bash ./easy-wi_install.sh
@@ -27,10 +25,12 @@ bash ./easy-wi_install.sh
 
 ___
 
-## Unstable Installer (Developer Version)
+## Stable Installer up to Debian 8, Ubuntu 16.10 and CentOS 7
   
-```sh 
-wget --no-check-certificate https://raw.githubusercontent.com/easy-wi/installer/master/easy-wi_install.sh
+```sh
+LATEST_VERSION=`wget -O installer.tar.gz https://github.com/easy-wi/installer/archive/2.3.tar.gz
+tar zxf installer.tar.gz && mv ./installer-*/easy-wi_install.sh ./
+rm -r installer.tar.gz installer-*/
 
 #if you runnig as user (not root):
 sudo bash ./easy-wi_install.sh
