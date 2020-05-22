@@ -292,6 +292,7 @@ elif [ -f /etc/centos-release ]; then
 fi
 
 INSTALLER_VERSION="2.6"
+PKILL=$(which pkill)
 USERADD=$(which useradd)
 USERMOD=$(which usermod)
 USERDEL=$(which userdel)
@@ -1620,6 +1621,9 @@ fi
 # No direct root access for masteruser. Only limited access through sudo
 if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
 	checkInstall sudo
+	if [ -f /etc/sudoers -a -z "`grep $MASTERUSER /etc/sudoers | grep $PKILL`" ]; then
+		echo "$MASTERUSER ALL = NOPASSWD: $PKILL" >> /etc/sudoers
+	fi
 	if [ -f /etc/sudoers -a -z "`grep $MASTERUSER /etc/sudoers | grep $USERADD`" ]; then
 		echo "$MASTERUSER ALL = NOPASSWD: $USERADD" >> /etc/sudoers
 	fi
