@@ -477,7 +477,8 @@ fi
 cyanMessage " "
 
 if [ -f /etc/slackware-version ]; then
-	OS=$(cat /etc/os-release | grep '\bNAME=\b' | sed -n 's/^.*NAME=//p')
+	#OS=$(cat /etc/os-release | grep '\bNAME=\b' | sed -n 's/^.*NAME=//p')
+	OS=$(cat /etc/os-release | grep '\bNAME=\b' | sed -n 's/^.*NAME=//p' | sed -e 's/\(.*\)/\L\1/')
 	OSVERSION_TMP=$(cat /etc/os-release | grep '\bVERSION_ID=\b' | sed -n 's/^.*VERSION_ID=//p')
 	OSBRANCH=$(cat /etc/os-release | grep '\bVERSION_CODENAME=\b' | sed -n 's/^.*VERSION_CODENAME=//p')
 else
@@ -529,7 +530,7 @@ else
 	okAndSleep "Detected architecture: $ARCH"
 fi
 
-if [ "$OS" == "ubuntu" -a "$OSVERSION" -lt "1604" -o "$OS" == "debian" -a "$OSVERSION" -lt "80" -o "$OS" == "centos" -a "$OSVERSION" -lt "60" ]; then
+if [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -lt "1604" ] || [ "$OS" == "debian" ] && [ "$OSVERSION" -lt "80" ] || [ "$OS" == "centos" ] && [ "$OSVERSION" -lt "60" ]; then
 	echo
 	echo
 	redMessage "Error: Your OS \"$OS - $OSVERSION_TMP\" is not more supported from Easy-WI Installer."
@@ -1376,6 +1377,8 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
 			echo "proftpd-basic shared/proftpd/inetd_or_standalone select standalone" | debconf-set-selections
 		elif [ "$OS" == "centos" ]; then
 			$INSTALLER -y -q update
+		elif [ "$OS" == "slackware" ]; then
+			$INSTALLER update
 		fi
 
 		cyanMessage " "
@@ -1402,12 +1405,27 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
 				echo "Include /etc/proftpd/conf.d/" >>/etc/proftpd/proftpd.conf
 				makeDir /etc/proftpd/conf.d
 			fi
+		elif [ "$OS" == "slackware" ]; then
+			makeDir /etc/proftpd
+			backUpFile /etc/proftpd.conf
+			if [ -z "$(grep 'Include' /etc/proftpd.conf)" ]; then
+				echo "Include /etc/proftpd/conf.d/" >>/etc/proftpd.conf
+				makeDir /etc/proftpd/conf.d
+			fi
 		fi
 
-		if [ -f /etc/proftpd/proftpd.conf -a "$INSTALL" != "GS" ]; then
-			sed -i 's/Umask.*/Umask 037 027/g' /etc/proftpd/proftpd.conf
-		elif [ -f /etc/proftpd/proftpd.conf -a "$INSTALL" == "GS" ]; then
-			sed -i 's/Umask.*/Umask 077 077/g' /etc/proftpd/proftpd.conf
+		if [ $OS == "debian" ] || [ $OS == "ubuntu" ] || [ $OS == "centos" ]; then
+			if [ -f /etc/proftpd/proftpd.conf -a "$INSTALL" != "GS" ]; then
+				sed -i 's/Umask.*/Umask 037 027/g' /etc/proftpd/proftpd.conf
+			elif [ -f /etc/proftpd/proftpd.conf -a "$INSTALL" == "GS" ]; then
+				sed -i 's/Umask.*/Umask 077 077/g' /etc/proftpd/proftpd.conf
+			fi
+		elif [ $OS == "slackware " ]; then
+			if [ -f /etc/proftpd.conf -a "$INSTALL" != "GS" ]; then
+				sed -i 's/Umask.*/Umask 037 027/g' /etc/proftpd.conf
+			elif [ -f /etc/proftpd.conf -a "$INSTALL" == "GS" ]; then
+				sed -i 's/Umask.*/Umask 077 077/g' /etc/proftpd.conf
+			fi
 		fi
 
 		cyanMessage " "
@@ -1422,7 +1440,7 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
 			esac
 		done
 
-		if [ "$OPTION" == "Yes" ]; then
+		if [ $OS != "slackware" ] && [ "$OPTION" == "Yes" ]; then
 			if [ "$INSTALL" == "GS" -a "$(grep '<Directory \/home\/\*\/pserver\/\*>' /etc/proftpd/proftpd.conf)" -a ! -f /etc/proftpd/conf.d/easy-wi-game.conf ]; then
 				makeDir /etc/proftpd/conf.d/
 				chmod 755 /etc/proftpd/conf.d/
@@ -1521,6 +1539,107 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
 " >>/etc/proftpd/conf.d/easy-wi-web.conf
 				fi
 			fi
+
+		elif [ $OS == "slackware" ] && [ "$OPTION" == "Yes" ]; then
+			if [ "$INSTALL" == "GS" -a "$(grep '<Directory \/home\/\*\/pserver\/\*>' /etc/proftpd.conf)" -a ! -f /etc/proftpd/conf.d/easy-wi-game.conf ]; then
+				makeDir /etc/proftpd/conf.d/
+				chmod 755 /etc/proftpd/conf.d/
+
+				echo "
+<Directory ~>
+    HideFiles (^\..+|\.ssh|\.bash_history|\.bash_logout|\.bashrc|\.profile|srcds_run|srcds_linux|hlds_run|hlds_amd|hlds_i686|\.rc|\.sh|\.7z|\.dll)$
+    PathDenyFilter (^\..+|\.ssh|\.bash_history|\.bash_logout|\.bashrc|\.profile|srcds_run|srcds_linux|hlds_run|hlds_amd|hlds_i686|\.rc|\.sh|\.7z|\.dll)$
+    HideNoAccess on
+    <Limit RNTO RNFR STOR DELE CHMOD SITE_CHMOD MKD RMD>
+        DenyAll
+    </Limit>
+</Directory>" >/etc/proftpd/conf.d/easy-wi-game.conf
+				echo "<Directory /home/$MASTERUSER>" >>/etc/proftpd/conf.d/easy-wi-game.conf
+				echo "    HideFiles (^\..+|\.ssh|\.bash_history|\.bash_logout|\.bashrc|\.profile)$
+    PathDenyFilter (^\..+|\.ssh|\.bash_history|\.bash_logout|\.bashrc|\.profile)$
+    HideNoAccess on
+    Umask 137 027
+    <Limit RNTO RNFR STOR DELE CHMOD SITE_CHMOD MKD RMD>
+        AllowAll
+    </Limit>
+</Directory>
+<Directory /home/*/pserver/*>
+    Umask 077 077
+    <Limit RNFR RNTO STOR DELE MKD RMD>
+        AllowAll
+    </Limit>
+</Directory>
+<Directory ~/backup>
+    Umask 177 077
+    <Limit RNTO RNFR STOR DELE>
+        AllowAll
+    </Limit>
+</Directory>
+<Directory ~/*/>
+    HideFiles (^\..+|srcds_run|srcds_linux|hlds_run|hlds_amd|hlds_i686|\.rc|\.sh|\.7z|\.dll)$
+    PathDenyFilter (^\..+|srcds_run|srcds_linux|hlds_run|hlds_amd|hlds_i686|\.rc|\.sh|\.7z|\.dll)$
+    HideNoAccess on
+</Directory>" >>/etc/proftpd/conf.d/easy-wi-game.conf
+
+				GAMES=("ark" "arma3" "bukkit" "hexxit" "mc" "mtasa" "projectcars" "rust" "samp" "spigot" "teeworlds" "tekkit" "tekkit-classic")
+				for GAME in ${GAMES[@]}; do
+					echo "<Directory ~/server/$GAME*/*>
+    Umask 077 077
+    <Limit RNFR RNTO STOR DELE MKD RMD>
+        AllowAll
+    </Limit>
+</Directory>" >>/etc/proftpd/conf.d/easy-wi-game.conf
+				done
+
+				GAME_MODS=("csgo" "cstrike" "czero" "orangebox" "dod" "garrysmod")
+				for GAME_MOD in ${GAME_MODS[@]}; do
+					echo "<Directory ~/server/*/${GAME_MOD}/*>
+    Umask 077 077
+    <Limit RNFR RNTO STOR DELE MKD RMD>
+        AllowAll
+    </Limit>
+</Directory>" >>/etc/proftpd/conf.d/easy-wi-game.conf
+				done
+
+				FOLDERS=("addons" "cfg" "maps")
+				for FOLDER in ${FOLDERS[@]}; do
+					echo "<Directory ~/*/*/*/${FOLDER}>
+    Umask 077 077
+    <Limit RNFR RNTO STOR DELE>
+        AllowAll
+    </Limit>
+</Directory>
+<Directory ~/*/*/${FOLDER}>
+    Umask 077 077
+    <Limit RNFR RNTO STOR DELE MKD RMD>
+        AllowAll
+    </Limit>
+</Directory>" >>/etc/proftpd/conf.d/easy-wi-game.conf
+				done
+			fi
+
+			if [ "$INSTALL" != "GS" ]; then
+				if [ ! -f /etc/proftpd/conf.d/easy-wi-web.conf ]; then
+					echo "
+<Directory /home/web-*/htdocs/*>
+    Umask 022 022
+    <Limit RNFR RNTO STOR DELE MKD RMD>
+        AllowAll
+    </Limit>
+</Directory>
+" >>/etc/proftpd/conf.d/easy-wi-web.conf
+				elif [ -z "$(grep '<Directory \/home\/\web-\*\/htdocs\/\*>' /etc/proftpd/conf.d/easy-wi-web.conf)" ]; then
+					echo "
+<Directory /home/web-*/htdocs/*>
+    Umask 022 022
+    <Limit RNFR RNTO STOR DELE MKD RMD>
+        AllowAll
+    </Limit>
+</Directory>
+" >>/etc/proftpd/conf.d/easy-wi-web.conf
+				fi
+			fi
+
 		fi
 
 		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
@@ -1670,6 +1789,103 @@ _EOF_
 		elif [ "$OS" == "centos" ]; then
 			APACHE_VERSION=$(httpd -v | grep 'Server version')
 		fi
+
+		if [ -z "$(grep '/home/'$MASTERUSER'/sites-enabled/' $APACHE_CONFIG)" ]; then
+			echo '# Load config files in the "/home/'$MASTERUSER'/sites-enabled" directory, if any.' >>$APACHE_CONFIG
+			if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
+				if [[ "$APACHE_VERSION" =~ .*Apache/2.2.* ]]; then
+					echo "Include /home/$MASTERUSER/sites-enabled/" >>$APACHE_CONFIG
+				else
+					echo "IncludeOptional /home/$MASTERUSER/sites-enabled/*.conf" >>$APACHE_CONFIG
+				fi
+			elif [ "$OS" == "centos" ]; then
+				if [[ $APACHE_VERSION =~ .*Apache/2.2.* ]]; then
+					echo "Include /home/$MASTERUSER/sites-enabled/" >>$APACHE_CONFIG
+				else
+					echo "IncludeOptional /home/$MASTERUSER/sites-enabled/*.conf" >>$APACHE_CONFIG
+				fi
+			fi
+		fi
+
+		if [ -f /etc/apache2/sites-enabled/000-default.conf ]; then
+			rm /etc/apache2/sites-enabled/000-default.conf
+		fi
+
+		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
+			okAndSleep "Activating Apache mod_rewrite module."
+			a2enmod rewrite
+			a2enmod version 2>/dev/null
+		fi
+	fi
+	#TODO: Logrotate
+fi
+
+if [ "$INSTALL" == "WR" -o "$INSTALL" == "EW" ]; then
+	if [ "$WEBSERVER" == "Lighttpd" ]; then
+		backUpFile /etc/lighttpd/lighttpd.conf
+		echo "include_shell \"find /home/$MASTERUSER/sites-enabled/ -maxdepth 1 -type f -exec cat {} \;\"" >>/etc/lighttpd/lighttpd.conf
+	elif [ "$WEBSERVER" == "Apache" ]; then
+		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
+			APACHE_CONFIG="/etc/apache2/apache2.conf"
+		elif [ "$OS" == "centos" ]; then
+			APACHE_CONFIG="/etc/httpd/conf/httpd.conf"
+		elif [ "$OS" == "slackware" ]; then
+			APACHE_CONFIG="/etc/httpd/httpd.conf"
+		fi
+	fi
+	backUpFile $APACHE_CONFIG
+
+	if [ "$OS" == "centos" ]; then
+		if [ -z "$(grep '<IfModule mpm_itk_module>' "$APACHE_CONFIG")" ]; then
+			echo " " >>"$APACHE_CONFIG"
+			cat >>"$APACHE_CONFIG" <<_EOF_
+			<IfModule mpm_itk_module>
+			AssignUserId $WEBGROUPNAME $WEBGROUPNAME
+			MaxClientsVHost 50
+			NiceValue 10
+			LimitUIDRange 0 10000
+			LimitGIDRange 0 10000
+			</IfModule>
+_EOF_
+		fi
+	elif [ "$OS" == "slackware" ]; then
+		if [ -z "$(grep '<IfModule mpm_itk_module>' "$APACHE_CONFIG")" ]; then
+			echo " " >>"$APACHE_CONFIG"
+			cat >>"$APACHE_CONFIG" <<_EOF_
+			<IfModule mpm_itk_module>
+			AssignUserId $WEBGROUPNAME $WEBGROUPNAME
+			MaxClientsVHost 50
+			NiceValue 10
+			LimitUIDRange 0 10000
+			LimitGIDRange 0 10000
+			</IfModule>
+_EOF_
+		fi
+	fi
+
+	if [ -z "$(grep 'ServerName localhost' $APACHE_CONFIG)" ]; then
+		echo " " >>$APACHE_CONFIG
+		echo '# Added to prevent error message Could not reliably determine the servers fully qualified domain name' >>$APACHE_CONFIG
+		echo 'ServerName localhost' >>$APACHE_CONFIG
+	fi
+
+	if [ -z "$(grep 'ServerTokens' $APACHE_CONFIG)" ]; then
+		echo " " >>$APACHE_CONFIG
+		echo '# Added to turn off the server information off in production systems' >>$APACHE_CONFIG
+		echo 'ServerTokens prod' >>$APACHE_CONFIG
+	fi
+
+	if [ -z "$(grep 'ServerSignature' $APACHE_CONFIG)" ]; then
+		echo " " >>$APACHE_CONFIG
+		echo '# Added to turn off the server signature in production systems' >>$APACHE_CONFIG
+		echo 'ServerSignature off' >>$APACHE_CONFIG
+		echo "" >>$APACHE_CONFIG
+	fi
+
+	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
+		APACHE_VERSION=$(apache2 -v | grep 'Server version')
+	elif [ "$OS" == "centos" -o "$OS" == "slackware" ]; then
+		APACHE_VERSION=$(httpd -v | grep 'Server version')
 
 		if [ -z "$(grep '/home/'$MASTERUSER'/sites-enabled/' $APACHE_CONFIG)" ]; then
 			echo '# Load config files in the "/home/'$MASTERUSER'/sites-enabled" directory, if any.' >>$APACHE_CONFIG
@@ -1958,26 +2174,51 @@ EOF
 
 	chown -cR $MASTERUSER:$MASTERUSER /home/$MASTERUSER >/dev/null 2>&1
 
-	if [ -f /etc/crontab -a -z "$(grep 'Minecraft can easily produce 1GB' /etc/crontab)" ]; then
-		cyanMessage " "
-		okAndSleep "Installing Minecraft Crontabs"
-		if ionice -c3 true 2>/dev/null; then
-			IONICE="ionice -n 7 "
+
+	if [ $OS != "slackware" ]; then
+		if [ -f /etc/crontab -a -z "$(grep 'Minecraft can easily produce 1GB' /etc/crontab)" ]; then
+			cyanMessage " "
+			okAndSleep "Installing Minecraft Crontabs"
+			if ionice -c3 true 2>/dev/null; then
+				IONICE="ionice -n 7 "
+			fi
+
+			echo "#Minecraft can easily produce 1GB+ logs within one hour" >>/etc/crontab
+			echo "*/5 * * * * root nice -n +19 ionice -n 7 find /home/*/server/*/ -maxdepth 2 -type f -name \"screenlog.0\" -size +100M -delete" >>/etc/crontab
+			echo "# Even sudo /usr/sbin/deluser --remove-all-files is used some data remain from time to time" >>/etc/crontab
+			echo "*/5 * * * * root nice -n +19 $IONICE find /home/ -maxdepth 2 -type d -nouser -delete" >>/etc/crontab
+			echo "*/5 * * * * root nice -n +19 $IONICE find /home/*/fdl_data/ /home/*/temp/ /tmp/ /var/run/screen/ -nouser -print0 | xargs -0 rm -rf" >>/etc/crontab
+			echo "*/5 * * * * root nice -n +19 $IONICE find /var/run/screen/ -maxdepth 1 -type d -nouser -print0 | xargs -0 rm -rf" >>/etc/crontab
 		fi
+		echo " and 4"
+	elif [ $OS == "slackware" ]; then
+		echo "between 1"
+		if [ -f /etc/cron.d/easy-wi -a -z "$(grep 'Minecraft can easily produce 1GB' /etc/cron.d/easy-wi)" ]; then
+			cyanMessage " "
+			okAndSleep "Installing Minecraft Crontabs"
+			if ionice -c3 true 2>/dev/null; then
+				IONICE="ionice -n 7 "
+			fi
 
-		echo "#Minecraft can easily produce 1GB+ logs within one hour" >>/etc/crontab
-		echo "*/5 * * * * root nice -n +19 ionice -n 7 find /home/*/server/*/ -maxdepth 2 -type f -name \"screenlog.0\" -size +100M -delete" >>/etc/crontab
-		echo "# Even sudo /usr/sbin/deluser --remove-all-files is used some data remain from time to time" >>/etc/crontab
-		echo "*/5 * * * * root nice -n +19 $IONICE find /home/ -maxdepth 2 -type d -nouser -delete" >>/etc/crontab
-		echo "*/5 * * * * root nice -n +19 $IONICE find /home/*/fdl_data/ /home/*/temp/ /tmp/ /var/run/screen/ -nouser -print0 | xargs -0 rm -rf" >>/etc/crontab
-		echo "*/5 * * * * root nice -n +19 $IONICE find /var/run/screen/ -maxdepth 1 -type d -nouser -print0 | xargs -0 rm -rf" >>/etc/crontab
+			echo "#Minecraft can easily produce 1GB+ logs within one hour" >>/etc/cron.d/easy-wi
+			echo "*/5 * * * * root nice -n +19 ionice -n 7 find /home/*/server/*/ -maxdepth 2 -type f -name \"screenlog.0\" -size +100M -delete" >>/etc/cron.d/easy-wi
+			echo "# Even sudo /usr/sbin/deluser --remove-all-files is used some data remain from time to time" >>/etc/cron.d/easy-wi
+			echo "*/5 * * * * root nice -n +19 $IONICE find /home/ -maxdepth 2 -type d -nouser -delete" >>/etc/cron.d/easy-wi
+			echo "*/5 * * * * root nice -n +19 $IONICE find /home/*/fdl_data/ /home/*/temp/ /tmp/ /var/run/screen/ -nouser -print0 | xargs -0 rm -rf" >>/etc/cron.d/easy-wi
+			echo "*/5 * * * * root nice -n +19 $IONICE find /var/run/screen/ -maxdepth 1 -type d -nouser -print0 | xargs -0 rm -rf" >>/etc/cron.d/easy-wi
 
-		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
-			service cron restart 1>/dev/null
-		elif [ "$OS" == "centos" ]; then
-			systemctl restart crond.service 1>/dev/null
+			echo "and 2"
 		fi
 	fi
+
+	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
+		service cron restart 1>/dev/null
+	elif [ "$OS" == "centos" ]; then
+		systemctl restart crond.service 1>/dev/null
+	elif [ "$OS" == "slackware" ]; then
+		/etc/rc.d/rc.crond 1>/dev/null
+	fi
+
 fi
 
 if [ "$INSTALL" == "EW" ]; then
@@ -2312,7 +2553,7 @@ _EOF_
 	chown $MASTERUSER:$WEBGROUPNAME $FILE_NAME_VHOST
 
 	RestartWebserver
-
+	echo " between 4"
 	if [ -z "$(grep -o ./reboot.php /etc/crontab)" ]; then
 		cyanMessage " "
 		okAndSleep "Installing Easy-WI Crontabs"
@@ -2321,6 +2562,7 @@ _EOF_
 */1 * * * * easywi_web cd /home/easywi_web/htdocs && timeout 290 php ./startupdates.php >/dev/null 2>&1
 */5 * * * * easywi_web cd /home/easywi_web/htdocs && timeout 290 php ./jobs.php >/dev/null 2>&1
 */10 * * * * easywi_web cd /home/easywi_web/htdocs && timeout 290 php ./cloud.php >/dev/null 2>&1' >>/etc/crontab
+		echo " and 6"
 	fi
 
 	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
@@ -2724,7 +2966,7 @@ clearPassword
 cyanMessage " "
 
 if [ "$DEBUG" == "ON" ]; then
-	set +x
+	set +x 
 fi
 
 exit 0
