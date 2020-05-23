@@ -1354,12 +1354,10 @@ fi
 if ([ "$INSTALL" == "WR" -o "$INSTALL" == "EW" ] && [ -z "$(grep '/bin/false' /etc/shells)" ]); then
 	echo "/bin/false" >>/etc/shells
 fi
-
 if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
 	if [ -z "$(rpm -qa proftpd 2>/dev/null)" -a -z "$(dpkg -l 2>/dev/null | egrep -o "proftpd")" ]; then
 		cyanMessage " "
 		cyanMessage "Install/Update ProFTPD?"
-
 		OPTIONS=("Yes" "No" "Quit")
 		select OPTION in "${OPTIONS[@]}"; do
 			case "$REPLY" in
@@ -1371,7 +1369,6 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
 	else
 		OPTION="No"
 	fi
-
 	if [ "$OPTION" == "Yes" ]; then
 		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 			echo "proftpd-basic shared/proftpd/inetd_or_standalone select standalone" | debconf-set-selections
@@ -1380,10 +1377,8 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
 		elif [ "$OS" == "slackware" ]; then
 			$INSTALLER update
 		fi
-
 		cyanMessage " "
 		checkInstall proftpd
-
 		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 			backUpFile /etc/proftpd/proftpd.conf
 			if [ -f /etc/proftpd/modules.conf ]; then
@@ -1405,32 +1400,31 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
 				echo "Include /etc/proftpd/conf.d/" >>/etc/proftpd/proftpd.conf
 				makeDir /etc/proftpd/conf.d
 			fi
+
 		elif [ "$OS" == "slackware" ]; then
 			makeDir /etc/proftpd
-			backUpFile /etc/proftpd.conf
-			if [ -z "$(grep 'Include' /etc/proftpd.conf)" ]; then
-				echo "Include /etc/proftpd/conf.d/" >>/etc/proftpd.conf
+			if [ ! -f /etc/proftpd/proftpd.conf ]; then
+				mv /etc/proftpd.conf /etc/proftpd/
+				cd /etc
+				ln -s /etc/proftpd/proftpd.conf proftpd.conf
+			fi
+			backUpFile /etc/proftpd/proftpd.conf
+			sed -i 's/.*UseIPv6.*/UseIPv6 off/g' /etc/proftpd/proftpd.conf
+			sed -i 's/#.*DefaultRoot.*~/DefaultRoot ~/g' /etc/proftpd/proftpd.conf
+			sed -i 's/# RequireValidShell.*/RequireValidShell on/g' /etc/proftpd/proftpd.conf
+			echo "#LoadModule mod_tls_memcache.c" >/etc/proftpd/modules.conf
+			if [ -z "$(grep 'Include' /etc/proftpd/proftpd.conf)" ]; then
+				echo "Include /etc/proftpd/conf.d/" >>/etc/proftpd/proftpd.conf
 				makeDir /etc/proftpd/conf.d
 			fi
 		fi
-
-		if [ $OS == "debian" ] || [ $OS == "ubuntu" ] || [ $OS == "centos" ]; then
-			if [ -f /etc/proftpd/proftpd.conf -a "$INSTALL" != "GS" ]; then
-				sed -i 's/Umask.*/Umask 037 027/g' /etc/proftpd/proftpd.conf
-			elif [ -f /etc/proftpd/proftpd.conf -a "$INSTALL" == "GS" ]; then
-				sed -i 's/Umask.*/Umask 077 077/g' /etc/proftpd/proftpd.conf
-			fi
-		elif [ $OS == "slackware " ]; then
-			if [ -f /etc/proftpd.conf -a "$INSTALL" != "GS" ]; then
-				sed -i 's/Umask.*/Umask 037 027/g' /etc/proftpd.conf
-			elif [ -f /etc/proftpd.conf -a "$INSTALL" == "GS" ]; then
-				sed -i 's/Umask.*/Umask 077 077/g' /etc/proftpd.conf
-			fi
+		if [ -f /etc/proftpd/proftpd.conf -a "$INSTALL" != "GS" ]; then
+			sed -i 's/Umask.*/Umask 037 027/g' /etc/proftpd/proftpd.conf
+		elif [ -f /etc/proftpd/proftpd.conf -a "$INSTALL" == "GS" ]; then
+			sed -i 's/Umask.*/Umask 077 077/g' /etc/proftpd/proftpd.conf
 		fi
-
 		cyanMessage " "
 		cyanMessage "Install/Update Easy-WI ProFTPD Rules?"
-
 		OPTIONS=("Yes" "No" "Quit")
 		select OPTION in "${OPTIONS[@]}"; do
 			case "$REPLY" in
@@ -1439,23 +1433,20 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
 			*) errorAndContinue ;;
 			esac
 		done
-
-		if [ $OS != "slackware" ] && [ "$OPTION" == "Yes" ]; then
-			if [ "$INSTALL" == "GS" -a "$(grep '<Directory \/home\/\*\/pserver\/\*>' /etc/proftpd/proftpd.conf)" -a ! -f /etc/proftpd/conf.d/easy-wi-game.conf ]; then
+		if [ "$OPTION" == "Yes" ]; then
+			if [ "$INSTALL" == "GS" ] && [ -z "$(grep '<Directory \/home\/\*\/pserver\/\*>' /etc/proftpd/proftpd.conf)" ] && [ ! -f /etc/proftpd/conf.d/easy-wi-game.conf ]; then
 				makeDir /etc/proftpd/conf.d/
 				chmod 755 /etc/proftpd/conf.d/
-
-				echo "
-<Directory ~>
-    HideFiles (^\..+|\.ssh|\.bash_history|\.bash_logout|\.bashrc|\.profile|srcds_run|srcds_linux|hlds_run|hlds_amd|hlds_i686|\.rc|\.sh|\.7z|\.dll)$
-    PathDenyFilter (^\..+|\.ssh|\.bash_history|\.bash_logout|\.bashrc|\.profile|srcds_run|srcds_linux|hlds_run|hlds_amd|hlds_i686|\.rc|\.sh|\.7z|\.dll)$
-    HideNoAccess on
-    <Limit RNTO RNFR STOR DELE CHMOD SITE_CHMOD MKD RMD>
-        DenyAll
-    </Limit>
-</Directory>" >/etc/proftpd/conf.d/easy-wi-game.conf
+				echo "<Directory ~>
+						HideFiles (^\..+|\.ssh|\.bash_history|\.bash_logout|\.bashrc|\.profile|srcds_run|srcds_linux|hlds_run|hlds_amd|hlds_i686|\.rc|\.sh|\.7z|\.dll)$
+						PathDenyFilter (^\..+|\.ssh|\.bash_history|\.bash_logout|\.bashrc|\.profile|srcds_run|srcds_linux|hlds_run|hlds_amd|hlds_i686|\.rc|\.sh|\.7z|\.dll)$
+						HideNoAccess on
+						<Limit RNTO RNFR STOR DELE CHMOD SITE_CHMOD MKD RMD>
+							DenyAll
+						</Limit>
+					</Directory>" >/etc/proftpd/conf.d/easy-wi-game.conf
 				echo "<Directory /home/$MASTERUSER>" >>/etc/proftpd/conf.d/easy-wi-game.conf
-				echo "    HideFiles (^\..+|\.ssh|\.bash_history|\.bash_logout|\.bashrc|\.profile)$
+				echo "HideFiles (^\..+|\.ssh|\.bash_history|\.bash_logout|\.bashrc|\.profile)$
     PathDenyFilter (^\..+|\.ssh|\.bash_history|\.bash_logout|\.bashrc|\.profile)$
     HideNoAccess on
     Umask 137 027
@@ -1480,168 +1471,59 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
     PathDenyFilter (^\..+|srcds_run|srcds_linux|hlds_run|hlds_amd|hlds_i686|\.rc|\.sh|\.7z|\.dll)$
     HideNoAccess on
 </Directory>" >>/etc/proftpd/conf.d/easy-wi-game.conf
-
 				GAMES=("ark" "arma3" "bukkit" "hexxit" "mc" "mtasa" "projectcars" "rust" "samp" "spigot" "teeworlds" "tekkit" "tekkit-classic")
 				for GAME in ${GAMES[@]}; do
 					echo "<Directory ~/server/$GAME*/*>
-    Umask 077 077
-    <Limit RNFR RNTO STOR DELE MKD RMD>
-        AllowAll
-    </Limit>
-</Directory>" >>/etc/proftpd/conf.d/easy-wi-game.conf
+							Umask 077 077
+							<Limit RNFR RNTO STOR DELE MKD RMD>
+								AllowAll
+							</Limit>
+						</Directory>" >>/etc/proftpd/conf.d/easy-wi-game.conf
 				done
-
 				GAME_MODS=("csgo" "cstrike" "czero" "orangebox" "dod" "garrysmod")
 				for GAME_MOD in ${GAME_MODS[@]}; do
 					echo "<Directory ~/server/*/${GAME_MOD}/*>
-    Umask 077 077
-    <Limit RNFR RNTO STOR DELE MKD RMD>
-        AllowAll
-    </Limit>
-</Directory>" >>/etc/proftpd/conf.d/easy-wi-game.conf
+							Umask 077 077
+							<Limit RNFR RNTO STOR DELE MKD RMD>
+								AllowAll
+							</Limit>
+						</Directory>" >>/etc/proftpd/conf.d/easy-wi-game.conf
 				done
-
 				FOLDERS=("addons" "cfg" "maps")
 				for FOLDER in ${FOLDERS[@]}; do
 					echo "<Directory ~/*/*/*/${FOLDER}>
-    Umask 077 077
-    <Limit RNFR RNTO STOR DELE>
-        AllowAll
-    </Limit>
-</Directory>
-<Directory ~/*/*/${FOLDER}>
-    Umask 077 077
-    <Limit RNFR RNTO STOR DELE MKD RMD>
-        AllowAll
-    </Limit>
-</Directory>" >>/etc/proftpd/conf.d/easy-wi-game.conf
+							Umask 077 077
+							<Limit RNFR RNTO STOR DELE>
+								AllowAll
+							</Limit>
+						</Directory>
+						<Directory ~/*/*/${FOLDER}>
+							Umask 077 077
+							<Limit RNFR RNTO STOR DELE MKD RMD>
+								AllowAll
+							</Limit>
+						</Directory>" >>/etc/proftpd/conf.d/easy-wi-game.conf
 				done
 			fi
-
 			if [ "$INSTALL" != "GS" ]; then
 				if [ ! -f /etc/proftpd/conf.d/easy-wi-web.conf ]; then
-					echo "
-<Directory /home/web-*/htdocs/*>
-    Umask 022 022
-    <Limit RNFR RNTO STOR DELE MKD RMD>
-        AllowAll
-    </Limit>
-</Directory>
-" >>/etc/proftpd/conf.d/easy-wi-web.conf
+					echo "<Directory /home/web-*/htdocs/*>
+								Umask 022 022
+								<Limit RNFR RNTO STOR DELE MKD RMD>
+									AllowAll
+								</Limit>
+							</Directory>" >>/etc/proftpd/conf.d/easy-wi-web.conf
 				elif [ -z "$(grep '<Directory \/home\/\web-\*\/htdocs\/\*>' /etc/proftpd/conf.d/easy-wi-web.conf)" ]; then
-					echo "
-<Directory /home/web-*/htdocs/*>
-    Umask 022 022
-    <Limit RNFR RNTO STOR DELE MKD RMD>
-        AllowAll
-    </Limit>
-</Directory>
-" >>/etc/proftpd/conf.d/easy-wi-web.conf
+
+					echo "<Directory /home/web-*/htdocs/*>
+								Umask 022 022
+								<Limit RNFR RNTO STOR DELE MKD RMD>
+									AllowAll
+								</Limit>
+							</Directory>" >>/etc/proftpd/conf.d/easy-wi-web.conf
 				fi
 			fi
-
-		elif [ $OS == "slackware" ] && [ "$OPTION" == "Yes" ]; then
-			if [ "$INSTALL" == "GS" -a "$(grep '<Directory \/home\/\*\/pserver\/\*>' /etc/proftpd.conf)" -a ! -f /etc/proftpd/conf.d/easy-wi-game.conf ]; then
-				makeDir /etc/proftpd/conf.d/
-				chmod 755 /etc/proftpd/conf.d/
-
-				echo "
-<Directory ~>
-    HideFiles (^\..+|\.ssh|\.bash_history|\.bash_logout|\.bashrc|\.profile|srcds_run|srcds_linux|hlds_run|hlds_amd|hlds_i686|\.rc|\.sh|\.7z|\.dll)$
-    PathDenyFilter (^\..+|\.ssh|\.bash_history|\.bash_logout|\.bashrc|\.profile|srcds_run|srcds_linux|hlds_run|hlds_amd|hlds_i686|\.rc|\.sh|\.7z|\.dll)$
-    HideNoAccess on
-    <Limit RNTO RNFR STOR DELE CHMOD SITE_CHMOD MKD RMD>
-        DenyAll
-    </Limit>
-</Directory>" >/etc/proftpd/conf.d/easy-wi-game.conf
-				echo "<Directory /home/$MASTERUSER>" >>/etc/proftpd/conf.d/easy-wi-game.conf
-				echo "    HideFiles (^\..+|\.ssh|\.bash_history|\.bash_logout|\.bashrc|\.profile)$
-    PathDenyFilter (^\..+|\.ssh|\.bash_history|\.bash_logout|\.bashrc|\.profile)$
-    HideNoAccess on
-    Umask 137 027
-    <Limit RNTO RNFR STOR DELE CHMOD SITE_CHMOD MKD RMD>
-        AllowAll
-    </Limit>
-</Directory>
-<Directory /home/*/pserver/*>
-    Umask 077 077
-    <Limit RNFR RNTO STOR DELE MKD RMD>
-        AllowAll
-    </Limit>
-</Directory>
-<Directory ~/backup>
-    Umask 177 077
-    <Limit RNTO RNFR STOR DELE>
-        AllowAll
-    </Limit>
-</Directory>
-<Directory ~/*/>
-    HideFiles (^\..+|srcds_run|srcds_linux|hlds_run|hlds_amd|hlds_i686|\.rc|\.sh|\.7z|\.dll)$
-    PathDenyFilter (^\..+|srcds_run|srcds_linux|hlds_run|hlds_amd|hlds_i686|\.rc|\.sh|\.7z|\.dll)$
-    HideNoAccess on
-</Directory>" >>/etc/proftpd/conf.d/easy-wi-game.conf
-
-				GAMES=("ark" "arma3" "bukkit" "hexxit" "mc" "mtasa" "projectcars" "rust" "samp" "spigot" "teeworlds" "tekkit" "tekkit-classic")
-				for GAME in ${GAMES[@]}; do
-					echo "<Directory ~/server/$GAME*/*>
-    Umask 077 077
-    <Limit RNFR RNTO STOR DELE MKD RMD>
-        AllowAll
-    </Limit>
-</Directory>" >>/etc/proftpd/conf.d/easy-wi-game.conf
-				done
-
-				GAME_MODS=("csgo" "cstrike" "czero" "orangebox" "dod" "garrysmod")
-				for GAME_MOD in ${GAME_MODS[@]}; do
-					echo "<Directory ~/server/*/${GAME_MOD}/*>
-    Umask 077 077
-    <Limit RNFR RNTO STOR DELE MKD RMD>
-        AllowAll
-    </Limit>
-</Directory>" >>/etc/proftpd/conf.d/easy-wi-game.conf
-				done
-
-				FOLDERS=("addons" "cfg" "maps")
-				for FOLDER in ${FOLDERS[@]}; do
-					echo "<Directory ~/*/*/*/${FOLDER}>
-    Umask 077 077
-    <Limit RNFR RNTO STOR DELE>
-        AllowAll
-    </Limit>
-</Directory>
-<Directory ~/*/*/${FOLDER}>
-    Umask 077 077
-    <Limit RNFR RNTO STOR DELE MKD RMD>
-        AllowAll
-    </Limit>
-</Directory>" >>/etc/proftpd/conf.d/easy-wi-game.conf
-				done
-			fi
-
-			if [ "$INSTALL" != "GS" ]; then
-				if [ ! -f /etc/proftpd/conf.d/easy-wi-web.conf ]; then
-					echo "
-<Directory /home/web-*/htdocs/*>
-    Umask 022 022
-    <Limit RNFR RNTO STOR DELE MKD RMD>
-        AllowAll
-    </Limit>
-</Directory>
-" >>/etc/proftpd/conf.d/easy-wi-web.conf
-				elif [ -z "$(grep '<Directory \/home\/\web-\*\/htdocs\/\*>' /etc/proftpd/conf.d/easy-wi-web.conf)" ]; then
-					echo "
-<Directory /home/web-*/htdocs/*>
-    Umask 022 022
-    <Limit RNFR RNTO STOR DELE MKD RMD>
-        AllowAll
-    </Limit>
-</Directory>
-" >>/etc/proftpd/conf.d/easy-wi-web.conf
-				fi
-			fi
-
 		fi
-
 		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 			if [ -f /etc/init.d/proftpd ]; then
 				service proftpd restart
@@ -2174,7 +2056,6 @@ EOF
 
 	chown -cR $MASTERUSER:$MASTERUSER /home/$MASTERUSER >/dev/null 2>&1
 
-
 	if [ $OS != "slackware" ]; then
 		if [ -f /etc/crontab -a -z "$(grep 'Minecraft can easily produce 1GB' /etc/crontab)" ]; then
 			cyanMessage " "
@@ -2192,7 +2073,7 @@ EOF
 		fi
 		echo " and 4"
 	elif [ $OS == "slackware" ]; then
-		echo "between 1"
+
 		if [ -f /etc/cron.d/easy-wi -a -z "$(grep 'Minecraft can easily produce 1GB' /etc/cron.d/easy-wi)" ]; then
 			cyanMessage " "
 			okAndSleep "Installing Minecraft Crontabs"
@@ -2207,8 +2088,8 @@ EOF
 			echo "*/5 * * * * root nice -n +19 $IONICE find /home/*/fdl_data/ /home/*/temp/ /tmp/ /var/run/screen/ -nouser -print0 | xargs -0 rm -rf" >>/etc/cron.d/easy-wi
 			echo "*/5 * * * * root nice -n +19 $IONICE find /var/run/screen/ -maxdepth 1 -type d -nouser -print0 | xargs -0 rm -rf" >>/etc/cron.d/easy-wi
 
-			echo "and 2"
 		fi
+
 	fi
 
 	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
@@ -2553,7 +2434,7 @@ _EOF_
 	chown $MASTERUSER:$WEBGROUPNAME $FILE_NAME_VHOST
 
 	RestartWebserver
-	echo " between 4"
+
 	if [ -z "$(grep -o ./reboot.php /etc/crontab)" ]; then
 		cyanMessage " "
 		okAndSleep "Installing Easy-WI Crontabs"
@@ -2562,7 +2443,7 @@ _EOF_
 */1 * * * * easywi_web cd /home/easywi_web/htdocs && timeout 290 php ./startupdates.php >/dev/null 2>&1
 */5 * * * * easywi_web cd /home/easywi_web/htdocs && timeout 290 php ./jobs.php >/dev/null 2>&1
 */10 * * * * easywi_web cd /home/easywi_web/htdocs && timeout 290 php ./cloud.php >/dev/null 2>&1' >>/etc/crontab
-		echo " and 6"
+
 	fi
 
 	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
@@ -2966,7 +2847,7 @@ clearPassword
 cyanMessage " "
 
 if [ "$DEBUG" == "ON" ]; then
-	set +x 
+	set +x
 fi
 
 exit 0
