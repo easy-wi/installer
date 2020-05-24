@@ -1252,7 +1252,7 @@ else
 fi
 
 if [ "$PHPINSTALL" == "Yes" ]; then
-	if [ "$OS" == "debian" ] && [ "$OSVERSION" -ge "100" ]; then
+	if [ "$OS" == "debian" ] && [ "$OSVERSION" -ge "10" ]; then
 		USE_PHP_VERSION='7.3'
 	elif [ "$OS" == "debian" ] && [ "$OSVERSION" -ge "85" ] || [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -lt "1610" ]; then
 		USE_PHP_VERSION='7.0'
@@ -1260,6 +1260,8 @@ if [ "$PHPINSTALL" == "Yes" ]; then
 		USE_PHP_VERSION='7.1'
 	elif [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -ge "1803" ]; then
 		USE_PHP_VERSION='7.2'
+	elif [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -ge "2004" ]; then
+		USE_PHP_VERSION='7.4'
 	elif [ "$OS" == "centos" ] && [ "$OSVERSION" -lt "80" ]; then
 		checkInstall http://rpms.remirepo.net/enterprise/remi-release-7.rpm
 		yum-config-manager --enable remi-php71
@@ -1286,7 +1288,7 @@ if [ "$PHPINSTALL" == "Yes" ]; then
 		checkInstall php${USE_PHP_VERSION}-common
 		checkInstall php${USE_PHP_VERSION}-curl
 		checkInstall php${USE_PHP_VERSION}-gd
-		if [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -lt "1803" ] || [ "$OS" == "debian" ] && [ "$OSVERSION" -lt "100" ]; then
+		if [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -lt "1803" ] || [ "$OS" == "debian" ] && [ "$OSVERSION" -lt "10" ]; then
 			checkInstall php${USE_PHP_VERSION}-mcrypt
 		elif [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -ge "1804" ]; then
 			checkInstall libsodium-dev
