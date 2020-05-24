@@ -5,6 +5,7 @@ Quality Code: [![Codacy Badge](https://api.codacy.com/project/badge/Grade/577d1e
 Easy-Wi Installer
 
 Supported OS:
+  - Slackware 14.2 (WIP)
   - Debian 8 and newer
   - Ubuntu 16.10 and newer
   - CentOS 7 and newer
