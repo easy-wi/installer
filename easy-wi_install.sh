@@ -177,11 +177,11 @@ importKey() {
 }
 
 checkUser() {
-	if [ -z "$1" ]; then
+	if [ -z $1 ]; then
 		redMessage "Error: No masteruser specified"
-	elif [ "$1" == "root" ]; then
+	elif [ $1 == "root" ]; then
 		redMessage "Error: Using root as masteruser is a security hazard and not allowed."
-	elif [ -n "$(id $1 2>/dev/null)" ] && ([ "$INSTALL" != "EW" -a "$INSTALL" != "WR" ] || [ ! -d "/home/$1/sites-enabled" ]); then
+	elif [ -n "$(id $1 2>/dev/null)" ] && { [ "$INSTALL" != "EW" -a "$INSTALL" != "WR" ] || [ ! -d "/home/$1/sites-enabled" ]; }; then
 		redMessage "Error: User \"$1\" already exists. Please name a not yet existing user"
 	else
 		echo 1
@@ -523,7 +523,7 @@ else
 		OSVERSION=$(echo "$OSVERSION_TMP" | tr -d . | cut -c 1-2)
 	elif [ "$OS" == "debian" ]; then
 		if [ "$OSVERSION_TMP" == "10" ]; then
-			OSVERSION=$(echo "$OSVERSION_TMP"0)
+			OSVERSION=$(echo "$OSVERSION_TMP")
 		else
 			OSVERSION=$(echo "$OSVERSION_TMP" | tr -d . | cut -c 1-2)
 		fi
@@ -1419,14 +1419,21 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
 			fi
 			sed -i 's/.*UseIPv6.*/UseIPv6 off/g' /etc/proftpd/proftpd.conf
 			backUpFile /etc/proftpd/proftpd.conf
-			sed -i 's/.*#ServerType.*/ServerType			standalone/g' /etc/proftpd/proftpd.conf
-			sed -i 's/.*ServerType			inetd.*/#ServerType			inetd/g' /etc/proftpd/proftpd.conf
-			sed -i 's/#.*DefaultRoot.*~/DefaultRoot ~/g' /etc/proftpd/proftpd.conf
-			if [ ! "$(grep -q RequireValidShell /etc/proftpd/proftpd.conf)" ]; then
-			echo "RequireValidShell on" >>/etc/proftpd/proftpd.conf
+			if [ -z "$(grep 'ServerType			standalone' /etc/proftpd/proftpd.conf)" ]; then
+				sed -i 's/.*#ServerType.*/ServerType			standalone/g' /etc/proftpd/proftpd.conf
 			fi
-			if [ ! "$(grep -q LoadModule mod_tls_memcache.c >> /etc/proftpd/modules.conf)" ]; then
-			echo "#LoadModule mod_tls_memcache.c" >/etc/proftpd/modules.conf
+			sed -i 's/.*ServerType			inetd.*/#ServerType			inetd/g' /etc/proftpd/proftpd.conf
+			if [ -z "$(grep 'DefaultRoot ~' /etc/proftpd/proftpd.conf)" ]; then
+				sed -i 's/#.*DefaultRoot.*~/DefaultRoot ~/g' /etc/proftpd/proftpd.conf
+			fi
+			if [ ! "$(grep -q RequireValidShell /etc/proftpd/proftpd.conf)" ]; then
+				echo "RequireValidShell on" >>/etc/proftpd/proftpd.conf
+			fi
+			if [ !-f /etc/proftpd/modules.conf ]; then
+				touch /etc/proftpd/modules.conf
+			fi
+			if [ -z "$(grep 'LoadModule mod_tls_memcache.c' /etc/proftpd/modules.conf)" ]; then
+				echo "#LoadModule mod_tls_memcache.c" >>/etc/proftpd/modules.conf
 			fi
 			if [ -z "$(grep 'Include' /etc/proftpd/proftpd.conf)" ]; then
 				echo "Include /etc/proftpd/conf.d/" >>/etc/proftpd/proftpd.conf
