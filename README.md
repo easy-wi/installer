@@ -7,7 +7,7 @@ Easy-Wi Installer
 Supported OS:
   - Slackware 14.2 (WIP)
   - Debian 8 and newer
-  - Ubuntu 16.10 and newer
+  - Ubuntu 16.10 - 20.04
   - CentOS 7 and newer
 
 ___
