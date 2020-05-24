@@ -1429,7 +1429,7 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
 			if [ ! "$(grep -q RequireValidShell /etc/proftpd/proftpd.conf)" ]; then
 				echo "RequireValidShell on" >>/etc/proftpd/proftpd.conf
 			fi
-			if [ !-f /etc/proftpd/modules.conf ]; then
+			if [ ! -f /etc/proftpd/modules.conf ]; then
 				touch /etc/proftpd/modules.conf
 			fi
 			if [ -z "$(grep 'LoadModule mod_tls_memcache.c' /etc/proftpd/modules.conf)" ]; then
