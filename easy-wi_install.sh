@@ -1260,7 +1260,7 @@ if [ "$PHPINSTALL" == "Yes" ]; then
 		USE_PHP_VERSION='7.1'
 	elif [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -ge "1803" ]; then
 		USE_PHP_VERSION='7.2'
-	elif [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -ge "2004" ]; then
+	elif [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -eq "2004" ]; then
 		USE_PHP_VERSION='7.4'
 	elif [ "$OS" == "centos" ] && [ "$OSVERSION" -lt "80" ]; then
 		checkInstall http://rpms.remirepo.net/enterprise/remi-release-7.rpm
