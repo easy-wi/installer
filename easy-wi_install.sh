@@ -397,7 +397,7 @@ if [ "$(id -u)" != "0" ]; then
 fi
 
 cyanMessage " "
-okAndSleep "Update the system packages to the latest version? Required, as otherwise dependencies might brake!"
+okAndSleep "Update the system packages to the latest version? Required, as otherwise dependencies might break!"
 
 OPTIONS=("Yes" "Quit")
 select UPDATE_UPGRADE_SYSTEM in "${OPTIONS[@]}"; do
@@ -525,7 +525,7 @@ else
 		if [ "$OSVERSION_TMP" == "10" ]; then
 			OSVERSION=$(echo "$OSVERSION_TMP")
 		else
-			OSVERSION=$(echo "$OSVERSION_TMP" | tr -d . | cut -c 1-2)
+			OSVERSION=$(echo "$OSVERSION_TMP" | tr -d . | cut -c 1)
 		fi
 	fi
 fi
@@ -536,10 +536,10 @@ else
 	okAndSleep "Detected architecture: $ARCH"
 fi
 
-if [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -lt "1604" ] || [ "$OS" == "debian" ] && [ "$OSVERSION" -lt "80" ] || [ "$OS" == "centos" ] && [ "$OSVERSION" -lt "60" ]; then
+if [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -lt "1604" ] || [ "$OS" == "debian" ] && [ "$OSVERSION" -lt "8" ] || [ "$OS" == "centos" ] && [ "$OSVERSION" -lt "60" ]; then
 	echo
 	echo
-	redMessage "Error: Your OS \"$OS - $OSVERSION_TMP\" is not more supported from Easy-WI Installer."
+	redMessage "Error: Your OS \"$OS $OSVERSION_TMP\" is not more supported from Easy-WI Installer."
 	redMessage "Please Upgrade to a newer OS Version!"
 	redMessage " "
 
