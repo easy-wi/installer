@@ -298,6 +298,16 @@ clearPassword() {
 	unset MYSQL_ROOT_PASSWORD MYSQL_USER_PASSWORD DB_PASSWORD QUERY_PASSWORD WEBGROUPNAME2 FIREWALL MASTERUSER MYSQL_USER HTTPDSCRIPT
 }
 
+portRange() {
+
+	RANDOMPORTRANGE=$(seq 1001 65536 | shuf -n 1)
+
+	PORT_RANGE=$((RANDOMPORTRANGE + 200))
+
+	echo $RANDOMPORTRANGE $PORT_RANGE
+
+}
+
 cyanMessage " "
 yellowMessage "Please wait... Update is currently running."
 cyanMessage " "
@@ -419,10 +429,7 @@ if [ "$UPDATE_UPGRADE_SYSTEM" == "Yes" ]; then
 		cyanMessage " "
 		cyanMessage "Update all obsolete packages."
 		$INSTALLER update
-		#checkInstall redhat-lsb
-		#checkInstall epel-release
-		#importKey /etc/pki/rpm-gpg/RPM-GPG-KEY*
-		#checkInstall yum-utils
+
 	fi
 fi
 checkInstall curl
@@ -477,7 +484,6 @@ fi
 cyanMessage " "
 
 if [ -f /etc/slackware-version ]; then
-	#OS=$(cat /etc/os-release | grep '\bNAME=\b' | sed -n 's/^.*NAME=//p')
 	OS=$(cat /etc/os-release | grep '\bNAME=\b' | sed -n 's/^.*NAME=//p' | sed -e 's/\(.*\)/\L\1/')
 	OSVERSION_TMP=$(cat /etc/os-release | grep '\bVERSION_ID=\b' | sed -n 's/^.*VERSION_ID=//p')
 	OSBRANCH=$(cat /etc/os-release | grep '\bVERSION_CODENAME=\b' | sed -n 's/^.*VERSION_CODENAME=//p')
@@ -857,17 +863,17 @@ if [ "$INSTALL" == "VS" ]; then
 		DOWNLOAD_URL_VERSION="https://files.teamspeak-services.com/releases/server/$VERSION/teamspeak3-server_linux_$ARCH-$VERSION.tar.bz2"
 		STATUS=$(curl -I $DOWNLOAD_URL_VERSION 2>&1 | grep "HTTP/" | awk '{print $2}')
 
-		if [ "$STATUS" == "200" ]; then
-			DOWNLOAD_URL=$DOWNLOAD_URL_VERSION
-			break
-		fi
+		#if [ "$STATUS" == "200" ]; then
+		DOWNLOAD_URL=$DOWNLOAD_URL_VERSION
+		break
+		#fi
 	done
 
-	if [ "$STATUS" == "200" -a -n "$DOWNLOAD_URL" ]; then
-		okAndSleep "Detected latest server version as $VERSION with download URL $DOWNLOAD_URL"
-	else
-		errorAndExit "Could not detect latest server version"
-	fi
+	#if [ "$STATUS" == "200" -a -n "$DOWNLOAD_URL" ]; then
+	okAndSleep "Detected latest server version as $VERSION with download URL $DOWNLOAD_URL"
+	#else
+	#errorAndExit "Could not detect latest server version"
+	#fi
 fi
 
 if [ "$INSTALL" != "MY" ]; then
@@ -1369,6 +1375,7 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
 	else
 		OPTION="No"
 	fi
+
 	if [ "$OPTION" == "Yes" ]; then
 		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 			echo "proftpd-basic shared/proftpd/inetd_or_standalone select standalone" | debconf-set-selections
@@ -1379,12 +1386,14 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
 		fi
 		cyanMessage " "
 		checkInstall proftpd
+
 		if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 			backUpFile /etc/proftpd/proftpd.conf
 			if [ -f /etc/proftpd/modules.conf ]; then
 				backUpFile /etc/proftpd/modules.conf
 				sed -i 's/.*LoadModule mod_tls_memcache.c.*/#LoadModule mod_tls_memcache.c/g' /etc/proftpd/modules.conf
 			fi
+
 			sed -i 's/.*UseIPv6.*/UseIPv6 off/g' /etc/proftpd/proftpd.conf
 			sed -i 's/#.*DefaultRoot.*~/DefaultRoot ~/g' /etc/proftpd/proftpd.conf
 			sed -i 's/# RequireValidShell.*/RequireValidShell on/g' /etc/proftpd/proftpd.conf
@@ -1408,14 +1417,23 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
 				cd /etc
 				ln -s /etc/proftpd/proftpd.conf proftpd.conf
 			fi
-			backUpFile /etc/proftpd/proftpd.conf
 			sed -i 's/.*UseIPv6.*/UseIPv6 off/g' /etc/proftpd/proftpd.conf
+			backUpFile /etc/proftpd/proftpd.conf
+			sed -i 's/.*#ServerType.*/ServerType			standalone/g' /etc/proftpd/proftpd.conf
+			sed -i 's/.*ServerType			inetd.*/#ServerType			inetd/g' /etc/proftpd/proftpd.conf
 			sed -i 's/#.*DefaultRoot.*~/DefaultRoot ~/g' /etc/proftpd/proftpd.conf
-			sed -i 's/# RequireValidShell.*/RequireValidShell on/g' /etc/proftpd/proftpd.conf
+			if [ ! "$(grep -q RequireValidShell /etc/proftpd/proftpd.conf)" ]; then
+			echo "RequireValidShell on" >>/etc/proftpd/proftpd.conf
+			fi
+			if [ ! "$(grep -q LoadModule mod_tls_memcache.c >> /etc/proftpd/modules.conf)" ]; then
 			echo "#LoadModule mod_tls_memcache.c" >/etc/proftpd/modules.conf
+			fi
 			if [ -z "$(grep 'Include' /etc/proftpd/proftpd.conf)" ]; then
 				echo "Include /etc/proftpd/conf.d/" >>/etc/proftpd/proftpd.conf
 				makeDir /etc/proftpd/conf.d
+			fi
+			if [ -z "$(grep 'Include' /etc/proftpd/modules.conf)" ]; then
+				echo "Include /etc/proftpd/modules.conf" >>/etc/proftpd/proftpd.conf
 			fi
 		fi
 		if [ -f /etc/proftpd/proftpd.conf -a "$INSTALL" != "GS" ]; then
@@ -1423,6 +1441,24 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
 		elif [ -f /etc/proftpd/proftpd.conf -a "$INSTALL" == "GS" ]; then
 			sed -i 's/Umask.*/Umask 077 077/g' /etc/proftpd/proftpd.conf
 		fi
+
+		cyanMessage "Use PassivePort range in ProFTPD?"
+		cyanMessage "Heplful when behind a firewall or using NAT"
+		OPTIONS=("Yes" "No" "Quit")
+		select OPTION in "${OPTIONS[@]}"; do
+			case "$REPLY" in
+			1 | 2) break ;;
+			3) errorAndQuit ;;
+			*) errorAndContinue ;;
+			esac
+		done
+
+		if [ "$OPTION" == "Yes" ]; then
+			if [ ! "$(grep -q PassivePorts /etc/proftpd/proftpd.conf)" ]; then
+				echo "PassivePorts $(portRange)" >>/etc/proftpd/proftpd.conf
+			fi
+		fi
+
 		cyanMessage " "
 		cyanMessage "Install/Update Easy-WI ProFTPD Rules?"
 		OPTIONS=("Yes" "No" "Quit")
@@ -1532,6 +1568,11 @@ if [ "$INSTALL" == "GS" -o "$INSTALL" == "WR" ]; then
 			if [ -f /usr/sbin/proftpd ]; then
 				systemctl enable proftpd >/dev/null 2>&1
 				systemctl restart proftpd 1>/dev/null
+			fi
+		elif [ "$OS" == "slackware" ]; then
+			if [ -f /usr/sbin/proftpd ]; then
+				chmod +x /etc/rc.d/rc.proftpd >/dev/null 2>&1
+				/etc/rc.d/rc.proftpd start 1>/dev/null
 			fi
 		fi
 	else
@@ -2435,22 +2476,39 @@ _EOF_
 
 	RestartWebserver
 
-	if [ -z "$(grep -o ./reboot.php /etc/crontab)" ]; then
-		cyanMessage " "
-		okAndSleep "Installing Easy-WI Crontabs"
-		echo '0 */1 * * * easywi_web cd /home/easywi_web/htdocs && timeout 300 php ./reboot.php >/dev/null 2>&1
-*/5 * * * * easywi_web cd /home/easywi_web/htdocs && timeout 290 php ./statuscheck.php >/dev/null 2>&1
-*/1 * * * * easywi_web cd /home/easywi_web/htdocs && timeout 290 php ./startupdates.php >/dev/null 2>&1
-*/5 * * * * easywi_web cd /home/easywi_web/htdocs && timeout 290 php ./jobs.php >/dev/null 2>&1
-*/10 * * * * easywi_web cd /home/easywi_web/htdocs && timeout 290 php ./cloud.php >/dev/null 2>&1' >>/etc/crontab
+	if [ $OS == "debian" ] || [ $OS == "ubuntu" ] || [ $OS = "centos" ]; then
+		if [ -z "$(grep -o ./reboot.php /etc/crontab)" ]; then
+			cyanMessage " "
+			okAndSleep "Installing Easy-WI Crontabs"
+			echo '0 */1 * * * easywi_web cd /home/easywi_web/htdocs && timeout 300 php ./reboot.php >/dev/null 2>&1
+			*/5 * * * * easywi_web cd /home/easywi_web/htdocs && timeout 290 php ./statuscheck.php >/dev/null 2>&1
+			*/1 * * * * easywi_web cd /home/easywi_web/htdocs && timeout 290 php ./startupdates.php >/dev/null 2>&1
+			*/5 * * * * easywi_web cd /home/easywi_web/htdocs && timeout 290 php ./jobs.php >/dev/null 2>&1
+			*/10 * * * * easywi_web cd /home/easywi_web/htdocs && timeout 290 php ./cloud.php >/dev/null 2>&1' >>/etc/crontab
 
+		fi
+
+	elif [ $OS == "slackware" ]; then
+		if [ -z "$(grep -o ./reboot.php /etc/cron.d/easy-wi)" ]; then
+			cyanMessage " "
+			okAndSleep "Installing Easy-WI Crontabs"
+			echo '0 */1 * * * easywi_web cd /home/easywi_web/htdocs && timeout 300 php ./reboot.php >/dev/null 2>&1
+			*/5 * * * * easywi_web cd /home/easywi_web/htdocs && timeout 290 php ./statuscheck.php >/dev/null 2>&1
+			*/1 * * * * easywi_web cd /home/easywi_web/htdocs && timeout 290 php ./startupdates.php >/dev/null 2>&1
+			*/5 * * * * easywi_web cd /home/easywi_web/htdocs && timeout 290 php ./jobs.php >/dev/null 2>&1
+			*/10 * * * * easywi_web cd /home/easywi_web/htdocs && timeout 290 php ./cloud.php >/dev/null 2>&1' >>/etc/cron.d/easy-wi
+
+		fi
 	fi
 
 	if [ "$OS" == "debian" -o "$OS" == "ubuntu" ]; then
 		service cron restart 1>/dev/null
 	elif [ "$OS" == "centos" ]; then
 		systemctl restart crond.service 1>/dev/null
+	elif [ "$OS" == "slackware" ]; then
+		/etc/rc.d/rc.crond restart 1>/dev/null
 	fi
+
 fi
 
 if [ "$INSTALL" == "VS" ]; then
