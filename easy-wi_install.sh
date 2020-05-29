@@ -1876,7 +1876,7 @@ if [ "$INSTALL" == "GS" ] || [ "$INSTALL" == "WR" ]; then
 		setPath
 	fi
 	
-	f [ -f /etc/sudoers ] && [ -z "$(grep "$MASTERUSER" /etc/sudoers | grep "$PKILL")" ]; then
+	if [ -f /etc/sudoers ] && [ -z "$(grep "$MASTERUSER" /etc/sudoers | grep "$PKILL")" ]; then
 		echo "$MASTERUSER ALL = NOPASSWD: $PKILL" >>/etc/sudoers
 	fi
 	if [ -f /etc/sudoers ] && [ -z "$(grep "$MASTERUSER" /etc/sudoers | grep "$USERADD")" ]; then
