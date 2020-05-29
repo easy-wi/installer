@@ -308,6 +308,28 @@ portRange() {
 
 }
 
+function setPath() {
+###########################
+## **** SLACKWARE ONLY ****
+
+## As standard sudo users on Slackware do not have access to /sbin and /usr/sbin
+## direftories which blocks access to 
+
+CURRENTPATH=$(sudo cat /etc/profile | grep PATH= | sed '/^#/d')
+CORRECTPATH='PATH="/usr/local/bin:/usr/bin:/bin:/usr/games:/sbin:/usr/sbin"'
+
+## If the PATH variable doesn't exist .. Yikes .. let's GTFO
+ if [ $CURRENTPATH == "" ]; then
+ 	echo "No PATH detected, you need to fix this! ... Exiting"
+ 	exit 1
+ fi
+
+## Write the new PATH to /etc/profile if it's not correct already
+if [ $CURRENTPATH != $CORRECTPATH ]; then
+sudo sed -i "s|$CURRENTPATH|"'PATH="/usr/local/bin:/usr/bin:/bin:/usr/games:/sbin:/usr/sbin"|' /etc/profile
+fi
+}
+
 cyanMessage " "
 yellowMessage "Please wait... Update is currently running."
 cyanMessage " "
@@ -344,10 +366,6 @@ elif [ -f /etc/centos-release ]; then
 elif [ -f /etc/os-release ]; then
 	INSTALLER="slackpkg"
 	OS="slackware"
-	#setenforce 0 >/dev/null 2>&1
-	#systemctl stop postfix
-	#systemctl disable postfix
-	#$INSTALLER clean all
 	$INSTALLER update
 	if [ -z "$(slackpkg search wget)" ]; then
 		checkInstall wget
@@ -1258,7 +1276,7 @@ if [ "$PHPINSTALL" == "Yes" ]; then
 		USE_PHP_VERSION='7.0'
 	elif [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -ge "1610" ] && [ "$OSVERSION" -lt "1803" ]; then
 		USE_PHP_VERSION='7.1'
-	elif [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -ge "1803" ]; then
+	elif [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -ge "1803" ] && [ "$OSVERSION" -lt "2004" ]; then
 		USE_PHP_VERSION='7.2'
 	elif [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -eq "2004" ]; then
 		USE_PHP_VERSION='7.4'
@@ -1852,7 +1870,14 @@ fi
 # No direct root access for masteruser. Only limited access through sudo
 if [ "$INSTALL" == "GS" ] || [ "$INSTALL" == "WR" ]; then
 	checkInstall sudo
-	if [ -f /etc/sudoers ] && [ -z "$(grep "$MASTERUSER" /etc/sudoers | grep "$PKILL")" ]; then
+
+	if [ $OS == "slackware" ]; then
+		backUpFile /etc/profile
+		## Call the setPath function to check if sudo users have access to required programs
+		setPath
+	fi
+	
+	f [ -f /etc/sudoers ] && [ -z "$(grep "$MASTERUSER" /etc/sudoers | grep "$PKILL")" ]; then
 		echo "$MASTERUSER ALL = NOPASSWD: $PKILL" >>/etc/sudoers
 	fi
 	if [ -f /etc/sudoers ] && [ -z "$(grep "$MASTERUSER" /etc/sudoers | grep "$USERADD")" ]; then
@@ -2018,7 +2043,7 @@ EOF
 
 			$INSTALLER -y install zlib1g
 			$INSTALLER -y install libc6-i386
-			if [ "$OS" == "debian" ] && [ "$OSVERSION" -gt "90" ] || [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -gt "1803" ]; then
+			if [ "$OS" == "debian" ] && [ "$OSVERSION" -gt "9" ] || [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -gt "1803" ]; then
 				$INSTALLER -y install lib32z1
 				$INSTALLER -y install lib32readline7
 				$INSTALLER -y install libreadline7:i386
@@ -2040,7 +2065,7 @@ EOF
 			$INSTALLER -y install libncursesw5-dev
 			$INSTALLER -y install zlib1g:i386
 		else
-			if [ "$OS" == "debian" ] && [ "$OSVERSION" -gt "90" ] || [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -gt "1803" ]; then
+			if [ "$OS" == "debian" ] && [ "$OSVERSION" -gt "9" ] || [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -gt "1803" ]; then
 				$INSTALLER -y install libreadline7 libncursesw5
 			else
 				$INSTALLER -y install libreadline5 libncursesw5
@@ -2121,7 +2146,7 @@ EOF
 			echo "*/5 * * * * root nice -n +19 $IONICE find /home/*/fdl_data/ /home/*/temp/ /tmp/ /var/run/screen/ -nouser -print0 | xargs -0 rm -rf" >>/etc/crontab
 			echo "*/5 * * * * root nice -n +19 $IONICE find /var/run/screen/ -maxdepth 1 -type d -nouser -print0 | xargs -0 rm -rf" >>/etc/crontab
 		fi
-		echo " and 4"
+
 	elif [ "$OS" == "slackware" ]; then
 
 		if [ ! -f /etc/crond./easy-wi ]; then
