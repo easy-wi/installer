@@ -316,7 +316,8 @@ CURRENTPATH=$(cat /etc/profile | grep PATH= | sed '/$PATH/d')
 CORRECTPATH='PATH="/usr/local/bin:/usr/bin:/bin:/usr/games:/sbin:/usr/sbin"'
 
 ## If the PATH variable doesn't exist .. Yikes .. let's GTFO
- cyanMessage "Checking if $PATH is set ...."
+ yellowMessage " "
+ yellowMessage "Checking if PATH is set ...."
  if [ $CURRENTPATH == "" ]; then
  	errorAndExit "No PATH detected, you need to fix this! ... Exiting"
  	exit 1
@@ -324,7 +325,8 @@ CORRECTPATH='PATH="/usr/local/bin:/usr/bin:/bin:/usr/games:/sbin:/usr/sbin"'
 
 ## Write the new PATH to /etc/profile if it's not correct already
 if [ $CURRENTPATH != $CORRECTPATH ]; then
-cyanMessage "Writing new $PATH to /etc/profile ..."
+yellowMessage " "
+yellowMessage "Writing new PATH to /etc/profile ..."
 sed -i "s|$CURRENTPATH|"'PATH="/usr/local/bin:/usr/bin:/bin:/usr/games:/sbin:/usr/sbin"|' /etc/profile
 fi
 }
