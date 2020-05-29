@@ -312,7 +312,7 @@ function setPath() {
 ## As standard sudo users on Slackware do not have access to /sbin and /usr/sbin
 ## direftories which blocks access to 
 
-CURRENTPATH=$(sudo cat /etc/profile | grep PATH= | sed '/$PATH/d')
+CURRENTPATH=$(cat /etc/profile | grep PATH= | sed '/$PATH/d')
 CORRECTPATH='PATH="/usr/local/bin:/usr/bin:/bin:/usr/games:/sbin:/usr/sbin"'
 
 ## If the PATH variable doesn't exist .. Yikes .. let's GTFO
@@ -323,7 +323,7 @@ CORRECTPATH='PATH="/usr/local/bin:/usr/bin:/bin:/usr/games:/sbin:/usr/sbin"'
 
 ## Write the new PATH to /etc/profile if it's not correct already
 if [ $CURRENTPATH != $CORRECTPATH ]; then
-sudo sed -i "s|$CURRENTPATH|"'PATH="/usr/local/bin:/usr/bin:/bin:/usr/games:/sbin:/usr/sbin"|' /etc/profile
+sed -i "s|$CURRENTPATH|"'PATH="/usr/local/bin:/usr/bin:/bin:/usr/games:/sbin:/usr/sbin"|' /etc/profile
 fi
 }
 
