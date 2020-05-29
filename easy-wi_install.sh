@@ -310,19 +310,21 @@ portRange() {
 
 function setPath() {
 ## As standard sudo users on Slackware do not have access to /sbin and /usr/sbin
-## direftories which blocks access to 
+## directories which blocks access to 
 
 CURRENTPATH=$(cat /etc/profile | grep PATH= | sed '/$PATH/d')
 CORRECTPATH='PATH="/usr/local/bin:/usr/bin:/bin:/usr/games:/sbin:/usr/sbin"'
 
 ## If the PATH variable doesn't exist .. Yikes .. let's GTFO
+ cyanMessage "Checking if $PATH is set ...."
  if [ $CURRENTPATH == "" ]; then
- 	echo "No PATH detected, you need to fix this! ... Exiting"
+ 	errorAndExit "No PATH detected, you need to fix this! ... Exiting"
  	exit 1
  fi
 
 ## Write the new PATH to /etc/profile if it's not correct already
 if [ $CURRENTPATH != $CORRECTPATH ]; then
+cyanMessage "Writing new $PATH to /etc/profile ..."
 sed -i "s|$CURRENTPATH|"'PATH="/usr/local/bin:/usr/bin:/bin:/usr/games:/sbin:/usr/sbin"|' /etc/profile
 fi
 }
