@@ -310,7 +310,7 @@ portRange() {
 
 function setPath() {
 ## As standard sudo users on Slackware do not have access to /sbin and /usr/sbin
-## directories which blocks access to 
+## directories which blocks access to usermod, userdel and useradd commands.
 
 CURRENTPATH=$(cat /etc/profile | grep PATH= | sed '/$PATH/d')
 CORRECTPATH='PATH="/usr/local/bin:/usr/bin:/bin:/usr/games:/sbin:/usr/sbin"'
