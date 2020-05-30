@@ -2132,52 +2132,64 @@ EOF
 
 	chown -cR "$MASTERUSER":"$MASTERUSER" /home/"$MASTERUSER" >/dev/null 2>&1
 
-	if [ "$OS" != "slackware" ]; then
-		if [ -f /etc/crontab ] && [ -z "$(grep 'Minecraft can easily produce 1GB' /etc/crontab)" ]; then
-			cyanMessage " "
-			okAndSleep "Installing Minecraft Crontabs"
-			if ionice -c3 true 2>/dev/null; then
-				IONICE="ionice -n 7 "
+	cyanMessage " "
+	cyanMessage "Minecraft cronjobs are used to periodically remove large log files"
+	cyanMessage "Do you want to install the minecraft cronjobs?"
+
+	OPTIONS=("Yes" "No" "Quit")
+	select OPTION in "${OPTIONS[@]}"; do
+		case "$REPLY" in
+		1 | 2) break ;;
+		3) errorAndQuit ;;
+		*) errorAndContinue ;;
+		esac
+	done
+
+	if [ $OPTION == "Yes" ]; then
+		if [ "$OS" != "slackware" ]; then
+			if [ -f /etc/crontab ] && [ -z "$(grep 'Minecraft can easily produce 1GB' /etc/crontab)" ]; then
+				cyanMessage " "
+				okAndSleep "Installing Minecraft Crontabs"
+				if ionice -c3 true 2>/dev/null; then
+					IONICE="ionice -n 7 "
+				fi
+
+				echo "#Minecraft can easily produce 1GB+ logs within one hour" >>/etc/crontab
+				echo "*/5 * * * * root nice -n +19 ionice -n 7 find /home/*/server/*/ -maxdepth 2 -type f -name \"screenlog.0\" -size +100M -delete" >>/etc/crontab
+				echo "# Even if sudo /usr/sbin/deluser --remove-all-files is used some data remain from time to time" >>/etc/crontab
+				echo "*/5 * * * * root nice -n +19 $IONICE find /home/ -maxdepth 2 -type d -nouser -delete" >>/etc/crontab
+				echo "*/5 * * * * root nice -n +19 $IONICE find /home/*/fdl_data/ /home/*/temp/ /tmp/ /var/run/screen/ -nouser -print0 | xargs -0 rm -rf" >>/etc/crontab
+				echo "*/5 * * * * root nice -n +19 $IONICE find /var/run/screen/ -maxdepth 1 -type d -nouser -print0 | xargs -0 rm -rf" >>/etc/crontab
 			fi
 
-			echo "#Minecraft can easily produce 1GB+ logs within one hour" >>/etc/crontab
-			echo "*/5 * * * * root nice -n +19 ionice -n 7 find /home/*/server/*/ -maxdepth 2 -type f -name \"screenlog.0\" -size +100M -delete" >>/etc/crontab
-			echo "# Even sudo /usr/sbin/deluser --remove-all-files is used some data remain from time to time" >>/etc/crontab
-			echo "*/5 * * * * root nice -n +19 $IONICE find /home/ -maxdepth 2 -type d -nouser -delete" >>/etc/crontab
-			echo "*/5 * * * * root nice -n +19 $IONICE find /home/*/fdl_data/ /home/*/temp/ /tmp/ /var/run/screen/ -nouser -print0 | xargs -0 rm -rf" >>/etc/crontab
-			echo "*/5 * * * * root nice -n +19 $IONICE find /var/run/screen/ -maxdepth 1 -type d -nouser -print0 | xargs -0 rm -rf" >>/etc/crontab
-		fi
+		elif [ "$OS" == "slackware" ]; then
 
-	elif [ "$OS" == "slackware" ]; then
-
-		if [ ! -f /etc/crond./easy-wi ]; then
-			touch /etc/cron.d/easy-wi
-		fi
-
-		if [ -f /etc/cron.d/easy-wi ] && [ -z "$(grep 'Minecraft can easily produce 1GB' /etc/cron.d/easy-wi)" ]; then
-			cyanMessage " "
-			okAndSleep "Installing Minecraft Crontabs"
-			if ionice -c3 true 2>/dev/null; then
-				IONICE="ionice -n 7 "
+			if [ ! -f /etc/crond./easy-wi ]; then
+				touch /etc/cron.d/easy-wi
 			fi
 
-			echo "#Minecraft can easily produce 1GB+ logs within one hour" >>/etc/cron.d/easy-wi
-			echo "*/5 * * * * root nice -n +19 ionice -n 7 find /home/*/server/*/ -maxdepth 2 -type f -name \"screenlog.0\" -size +100M -delete" >>/etc/cron.d/easy-wi
-			echo "# Even sudo /usr/sbin/deluser --remove-all-files is used some data remain from time to time" >>/etc/cron.d/easy-wi
-			echo "*/5 * * * * root nice -n +19 $IONICE find /home/ -maxdepth 2 -type d -nouser -delete" >>/etc/cron.d/easy-wi
-			echo "*/5 * * * * root nice -n +19 $IONICE find /home/*/fdl_data/ /home/*/temp/ /tmp/ /var/run/screen/ -nouser -print0 | xargs -0 rm -rf" >>/etc/cron.d/easy-wi
-			echo "*/5 * * * * root nice -n +19 $IONICE find /var/run/screen/ -maxdepth 1 -type d -nouser -print0 | xargs -0 rm -rf" >>/etc/cron.d/easy-wi
+			if [ -f /etc/cron.d/easy-wi ] && [ -z "$(grep 'Minecraft can easily produce 1GB' /etc/cron.d/easy-wi)" ]; then
+				cyanMessage " "
+				okAndSleep "Installing Minecraft Crontabs"
+				if ionice -c3 true 2>/dev/null; then
+					IONICE="ionice -n 7 "
+				fi
 
+				## Slackware does not use any screen socket directory, so cronjobs for /var/run/screen have been removed
+				echo "#Minecraft can easily produce 1GB+ logs within one hour" >>/etc/cron.d/easy-wi
+				echo "*/5 * * * * nice -n +19 ionice -n 7 find /home/*/server/*/ -maxdepth 2 -type f -name \"screenlog.0\" -size +100M -delete" >>/etc/cron.d/easy-wi
+				echo "# Even if sudo /usr/sbin/deluser --remove-all-files is used some data remain from time to time" >>/etc/cron.d/easy-wi
+				echo "*/5 * * * * nice -n +19 $IONICE find /home/ -maxdepth 2 -type d -nouser -delete" >>/etc/cron.d/easy-wi
+			fi
 		fi
-
-	fi
+	fi	
 
 	if [ "$OS" == "debian" ] || [ "$OS" == "ubuntu" ]; then
 		service cron restart 1>/dev/null
 	elif [ "$OS" == "centos" ]; then
 		systemctl restart crond.service 1>/dev/null
 	elif [ "$OS" == "slackware" ]; then
-		/etc/rc.d/rc.crond 1>/dev/null
+		/etc/rc.d/rc.crond restart 1>/dev/null
 	fi
 
 fi
