@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # DEBUG MODE
-DEBUG="OFF"
+DEBUG="ON"
 
 #    Author:     Ulrich Block <support@easy-wi.com>,
 #                Alexander Doerwald <support@easy-wi.com>
@@ -463,7 +463,7 @@ if [ "$OS" == "centos" ]; then
 		localectl set-locale LANG=en_US.utf8
 	fi
 elif [ "$OS" == "slackware" ]; then
-	if [ "$(grep '\bexport LANG=en_US.UTF-8\b' /etc/profile.d/lang.sh)" != " export LANG=en_US.UTF-8" ]; then
+	if [ "$(grep '\bexport LANG=en_US.UTF-8\b' /etc/profile.d/lang.sh)" != "export LANG=en_US.UTF-8" ]; then
 		echo "export LANG=en_US.UTF-8" >>/etc/profile.d/lang.sh
 
 	fi
@@ -501,6 +501,13 @@ if [ "$OS" == "centos" ]; then
 fi
 
 cyanMessage " "
+## Use this to detect OS details for Slackware, Debian, Ubuntu and CentOS
+# if [ -f /etc/os-release ]; then
+# 	OS=$(grep -oP '(?<=^ID=).+' /etc/os-release | tr -d '"')
+# 	OSVERSION=$(grep -oP '(?<=^VERSION_ID=).+' /etc/os-release | tr -d '."')
+# 	OSVERSION_TMP=$(grep -oP '(?<=^VERSION_ID=).+' /etc/os-release | tr -d '"')
+# 	OSBRANCH=$(grep -oP '(?<=^VERSION_CODENAME=).+' /etc/os-release)
+# fi
 
 if [ -f /etc/slackware-version ]; then
 	OS=$(grep '\bNAME=\b' /etc/os-release | sed -n 's/^.*NAME=//p' | sed -e 's/\(.*\)/\L\1/')
@@ -510,6 +517,7 @@ else
 
 	OS=$(lsb_release -i 2>/dev/null | grep 'Distributor' | awk '{print tolower($3)}')
 	OSVERSION_TMP=$(lsb_release -r 2>/dev/null | grep 'Release' | awk '{print $2}')
+	DEB10_VERSION=$(cat '/etc/debian_version' | tr -d .)
 	OSBRANCH=$(lsb_release -c 2>/dev/null | grep 'Codename' | awk '{print $2}')
 fi
 
@@ -520,7 +528,7 @@ elif [ "$MACHINE" == "i386" ] || [ "$MACHINE" == "i686" ]; then
 fi
 
 if [ -z "$OS" ]; then
-	errorAndExit "Error: Could not detect OS. Currently only Debian, Ubuntu and CentOS are supported. Aborting!"
+	errorAndExit "Error: Could not detect OS. Currently only Debian, Ubuntu, Slackware and CentOS are supported. Aborting!"
 else
 	okAndSleep "Detected OS: $OS"
 fi
@@ -537,28 +545,31 @@ else
 	okAndSleep "Detected version: $OSVERSION_TMP"
 
 	if [ "$OS" == "ubuntu" ]; then
-		OSVERSION=$(echo "$OSVERSION_TMP" | tr -d .)
+	 	OSVERSION=$(echo "$OSVERSION_TMP" | tr -d .)
 	elif [ "$OS" == "centos" ]; then
-		OSVERSION=$(echo "$OSVERSION_TMP" | tr -d . | cut -c 1-2)
+	 	OSVERSION=$(echo "$OSVERSION_TMP" | tr -d . | cut -c 1-2)
 	elif [ "$OS" == "debian" ]; then
-		if [ "$OSVERSION_TMP" == "10" ]; then
-			OSVERSION=$(echo "$OSVERSION_TMP")
-		else
-			OSVERSION=$(echo "$OSVERSION_TMP" | tr -d . | cut -c 1)
-		fi
+	 	if [ "$OSBRANCH" == "buster" ]; then
+	 		## While lsb_release on Debian 10 is broken and doesn't show proper version number
+	 		## eg 10.4, we will have to use version from /etc/debian_version
+	 		## See: https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=939733
+	 		
+	 		## $OSVERSION has to be a 3 digit integer on debian 10, eg Debian 10 version 10.4
+	 		## will be converted and used as 104 (missing the decimal) 
+	 		OSVERSION=$DEB10_VERSION
+	 	else
+	 		## OSVERSION for Debian 8 and 9 has to be a 2 digit number otherwise Debian 10 would
+	 		## be seen as 10 for example, while Debian 9 would be seen as 91 for example.
+	 		## This would make the panel think that Debian 10 is older than 8 or 9 and thus too old
+	 		## to be supported by easy-wi!!
+	 		OSVERSION=$(echo "$OSVERSION_TMP" | tr -d . | cut -c 1-2)
+	 	fi
 	fi
 fi
 
-if [ -z "$ARCH" ]; then
-	errorAndExit "Error: $MACHINE is not supported! Aborting"
-else
-	okAndSleep "Detected architecture: $ARCH"
-fi
-
-if [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -lt "1604" ] || [ "$OS" == "debian" ] && [ "$OSVERSION" -lt "8" ] || [ "$OS" == "centos" ] && [ "$OSVERSION" -lt "60" ]; then
-	echo
-	echo
-	redMessage "Error: Your OS \"$OS $OSVERSION_TMP\" is not more supported from Easy-WI Installer."
+## Ubuntu version < 16.04, Debian version < 8 (Debian Jessie) and CentOS < 6 are no longer supported
+if [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -lt "1604" ] || [ "$OS" == "debian" ] && [ "$OSVERSION" -lt "80" ] || [ "$OS" == "centos" ] && [ "$OSVERSION" -lt "60" ]; then
+	redMessage "Error: Your OS "$OS $OSVERSION_TMP" is not more supported from Easy-WI Installer."
 	redMessage "Please Upgrade to a newer OS Version!"
 	redMessage " "
 
@@ -599,17 +610,17 @@ if [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -lt "1604" ] || [ "$OS" == "debian" ]
 		doReboot "System is rebooting now for finish Upgrade!"
 	else
 		if [ "$OS" == "ubuntu" ]; then
+			redMessage "Run this command to manually update your OS: "
 			redMessage "Command: do-release-upgrade"
-			redMessage " "
 			errorAndQuit
 		elif [ "$OS" == "debian" ]; then
+			redMessage "Run this command to manually update your OS: "
 			redMessage "Command: apt-get update; apt-get upgrade; apt-get dist-upgrade; apt-get autoremove"
-			redMessage " "
 			errorAndQuit
 		fi
 	fi
 fi
-
+	
 yellowMessage " "
 yellowOneLineMessage "If you want to install everything on this system, then please install the "
 cyanOneLineMessage "Easy-WI Webpanel "
@@ -734,7 +745,8 @@ if [ "$INSTALL" == "EW" ] || [ "$INSTALL" == "WR" ]; then
 		checkInstall crontabs
 	fi
 
-	if [ "$OS" == "debian" ] && [ "$OSVERSION" -lt "100" ]; then
+	## Dotdeb.org supports upto Debian 8
+	if [ "$OS" == "debian" ] && [ "$OSVERSION" -le "80" ]; then
 		cyanMessage " "
 		cyanMessage "Use dotdeb.org repository for more up to date server and PHP versions?"
 
@@ -759,6 +771,41 @@ if [ "$INSTALL" == "EW" ] || [ "$INSTALL" == "WR" ]; then
 				add-apt-repository "deb http://packages.dotdeb.org $OSBRANCH all"
 				curl --remote-name https://www.dotdeb.org/dotdeb.gpg
 				apt-key add dotdeb.gpg
+				removeIfExists dotdeb.gpg
+				$INSTALLER -y update
+			fi
+		fi
+	fi
+
+	## Sury.org supports upto Debian 10 and provides php7.4
+	if [ "$OS" == "debian" ] && [ "$OSVERSION" -gt "80" ] && [ "$OSVERSION" -ge "100" ]; then
+		cyanMessage " "
+		cyanMessage "Use deb.sury.org repository for more up to date server and PHP versions?"
+
+		OPTIONS=("Yes" "No" "Quit")
+		select SURY in "${OPTIONS[@]}"; do
+			case "$REPLY" in
+			1 | 2) break ;;
+			3) errorAndQuit ;;
+			*) errorAndContinue ;;
+			esac
+		done
+
+		if [ "$SURY" == "Yes" ]; then
+			## TODO: Add ability to delete earlier dotdeb sources.list entries from newer versions of debian
+			if [ ! -f '/etc/apt/sources.list.d/php.list' ]; then
+				touch '/etc/apt/sources.list.d/php.list'
+			fi	
+				if [ -z "$(grep 'deb.sury.org' /etc/apt/sources.list.d/php.list)" ]; then
+					cyanMessage " "
+					okAndSleep "Adding entries to /etc/apt/sources.list.d/php.list"
+
+				if [ "$OSBRANCH" == "stretch" ] || [ "$OSBRANCH" == "buster" ]; then
+					checkInstall software-properties-common apt-transport-https lsb-release ca-certificates curl
+				fi
+				
+				wget -O /etc/apt/trusted.gpg.d/php.gpg https://packages.sury.org/php/apt.gpg
+				sh -c 'echo "deb https://packages.sury.org/php/ $(lsb_release -sc) main" > /etc/apt/sources.list.d/php.list'
 				removeIfExists dotdeb.gpg
 				$INSTALLER -y update
 			fi
@@ -888,11 +935,11 @@ if [ "$INSTALL" == "VS" ]; then
 		#fi
 	done
 
-	#if [ "$STATUS" == "200" -a -n "$DOWNLOAD_URL" ]; then
+	if [ "$STATUS" == "200" -a -n "$DOWNLOAD_URL" ]; then
 	okAndSleep "Detected latest server version as $VERSION with download URL $DOWNLOAD_URL"
-	#else
-	#errorAndExit "Could not detect latest server version"
-	#fi
+	else
+	errorAndExit "Could not detect latest server version"
+	fi
 fi
 
 if [ "$INSTALL" != "MY" ]; then
@@ -1002,13 +1049,14 @@ fi
 if [ "$INSTALL" == "EW" ] || [ "$INSTALL" == "MY" ]; then
 	if [ "$INSTALL" == "EW" ]; then
 		cyanMessage " "
-		okAndSleep "Please note that Easy-Wi requires a MySQL or MariaDB installed and will install MySQL if no DB is installed"
+		okAndSleep "Please note that Easy-Wi requires a MySQL or MariaDB server to be installed, and will install MySQL if no server is already installed"
 	fi
 
-	if [ "$OS" == "debian" ] && [ "$OSVERSION" -lt "100" ] || [ "$OS" == "ubuntu" ]; then
+	#echo $OSVERSION
+	if [ "$OS" == "debian" ] && [ "$OSVERSION" -ge "80" ] || [ "$OS" == "ubuntu" ]; then
 		if [ -z "$(ps fax | grep 'mysqld' | grep -v 'grep')" ]; then
 			cyanMessage " "
-			cyanMessage "Please select if an which database server to install."
+			cyanMessage "Please select which database server to install."
 
 			OPTIONS=("MySQL" "MariaDB" "None" "Quit")
 			select SQL in "${OPTIONS[@]}"; do
@@ -1064,10 +1112,10 @@ if [ "$INSTALL" == "EW" ] || [ "$INSTALL" == "MY" ]; then
 	if [ "$SQL" == "MariaDB" ]; then
 		MARIADB_VERSION="10.4"
 		RUNUPDATE="0"
-		if { [ "$OS" == "debian" ] || [ "$OS" == "ubuntu" ] && [ -z "$(grep '/mariadb/' /etc/apt/sources.list)" ]; }; then
+		if [ "$OS" == "debian" ] || [ "$OS" == "ubuntu" ] && [ -z "$(grep '/mariadb/' /etc/apt/sources.list)" ]; then
 			checkInstall software-properties-common
 
-			if [ "$OS" == "debian" ] && [ "$OSVERSION" -ge "90" ]; then
+			if [ "$OS" == "debian" ] && [ "$OSVERSION" -ge "80" ]; then
 				checkInstall dirmngr
 			fi
 
@@ -1098,12 +1146,12 @@ if [ "$INSTALL" == "EW" ] || [ "$INSTALL" == "MY" ]; then
 			for search_mariadb in "${MARIADB_FILE[@]}"; do
 				if [ -z "$(grep '/MariaDB/' "$search_mariadb" >/dev/null 2>&1)" ] && [ ! -f /etc/yum.repos.d/MariaDB.repo ]; then
 					echo "# MariaDB $MARIADB_VERSION CentOS repository list
-# http://downloads.mariadb.org/mariadb/repositories/
-[mariadb]
-name = MariaDB
-baseurl = http://yum.mariadb.org/"$MARIADB_VERSION"/centos"$MARIADB_TMP_VERSION"-amd64
-gpgkey=https://yum.mariadb.org/RPM-GPG-KEY-MariaDB
-gpgcheck=1" >/etc/yum.repos.d/MariaDB.repo
+							# http://downloads.mariadb.org/mariadb/repositories/
+							[mariadb]
+							name = MariaDB
+							baseurl = http://yum.mariadb.org/"$MARIADB_VERSION"/centos"$MARIADB_TMP_VERSION"-amd64
+							gpgkey=https://yum.mariadb.org/RPM-GPG-KEY-MariaDB
+							gpgcheck=1" >/etc/yum.repos.d/MariaDB.repo
 				fi
 			done
 			importKey https://yum.mariadb.org/RPM-GPG-KEY-MariaDB
@@ -1124,11 +1172,11 @@ gpgcheck=1" >/etc/yum.repos.d/MariaDB.repo
 		checkInstall mysql-client
 		checkInstall mysql-common
 	elif [ "$SQL" == "MariaDB" ]; then
-		cyanMessage " "
-		if [ "$OS" == "debian" ] && [ "$OS" == "ubuntu" ]; then
+		cyanMessage " Checking if MariaDB is installed ..."
+		if [ "$OS" == "debian" ] || [ "$OS" == "ubuntu" ]; then
 			checkInstall mariadb-server
 			checkInstall mariadb-client
-			if { [ "$(printf "${OSVERSION}\n80" | sort -V | tail -n 1)" == "80" ] || [ "$OS" == "ubuntu" ] && [ -z "$(grep '/mariadb/' /etc/apt/sources.list)" ]; }; then
+			if [ "$OSVERSION" == "80" ] || [ "$OS" == "ubuntu" ] && [ -z "$(grep '/mariadb/' /etc/apt/sources.list)" ]; then
 				checkInstall mysql-common
 			else
 				checkInstall mariadb-common
@@ -1271,7 +1319,9 @@ else
 fi
 
 if [ "$PHPINSTALL" == "Yes" ]; then
-	if [ "$OS" == "debian" ] && [ "$OSVERSION" -ge "10" ]; then
+	if [ "$OS" == "debian" ] && [ "$OSVERSION" -ge "80" ] && [ "$SURY" == "Yes" ]; then
+		USE_PHP_VERSION='7.4'
+	elif [ "$OS" == "debian" ] && [ "$OSVERSION" -ge "80" ]; then
 		USE_PHP_VERSION='7.3'
 	elif [ "$OS" == "debian" ] && [ "$OSVERSION" -ge "85" ] || [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -lt "1610" ]; then
 		USE_PHP_VERSION='7.0'
@@ -1307,7 +1357,7 @@ if [ "$PHPINSTALL" == "Yes" ]; then
 		checkInstall php${USE_PHP_VERSION}-common
 		checkInstall php${USE_PHP_VERSION}-curl
 		checkInstall php${USE_PHP_VERSION}-gd
-		if [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -lt "1803" ] || [ "$OS" == "debian" ] && [ "$OSVERSION" -lt "10" ]; then
+		if [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -lt "1803" ] || [ "$OS" == "debian" ] && [ "$OSVERSION" -lt "100" ]; then
 			checkInstall php${USE_PHP_VERSION}-mcrypt
 		elif [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -ge "1804" ]; then
 			checkInstall libsodium-dev
@@ -1377,6 +1427,8 @@ if [ "$PHPINSTALL" == "Yes" ]; then
 
 	RestartWebserver
 fi
+
+
 
 if ([ "$INSTALL" == "WR" ] || [ "$INSTALL" == "EW" ] && [ -z "$(grep '/bin/false' /etc/shells)" ]); then
 	echo "/bin/false" >>/etc/shells
@@ -2044,7 +2096,7 @@ EOF
 
 			$INSTALLER -y install zlib1g
 			$INSTALLER -y install libc6-i386
-			if [ "$OS" == "debian" ] && [ "$OSVERSION" -gt "9" ] || [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -gt "1803" ]; then
+			if [ "$OS" == "debian" ] && [ "$OSVERSION" -gt "90" ] || [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -gt "1803" ]; then
 				$INSTALLER -y install lib32z1
 				$INSTALLER -y install lib32readline7
 				$INSTALLER -y install libreadline7:i386
@@ -2066,7 +2118,7 @@ EOF
 			$INSTALLER -y install libncursesw5-dev
 			$INSTALLER -y install zlib1g:i386
 		else
-			if [ "$OS" == "debian" ] && [ "$OSVERSION" -gt "9" ] || [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -gt "1803" ]; then
+			if [ "$OS" == "debian" ] && [ "$OSVERSION" -gt "90" ] || [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -gt "1803" ]; then
 				$INSTALLER -y install libreadline7 libncursesw5
 			else
 				$INSTALLER -y install libreadline5 libncursesw5
@@ -2096,7 +2148,7 @@ EOF
 			okAndSleep "Installing 32bit support for 64bit systems."
 			checkInstall glibc.i686
 			checkInstall libstdc++.i686
-			checkInstall lib32tinfo5
+
 		fi
 		checkInstall libgcc
 	fi
@@ -2375,7 +2427,9 @@ _EOF_
 			if [ "$WEBSERVER" == "Apache" ]; then
 				cyanMessage " "
 				okAndSleep "Stopping PHP-FPM and Apache2."
-				service php${USE_PHP_VERSION}-fpm stop
+				## Script currently doesn't support using PHP-FPM with Apache2
+				## TODO: Add support for PHP-FPM with Apache2
+				#service php${USE_PHP_VERSION}-fpm stop
 				service apache2 stop
 			fi
 			cyanMessage " "
@@ -2540,14 +2594,14 @@ _EOF_
 		fi
 
 	elif [ "$OS" == "slackware" ]; then
-		if [ -z "$(grep -o ./reboot.php /etc/cron.d/easy-wi)" ]; then
+		if [ -z "$(grep -o ./reboot.php /etc/cron.d/easy-wi-web)" ]; then
 			cyanMessage " "
 			okAndSleep "Installing Easy-WI Crontabs"
 			echo '0 */1 * * * easywi_web cd /home/easywi_web/htdocs && timeout 300 php ./reboot.php >/dev/null 2>&1
 			*/5 * * * * easywi_web cd /home/easywi_web/htdocs && timeout 290 php ./statuscheck.php >/dev/null 2>&1
 			*/1 * * * * easywi_web cd /home/easywi_web/htdocs && timeout 290 php ./startupdates.php >/dev/null 2>&1
 			*/5 * * * * easywi_web cd /home/easywi_web/htdocs && timeout 290 php ./jobs.php >/dev/null 2>&1
-			*/10 * * * * easywi_web cd /home/easywi_web/htdocs && timeout 290 php ./cloud.php >/dev/null 2>&1' >>/etc/cron.d/easy-wi
+			*/10 * * * * easywi_web cd /home/easywi_web/htdocs && timeout 290 php ./cloud.php >/dev/null 2>&1' >>/etc/cron.d/easy-wi-web
 
 		fi
 	fi
