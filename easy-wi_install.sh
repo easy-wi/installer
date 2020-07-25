@@ -36,7 +36,7 @@ DEBUG="OFF"
 #    Sie sollten eine Kopie der GNU General Public License zusammen mit diesem
 #    Programm erhalten haben. Wenn nicht, siehe <http://www.gnu.org/licenses/>.
 
-if [ "$DEBUG" == "ON" ]; then
+if [ "$DEBUG" == "ON" ] || [ "$1" == "--debug" ]; then
 	set -x
 fi
 
@@ -479,7 +479,7 @@ fi
 #CentOS - SELinux
 if [ "$OS" == "centos" ]; then
 	if [ ! -f /tmp/easy-wi_reboot ]; then
-		if { [ ! -d /home/easywi_web ] && [ -z "$(find /home -type d -name 'masterserver')" ] && [ -z "$(find /home -type f -name 'ts3server')" ]; }; then
+		if [ ! -d /home/easywi_web ] && [ -z "$(find /home -type d -name 'masterserver')" ] && [ -z "$(find /home -type f -name 'ts3server')" ]; then
 			yellowMessage ""
 			yellowMessage "Note: Please update your fresh operating system and restart it!"
 			yellowMessage ""
@@ -1064,31 +1064,26 @@ if [ "$INSTALL" == "EW" ] || [ "$INSTALL" == "MY" ]; then
 	if [ "$SQL" == "MariaDB" ]; then
 		MARIADB_VERSION="10.4"
 		RUNUPDATE="0"
-		if { [ "$OS" == "debian" ] || [ "$OS" == "ubuntu" ] && [ -z "$(grep '/mariadb/' /etc/apt/sources.list)" ]; }; then
+		if [ "$OS" == "debian" ] || [ "$OS" == "ubuntu" ] && [ -z "$(grep '/mariadb/' /etc/apt/sources.list)" ]; then
 			checkInstall software-properties-common
 
 			if [ "$OS" == "debian" ] && [ "$OSVERSION" -ge "90" ]; then
 				checkInstall dirmngr
 			fi
 
-			if [ "$OS" == "debian" ] && [ "$OSVERSION" -ge "90" ]; then
-				importKey keyserver.ubuntu.com 0xF1656F24C74CD1D8
-			elif [ "$OS" == "debian" ] && [ "$OSVERSION" -lt "90" ]; then
-				importKey keyserver.ubuntu.com 0xcbcb082a1bb943db
-			elif [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -ge "1410" ]; then
-				importKey hkp://keyserver.ubuntu.com:80 0xF1656F24C74CD1D8
-			elif [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -lt "1410" ]; then
-				importKey hkp://keyserver.ubuntu.com:80 0xcbcb082a1bb943db
-			fi
+            # FIX MariaDB Install (#96)
+			if [ -z $(apt-cache search mariadb-server-$MARIADB_VERSION 2> /dev/null) ]; then
+			    curl -LsSO https://downloads.mariadb.com/MariaDB/mariadb-keyring-2019.gpg
+                mv mariadb-keyring-2019.gpg /etc/apt/trusted.gpg.d/
+				add-apt-repository "deb https://downloads.mariadb.com/MariaDB/mariadb-$MARIADB_VERSION/repo/$OS $OSBRANCH main"
 
-			if [ -n "apt-cache search mariadb-server-$MARIADB_VERSION" ]; then
-				add-apt-repository "deb http://mirror.23media.de/mariadb/repo/$MARIADB_VERSION/$OS $OSBRANCH main"
 				RUNUPDATE=1
 			fi
 
+
 			if [ "$OS" == "debian" ] && [ "$DOTDEB" == "Yes" ]; then
 				echo "Package: *" >/etc/apt/preferences.d/mariadb.pref
-				echo "Pin: origin mirror.23media.de" >>/etc/apt/preferences.d/mariadb.pref
+				echo "Pin: origin downloads.mariadb.com" >>/etc/apt/preferences.d/mariadb.pref
 				echo "Pin-Priority: 1000" >>/etc/apt/preferences.d/mariadb.pref
 				RUNUPDATE=1
 			fi
@@ -1125,10 +1120,11 @@ gpgcheck=1" >/etc/yum.repos.d/MariaDB.repo
 		checkInstall mysql-common
 	elif [ "$SQL" == "MariaDB" ]; then
 		cyanMessage " "
-		if [ "$OS" == "debian" ] && [ "$OS" == "ubuntu" ]; then
+		# FIX MariaDB Install (#96) && => ||
+		if [ "$OS" == "debian" ] || [ "$OS" == "ubuntu" ]; then
 			checkInstall mariadb-server
 			checkInstall mariadb-client
-			if { [ "$(printf "${OSVERSION}\n80" | sort -V | tail -n 1)" == "80" ] || [ "$OS" == "ubuntu" ] && [ -z "$(grep '/mariadb/' /etc/apt/sources.list)" ]; }; then
+			if [ "$(printf "${OSVERSION}\n80" | sort -V | tail -n 1)" == "80" ] || [ "$OS" == "ubuntu" ] && [ -z "$(grep '/mariadb/' /etc/apt/sources.list)" ]; then
 				checkInstall mysql-common
 			else
 				checkInstall mariadb-common
