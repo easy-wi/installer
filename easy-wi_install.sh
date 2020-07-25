@@ -384,15 +384,10 @@ USERDEL=$(which userdel)
 GROUPADD=$(which groupadd)
 MACHINE=$(uname -m)
 HOST_NAME=$(hostname -f | awk '{print tolower($0)}')
-
-if [ -n "$HOST_NAME" ] && [ "$HOST_NAME" != "localhost" ]; then
-	LOCAL_IP="$HOST_NAME"
-elif [ -z "$HOST_NAME" ] || [ "$HOST_NAME" == "0" ] || [ "$HOST_NAME" == "localhost" ]; then
-	LOCAL_IP=$(ip route get 8.8.8.8 | awk '{print $NF; exit}')
-fi
+LOCAL_IP=$(hostname -I | awk '{print $1}')
 
 if [ -z "$LOCAL_IP" ] || [ "$LOCAL_IP" == "0" ] || [ "$LOCAL_IP" == "localhost" ]; then
-	LOCAL_IP=$(hostname -I | awk '{print $1}')
+	LOCAL_IP=$(ip route get 8.8.8.8 | awk '{print $7; exit}')
 fi
 
 cyanMessage " "
