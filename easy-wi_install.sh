@@ -1344,7 +1344,7 @@ if [ "$PHPINSTALL" == "Yes" ]; then
 			checkInstall libapache2-mod-php${USE_PHP_VERSION}
 			a2enmod php${USE_PHP_VERSION}
 		elif [ "$OS" == "centos" ]; then
-			checkInstall httpd-itk
+			checkInstall httpd
 			backUpFile /etc/httpd/conf.modules.d/00-mpm-itk.conf
 			sed -i "s/#LoadModule mpm_itk_module modules\/mod_mpm_itk.so/LoadModule mpm_itk_module modules\/mod_mpm_itk.so/g" /etc/httpd/conf.modules.d/00-mpm-itk.conf
 		fi
@@ -2087,7 +2087,6 @@ EOF
 			okAndSleep "Installing 32bit support for 64bit systems."
 			checkInstall glibc.i686
 			checkInstall libstdc++.i686
-			checkInstall lib32tinfo5
 		fi
 		checkInstall libgcc
 	fi
