@@ -1305,7 +1305,7 @@ if [ "$PHPINSTALL" == "Yes" ]; then
 		fi
 		checkInstall php${USE_PHP_VERSION}-mysql
 		checkInstall php${USE_PHP_VERSION}-cli
-		if [ "$OS" == "debian" ] && [ "$OSVERSION" -ge "85" ] || [ "$OS" == "ubuntu" ]; then
+		if [ "$OS" == "debian" ] && [ "$OSVERSION" -ge "85" ] || [ "$OS" == "debian" ] && [ "$OSVERSION" == "10" ] || [ "$OS" == "ubuntu" ]; then
 			checkInstall php${USE_PHP_VERSION}-xml
 			checkInstall php${USE_PHP_VERSION}-mbstring
 			checkInstall php${USE_PHP_VERSION}-zip
@@ -2256,8 +2256,8 @@ _EOF_
 		rm -rf "${HEX_FOLDER}"
 	fi
 
-	find /home/easywi_web/ -type f -exec chmod 0640 {} \;
-	find /home/easywi_web/ -mindepth 1 -type d -exec chmod 0750 {} \;
+	find /home/easywi_web/ -type f -exec chmod 0664 {} \;
+	find /home/easywi_web/ -mindepth 1 -type d -exec chmod 0770 {} \;
 
 	chown -cR easywi_web:$WEBGROUPNAME /home/easywi_web >/dev/null 2>&1
 
