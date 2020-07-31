@@ -6,10 +6,25 @@ Easy-Wi Installer
 
 Supported OS:
   - Slackware 14.2 (WIP)
-  - Debian 8 and newer
-  - Ubuntu 16.10 - 20.04
-  - CentOS 7 and newer
+  - Debian 8, 9 and 10
+  - Ubuntu 16.10, 18.04, 18,10 and 20.04
+  - CentOS 7 and 8
 
+___
+
+## Stable Installer up to Debian 8, 9 and 10, Ubuntu 16.10, 18.04, 18.10 and 20.04 and CentOS 7 and 8
+  
+```sh
+LATEST_VERSION=`wget -O installer.tar.gz https://github.com/easy-wi/installer/archive/2.8.tar.gz
+tar zxf installer.tar.gz && mv ./installer-*/easy-wi_install.sh ./
+rm -r installer.tar.gz installer-*/
+
+#if you runnig as user (not root):
+sudo bash ./easy-wi_install.sh
+
+#if you runnig as root:
+bash ./easy-wi_install.sh
+```
 ___
 
 ## Unstable Installer (Developer Version)
@@ -23,23 +38,6 @@ sudo bash ./easy-wi_install.sh
 #if you runnig as root:
 bash ./easy-wi_install.sh
 ```
-
-___
-
-## Stable Installer up to Debian 8, Ubuntu 16.10 and CentOS 7
-  
-```sh
-LATEST_VERSION=`wget -O installer.tar.gz https://github.com/easy-wi/installer/archive/2.3.tar.gz
-tar zxf installer.tar.gz && mv ./installer-*/easy-wi_install.sh ./
-rm -r installer.tar.gz installer-*/
-
-#if you runnig as user (not root):
-sudo bash ./easy-wi_install.sh
-
-#if you runnig as root:
-bash ./easy-wi_install.sh
-```
-
 ___
 
 ## Support Channel
