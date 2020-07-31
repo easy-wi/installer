@@ -684,7 +684,7 @@ fi
 if [ "$INSTALL" == "EW" ]; then
 	cyanMessage " "
 	cyanMessage "At which URL/Domain should Easy-Wi be placed?"
-	OPTIONS=("$LOCAL_IP" "Other" "Quit")
+	OPTIONS=("$LOCAL_IP" "Domain/IP" "Quit")
 	select OPTION in "${OPTIONS[@]}"; do
 		case "$REPLY" in
 		1 | 2) break ;;
@@ -693,7 +693,7 @@ if [ "$INSTALL" == "EW" ]; then
 		esac
 	done
 
-	if [ "$OPTION" == "Other" ]; then
+	if [ "$OPTION" == "Domain/IP" ]; then
 		cyanMessage " "
 		cyanMessage "Please specify the IP or domain Easy-Wi should run at."
 		read IP_DOMAIN
@@ -978,6 +978,11 @@ if [ "$INSTALL" == "WR" ] || [ "$INSTALL" == "EW" ]; then
 	makeDir /home/"$MASTERUSER"/skel/tmp
 	chown -cR "$MASTERUSER":$WEBGROUPNAME /home/"$MASTERUSER" >/dev/null 2>&1
 
+    #Fix Error 403 - You don't have permission to access /install/install.php on this server.
+	chmod +x /home/"$MASTERUSER"/ >/dev/null 2>&1
+	chmod +x /home/"$MASTERUSER"/skel/ >/dev/null 2>&1
+	chmod +x /home/"$MASTERUSER"/skel/htdocs >/dev/null 2>&1
+
 	cyanMessage " "
 	if [ "$WEBSERVER" == "Lighttpd" ]; then
 		checkInstall lighttpd
@@ -1125,9 +1130,11 @@ gpgcheck=1" >/etc/yum.repos.d/MariaDB.repo
 				checkInstall mariadb-common
 			fi
 		elif [ "$OS" == "centos" ] && [ "$OSVERSION" -lt "80" ]; then
+		    checkInstall perl-DBI
 			checkInstall mariadb-server
 			systemctl enable mariadb.service >/dev/null 2>&1
 		elif [ "$OS" == "centos" ] && [ "$OSVERSION" -ge "80" ]; then
+		    dnf install -y perl-DBI
 			dnf install -y boost-program-options
 			dnf install -y MariaDB-server MariaDB-client --disablerepo=AppStream
 		fi
@@ -1273,11 +1280,18 @@ if [ "$PHPINSTALL" == "Yes" ]; then
 	elif [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -eq "2004" ]; then
 		USE_PHP_VERSION='7.4'
 	elif [ "$OS" == "centos" ] && [ "$OSVERSION" -lt "80" ]; then
-		checkInstall http://rpms.remirepo.net/enterprise/remi-release-7.rpm
+
+        REMIREPO=$(yum list installed | grep "remi-release" | awk '{print $1}')
+        if [ -z "$REMIREPO" ]; then
+            checkInstall http://rpms.remirepo.net/enterprise/remi-release-7.rpm
+        fi
 		yum-config-manager --enable remi-php71
 		RUNUPDATE="1"
 	elif [ "$OS" == "centos" ] && [ "$OSVERSION" -ge "80" ]; then
-		checkInstall http://rpms.remirepo.net/enterprise/remi-release-8.rpm
+        REMIREPO=$(yum list installed | grep "remi-release" | awk '{print $1}')
+        if [ -z "$REMIREPO" ]; then
+            checkInstall http://rpms.remirepo.net/enterprise/remi-release-8.rpm
+        fi
 		yum-config-manager --enable remi-php72
 		RUNUPDATE="1"
 	else
@@ -1320,6 +1334,10 @@ if [ "$PHPINSTALL" == "Yes" ]; then
 		checkInstall php-xml
 		checkInstall php-mbstring
 		checkInstall php-zip
+
+        if [ "${OSVERSION%?}" == "8" ]; then
+            checkInstall php-json
+        fi
 	fi
 
 	if [ "$WEBSERVER" == "Lighttpd" ]; then
@@ -1344,7 +1362,11 @@ if [ "$PHPINSTALL" == "Yes" ]; then
 			checkInstall libapache2-mod-php${USE_PHP_VERSION}
 			a2enmod php${USE_PHP_VERSION}
 		elif [ "$OS" == "centos" ]; then
-			checkInstall httpd
+		    checkInstall httpd
+		    if [ "${OSVERSION%?}" == "7" ]; then
+		        checkInstall httpd-itk
+            fi
+
 			backUpFile /etc/httpd/conf.modules.d/00-mpm-itk.conf
 			sed -i "s/#LoadModule mpm_itk_module modules\/mod_mpm_itk.so/LoadModule mpm_itk_module modules\/mod_mpm_itk.so/g" /etc/httpd/conf.modules.d/00-mpm-itk.conf
 		fi
@@ -2219,6 +2241,11 @@ _EOF_
 	makeDir /home/easywi_web/logs
 	makeDir /home/easywi_web/tmp
 	makeDir /home/easywi_web/sessions
+
+	#Fix Error 403 - You don't have permission to access /install/install.php on this server.
+	chmod +x /home/easywi_web/ >/dev/null 2>&1
+	chmod +x /home/easywi_web/htdocs/ >/dev/null 2>&1
+
 	chown -cR easywi_web:$WEBGROUPNAME /home/easywi_web >/dev/null 2>&1
 
 	if [ -z "$(id easywi_web 2>/dev/null)" ]; then
