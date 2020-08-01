@@ -376,7 +376,7 @@ elif [ -f /etc/os-release ]; then
 	fi
 fi
 
-INSTALLER_VERSION="2.9"
+INSTALLER_VERSION="3.0"
 PKILL=$(which pkill)
 USERADD=$(which useradd)
 USERMOD=$(which usermod)
@@ -2058,18 +2058,18 @@ EOF
 			$INSTALLER -y install zlib1g
 			$INSTALLER -y install libc6-i386
 			if [ "$OS" == "debian" ] && [ "$OSVERSION" -gt "9" ] || [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -gt "1803" ]; then
-				$INSTALLER -y install lib32z1
 				$INSTALLER -y install lib32readline7
 				$INSTALLER -y install libreadline7:i386
 			else
-				$INSTALLER -y install ia32-libs
-				$INSTALLER -y install lib32gcc1
 				$INSTALLER -y install lib32readline5
 				$INSTALLER -y install libreadline5:i386
 			fi
+
+            $INSTALLER -y install lib32z1
+            $INSTALLER -y install libc6-i386
+            $INSTALLER -y install lib32gcc1
 			$INSTALLER -y install lib32ncursesw5
 			$INSTALLER -y install lib32stdc++6
-			$INSTALLER -y install lib64stdc++6
 			$INSTALLER -y install libstdc++6
 			$INSTALLER -y install libgcc1:i386
 			$INSTALLER -y install libtinfo5:i386
