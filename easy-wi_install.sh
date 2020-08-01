@@ -376,7 +376,7 @@ elif [ -f /etc/os-release ]; then
 	fi
 fi
 
-INSTALLER_VERSION="2.8"
+INSTALLER_VERSION="2.9"
 PKILL=$(which pkill)
 USERADD=$(which useradd)
 USERMOD=$(which usermod)
@@ -1890,7 +1890,7 @@ if [ "$INSTALL" == "GS" ] || [ "$INSTALL" == "WR" ]; then
 		## Call the setPath function to check if sudo users have access to required programs
 		setPath
 	fi
-	
+
 	if [ -f /etc/sudoers ] && [ -z "$(grep "$MASTERUSER" /etc/sudoers | grep "$PKILL")" ]; then
 		echo "$MASTERUSER ALL = NOPASSWD: $PKILL" >>/etc/sudoers
 	fi
@@ -2096,14 +2096,25 @@ EOF
 		checkInstall unzip
 		checkInstall ncurses-libs.i686
 
-		# wput from rpmforge
-		LASTEST_RPMFORGE_VERSION=$(curl -s http://ftp.tu-chemnitz.de/pub/linux/dag/redhat/el7/en/x86_64/rpmforge/RPMS/ | grep -o "rpmforge-release-[0-9].[0-9].[0-9]-[0-9].el[0-9].rf.x86_64.rpm" | head -n1)
-		if [ -n "$LASTEST_RPMFORGE_VERSION" ]; then
-			okAndSleep "Installing required packages rpmforge-release wput"
-			wget -q --timeout=60 -P /tmp/ http://ftp.tu-chemnitz.de/pub/linux/dag/redhat/el7/en/x86_64/rpmforge/RPMS/"$LASTEST_RPMFORGE_VERSION"
-			rpm -Uvh /tmp/"$LASTEST_RPMFORGE_VERSION"
-			checkInstall wput
-		fi
+
+        LASTEST_WPUT_VERSION=$(curl -s http://ftp.tu-chemnitz.de/pub/linux/dag/redhat/el7/en/x86_64/rpmforge/RPMS/ | grep -o "wput-[0-9].[0-9].[0-9]-[0-9].el[0-9].rf.x86_64.rpm" | head -n1)
+        if [ "${OSVERSION%?}" == "8" ]; then
+            wget -q --timeout=60 -P /tmp/ http://ftp.tu-chemnitz.de/pub/linux/dag/redhat/el7/en/x86_64/rpmforge/RPMS/"$LASTEST_WPUT_VERSION"
+            if [ ! -f /tmp/"$LASTEST_WPUT_VERSION" ]; then
+                errorAndExit "Wput cant be Downloaded for CentOS-8"
+            fi
+            rpm -Uvh /tmp/"LASTEST_WPUT_VERSION"
+
+        fi
+
+        # wput from rpmforge
+        if [ -n "$LASTEST_RPMFORGE_VERSION" ]  && [ "${OSVERSION%?}" -lt "8" ]; then
+            okAndSleep "Installing required packages rpmforge-release wput"
+            wget -q --timeout=60 -P /tmp/ http://ftp.tu-chemnitz.de/pub/linux/dag/redhat/el7/en/x86_64/rpmforge/RPMS/"$LASTEST_RPMFORGE_VERSION"
+            rpm -Uvh /tmp/"$LASTEST_RPMFORGE_VERSION"
+            checkInstall wput
+        fi
+
 
 		if [ "$(uname -m)" == "x86_64" ]; then
 			okAndSleep "Installing 32bit support for 64bit systems."
@@ -2194,7 +2205,7 @@ EOF
 				echo "*/5 * * * * nice -n +19 $IONICE find /home/ -maxdepth 2 -type d -nouser -delete" >>/etc/cron.d/easy-wi
 			fi
 		fi
-	fi	
+	fi
 
 	if [ "$OS" == "debian" ] || [ "$OS" == "ubuntu" ]; then
 		service cron restart 1>/dev/null
