@@ -15,7 +15,7 @@ ___
 ## Stable Installer up to Debian 8, 9 and 10, Ubuntu 16.10, 18.04, 18.10 and 20.04 and CentOS 7 and 8
   
 ```sh
-LATEST_VERSION=`wget -O installer.tar.gz https://github.com/easy-wi/installer/archive/2.8.tar.gz
+LATEST_VERSION=`wget -O installer.tar.gz https://github.com/easy-wi/installer/archive/2.9.tar.gz
 tar zxf installer.tar.gz && mv ./installer-*/easy-wi_install.sh ./
 rm -r installer.tar.gz installer-*/
 
