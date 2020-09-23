@@ -1763,7 +1763,7 @@ _EOF_
 	#TODO: Logrotate
 fi
 
-if ([ "$INSTALL" == "WR" ] || [ "$INSTALL" == "EW" ] && [ "$WEBSERVER" != "None" ]); then
+if [ "$INSTALL" == "WR" ] || [ "$INSTALL" == "EW" ]; then
 	if [ "$WEBSERVER" == "Lighttpd" ]; then
 		backUpFile /etc/lighttpd/lighttpd.conf
 		echo "include_shell \"find /home/$MASTERUSER/sites-enabled/ -maxdepth 1 -type f -exec cat {} \;\"" >>/etc/lighttpd/lighttpd.conf
@@ -1900,7 +1900,7 @@ if [ "$INSTALL" == "GS" ] || [ "$INSTALL" == "WR" ]; then
 		echo "$MASTERUSER ALL = (ALL, !root:$MASTERUSER) NOPASSWD: /bin/bash /home/$MASTERUSER/temp/*.sh" >>/etc/sudoers
 	fi
 
-	if [ "$INSTALL" == "WR" ] && [ "$WEBSERVER" != "None" ]; then
+	if [ "$INSTALL" == "WR" ]; then
 		if [ "$OS" == "debian" ] || [ "$OS" == "ubuntu" ]; then
 			if [ "$WEBSERVER" == "Lighttpd" ]; then
 				HTTPDBIN=$(lighttpd)
@@ -1927,7 +1927,7 @@ if [ "$INSTALL" == "GS" ] || [ "$INSTALL" == "WR" ]; then
 	fi
 fi
 
-if [ "$INSTALL" == "WR" ] && [ "$WEBSERVER" != "None" ]; then
+if [ "$INSTALL" == "WR" ]; then
 	chown -cR "$MASTERUSER":$WEBGROUPNAME /home/"$MASTERUSER"/ >/dev/null 2>&1
 
 	cyanMessage " "
@@ -1952,7 +1952,7 @@ if [ "$INSTALL" == "WR" ] && [ "$WEBSERVER" != "None" ]; then
 	fi
 fi
 
-if ([ "$INSTALL" == "GS" ] || [ "$INSTALL" == "WR" ] && [ "$QUOTAINSTALL" == "Yes" ] && [ "$WEBSERVER" != "None" ]); then
+if ([ "$INSTALL" == "GS" ] || [ "$INSTALL" == "WR" ] && [ "$QUOTAINSTALL" == "Yes" ]); then
 	cyanMessage " "
 	greenOneLineMessage "The setquota command is: "
 	cyanMessage "sudo $(which setquota) %cmd%"
