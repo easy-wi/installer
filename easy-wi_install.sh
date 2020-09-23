@@ -230,16 +230,6 @@ RestartWebserver() {
 			fi
 			/etc/rc.d/rc.httpd restart 1>/dev/null
 		fi
-		# elif [ "$WEBSERVER" == "Lighttpd" ]; then
-		# 	cyanMessage " "
-		# 	if [ -f /etc/php-fpm.conf ]; then
-		# 		okAndSleep "Restarting PHP-FPM and Lighttpd."
-		# 		systemctl restart php-fpm.service 1>/dev/null
-		# 	else
-		# 		okAndSleep "Restarting Lighttpd."
-		# 	fi
-		# 	systemctl restart lighttpd.service 1>/dev/null
-		# fi
 	fi
 }
 
@@ -260,9 +250,6 @@ RestartDatabase() {
 		/etc/rc.d/rc.mysqld restart 1>/dev/null
 
 	fi
-	# if [ "$?" -ne "0" ]; then
-	# 	systemctl restart mysql.service 1>/dev/null
-	# fi
 }
 
 doReboot() {
@@ -376,7 +363,7 @@ elif [ -f /etc/os-release ]; then
 	fi
 fi
 
-INSTALLER_VERSION="3.0"
+INSTALLER_VERSION="3.1"
 PKILL=$(which pkill)
 USERADD=$(which useradd)
 USERMOD=$(which usermod)
