@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # DEBUG MODE
-DEBUG="OFF"
+DEBUG="ON"
 
 #    Author:     Ulrich Block <support@easy-wi.com>,
 #                Alexander Doerwald <support@easy-wi.com>
@@ -948,7 +948,7 @@ if [ "$INSTALL" != "MY" ]; then
 	fi
 fi
 
-if ([ "$INSTALL" == "WR" ] || [ "$INSTALL" == "EW" ] && [ "$WEBSERVER" != "None" ]); then
+if [ "$INSTALL" == "WR" ] || [ "$INSTALL" == "EW" ]; then
 	makeDir /home/"$MASTERUSER"/sites-enabled/
 	makeDir /home/"$MASTERUSER"/skel
 	makeDir /home/"$MASTERUSER"/skel/htdocs
@@ -1228,7 +1228,7 @@ if [ "$INSTALL" == "EW" ]; then
 	cyanMessage " "
 	okAndSleep "Please note that Easy-Wi will install required PHP packages."
 	PHPINSTALL="Yes"
-elif [ "$INSTALL" == "WR" ]; then
+elif ([ "$INSTALL" == "WR" ] && [ "$WEBSERVER" != "None" ]); then
 	if [ -z "$(rpm -qa php 2>/dev/null)" ] && [ -z "$(dpkg -l 2>/dev/null | egrep -o "php-common")" ]; then
 		cyanMessage " "
 		cyanMessage "Install/Update PHP?"
@@ -1694,7 +1694,7 @@ if [ "$INSTALL" == "WR" ] || [ "$INSTALL" == "EW" ]; then
 		backUpFile $APACHE_CONFIG
 
 		if [ "$OS" == "centos" ]; then
-			if [ -z "$(grep '<IfModule mpm_itk_module>' $APACHE_CONFIG)" ]; then
+			if [ -z "$(grep '<IfModule mpm_itk_module>' "$APACHE_CONFIG")" ]; then
 				echo " " >>$APACHE_CONFIG
 				cat >>$APACHE_CONFIG <<_EOF_
 <IfModule mpm_itk_module>
@@ -1708,19 +1708,19 @@ _EOF_
 			fi
 		fi
 
-		if [ -z "$(grep 'ServerName localhost' $APACHE_CONFIG)" ]; then
+		if [ -z "$(grep 'ServerName localhost' "$APACHE_CONFIG")" ]; then
 			echo " " >>$APACHE_CONFIG
 			echo '# Added to prevent error message Could not reliably determine the servers fully qualified domain name' >>$APACHE_CONFIG
 			echo 'ServerName localhost' >>$APACHE_CONFIG
 		fi
 
-		if [ -z "$(grep 'ServerTokens' $APACHE_CONFIG)" ]; then
+		if [ -z "$(grep 'ServerTokens' "$APACHE_CONFIG")" ]; then
 			echo " " >>$APACHE_CONFIG
 			echo '# Added to prevent the server information off in productive systems' >>$APACHE_CONFIG
 			echo 'ServerTokens prod' >>$APACHE_CONFIG
 		fi
 
-		if [ -z "$(grep 'ServerSignature' $APACHE_CONFIG)" ]; then
+		if [ -z "$(grep 'ServerSignature' "$APACHE_CONFIG")" ]; then
 			echo " " >>$APACHE_CONFIG
 			echo '# Added to prevent the server signatur off in productive systems' >>$APACHE_CONFIG
 			echo 'ServerSignature off' >>$APACHE_CONFIG
@@ -1733,7 +1733,7 @@ _EOF_
 			APACHE_VERSION=$(httpd -v | grep 'Server version')
 		fi
 
-		if [ -z "$(grep '/home/'"$MASTERUSER"'/sites-enabled/' $APACHE_CONFIG)" ]; then
+		if [ -z "$(grep '/home/'"$MASTERUSER"'/sites-enabled/' "$APACHE_CONFIG")" ]; then
 			echo '# Load config files in the "/home/'"$MASTERUSER"'/sites-enabled" directory, if any.' >>$APACHE_CONFIG
 			if [ "$OS" == "debian" ] || [ "$OS" == "ubuntu" ]; then
 				if [[ "$APACHE_VERSION" =~ .*Apache/2.2.* ]]; then
@@ -1776,12 +1776,11 @@ if [ "$INSTALL" == "WR" ] || [ "$INSTALL" == "EW" ]; then
 			APACHE_CONFIG="/etc/httpd/httpd.conf"
 		fi
 		backUpFile $APACHE_CONFIG
-	fi
 
-	if [ "$OS" == "centos" ]; then
-		if [ -z "$(grep '<IfModule mpm_itk_module>' "$APACHE_CONFIG")" ]; then
-			echo " " >>"$APACHE_CONFIG"
-			cat >>"$APACHE_CONFIG" <<_EOF_
+		if [ "$OS" == "centos" ]; then
+			if [ -z "$(grep '<IfModule mpm_itk_module>' "$APACHE_CONFIG")" ]; then
+				echo " " >>"$APACHE_CONFIG"
+				cat >>"$APACHE_CONFIG" <<_EOF_
 			<IfModule mpm_itk_module>
 			AssignUserId $WEBGROUPNAME $WEBGROUPNAME
 			MaxClientsVHost 50
@@ -1790,11 +1789,11 @@ if [ "$INSTALL" == "WR" ] || [ "$INSTALL" == "EW" ]; then
 			LimitGIDRange 0 10000
 			</IfModule>
 _EOF_
-		fi
-	elif [ "$OS" == "slackware" ]; then
-		if [ -z "$(grep '<IfModule mpm_itk_module>' "$APACHE_CONFIG")" ]; then
-			echo " " >>"$APACHE_CONFIG"
-			cat >>"$APACHE_CONFIG" <<_EOF_
+			fi
+		elif [ "$OS" == "slackware" ]; then
+			if [ -z "$(grep '<IfModule mpm_itk_module>' "$APACHE_CONFIG")" ]; then
+				echo " " >>"$APACHE_CONFIG"
+				cat >>"$APACHE_CONFIG" <<_EOF_
 			<IfModule mpm_itk_module>
 			AssignUserId $WEBGROUPNAME $WEBGROUPNAME
 			MaxClientsVHost 50
@@ -1803,58 +1802,59 @@ _EOF_
 			LimitGIDRange 0 10000
 			</IfModule>
 _EOF_
-		fi
-	fi
-
-	if [ -z "$(grep 'ServerName localhost' $APACHE_CONFIG)" ]; then
-		echo " " >>$APACHE_CONFIG
-		echo '# Added to prevent error message Could not reliably determine the servers fully qualified domain name' >>$APACHE_CONFIG
-		echo 'ServerName localhost' >>$APACHE_CONFIG
-	fi
-
-	if [ -z "$(grep 'ServerTokens' $APACHE_CONFIG)" ]; then
-		echo " " >>$APACHE_CONFIG
-		echo '# Added to turn off the server information off in production systems' >>$APACHE_CONFIG
-		echo 'ServerTokens prod' >>$APACHE_CONFIG
-	fi
-
-	if [ -z "$(grep 'ServerSignature' $APACHE_CONFIG)" ]; then
-		echo " " >>$APACHE_CONFIG
-		echo '# Added to turn off the server signature in production systems' >>$APACHE_CONFIG
-		echo 'ServerSignature off' >>$APACHE_CONFIG
-		echo "" >>$APACHE_CONFIG
-	fi
-
-	if [ "$OS" == "debian" ] || [ "$OS" == "ubuntu" ]; then
-		APACHE_VERSION=$(apache2 -v | grep 'Server version')
-	elif [ "$OS" == "centos" ] || [ "$OS" == "slackware" ]; then
-		APACHE_VERSION=$(httpd -v | grep 'Server version')
-
-		if [ -z "$(grep '/home/'"$MASTERUSER"'/sites-enabled/' $APACHE_CONFIG)" ]; then
-			echo '# Load config files in the "/home/'"$MASTERUSER"'/sites-enabled" directory, if any.' >>$APACHE_CONFIG
-			if [ "$OS" == "debian" ] || [ "$OS" == "ubuntu" ]; then
-				if [[ "$APACHE_VERSION" =~ .*Apache/2.2.* ]]; then
-					echo "Include /home/$MASTERUSER/sites-enabled/" >>$APACHE_CONFIG
-				else
-					echo "IncludeOptional /home/$MASTERUSER/sites-enabled/*.conf" >>$APACHE_CONFIG
-				fi
-			elif [ "$OS" == "centos" ]; then
-				if [[ $APACHE_VERSION =~ .*Apache/2.2.* ]]; then
-					echo "Include /home/$MASTERUSER/sites-enabled/" >>$APACHE_CONFIG
-				else
-					echo "IncludeOptional /home/$MASTERUSER/sites-enabled/*.conf" >>$APACHE_CONFIG
-				fi
 			fi
 		fi
 
-		if [ -f /etc/apache2/sites-enabled/000-default.conf ]; then
-			rm /etc/apache2/sites-enabled/000-default.conf
+		if [ -z "$(grep 'ServerName localhost' "$APACHE_CONFIG")" ]; then
+			echo " " >>$APACHE_CONFIG
+			echo '# Added to prevent error message Could not reliably determine the servers fully qualified domain name' >>$APACHE_CONFIG
+			echo 'ServerName localhost' >>$APACHE_CONFIG
+		fi
+
+		if [ -z "$(grep 'ServerTokens' "$APACHE_CONFIG")" ]; then
+			echo " " >>$APACHE_CONFIG
+			echo '# Added to turn off the server information off in production systems' >>$APACHE_CONFIG
+			echo 'ServerTokens prod' >>$APACHE_CONFIG
+		fi
+
+		if [ -z "$(grep 'ServerSignature' "$APACHE_CONFIG")" ]; then
+			echo " " >>$APACHE_CONFIG
+			echo '# Added to turn off the server signature in production systems' >>$APACHE_CONFIG
+			echo 'ServerSignature off' >>$APACHE_CONFIG
+			echo "" >>$APACHE_CONFIG
 		fi
 
 		if [ "$OS" == "debian" ] || [ "$OS" == "ubuntu" ]; then
-			okAndSleep "Activating Apache mod_rewrite module."
-			a2enmod rewrite
-			a2enmod version 2>/dev/null
+			APACHE_VERSION=$(apache2 -v | grep 'Server version')
+		elif [ "$OS" == "centos" ] || [ "$OS" == "slackware" ]; then
+			APACHE_VERSION=$(httpd -v | grep 'Server version')
+
+			if [ -z "$(grep '/home/'"$MASTERUSER"'/sites-enabled/' "$APACHE_CONFIG")" ]; then
+				echo '# Load config files in the "/home/'"$MASTERUSER"'/sites-enabled" directory, if any.' >>$APACHE_CONFIG
+				if [ "$OS" == "debian" ] || [ "$OS" == "ubuntu" ]; then
+					if [[ "$APACHE_VERSION" =~ .*Apache/2.2.* ]]; then
+						echo "Include /home/$MASTERUSER/sites-enabled/" >>$APACHE_CONFIG
+					else
+						echo "IncludeOptional /home/$MASTERUSER/sites-enabled/*.conf" >>$APACHE_CONFIG
+					fi
+				elif [ "$OS" == "centos" ]; then
+					if [[ $APACHE_VERSION =~ .*Apache/2.2.* ]]; then
+						echo "Include /home/$MASTERUSER/sites-enabled/" >>$APACHE_CONFIG
+					else
+						echo "IncludeOptional /home/$MASTERUSER/sites-enabled/*.conf" >>$APACHE_CONFIG
+					fi
+				fi
+			fi
+
+			if [ -f /etc/apache2/sites-enabled/000-default.conf ]; then
+				rm /etc/apache2/sites-enabled/000-default.conf
+			fi
+
+			if [ "$OS" == "debian" ] || [ "$OS" == "ubuntu" ]; then
+				okAndSleep "Activating Apache mod_rewrite module."
+				a2enmod rewrite
+				a2enmod version 2>/dev/null
+			fi
 		fi
 	fi
 	#TODO: Logrotate
