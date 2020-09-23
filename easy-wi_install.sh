@@ -1771,7 +1771,7 @@ _EOF_
 	#TODO: Logrotate
 fi
 
-if ([ "$INSTALL" == "WR" ] || [ "$INSTALL" == "EW" ]) && [ "$WEBSERVER" != "None" ]; then
+if ([ "$INSTALL" == "WR" ] || [ "$INSTALL" == "EW" ] && [ "$WEBSERVER" != "None" ]); then
 	if [ "$WEBSERVER" == "Lighttpd" ]; then
 		backUpFile /etc/lighttpd/lighttpd.conf
 		echo "include_shell \"find /home/$MASTERUSER/sites-enabled/ -maxdepth 1 -type f -exec cat {} \;\"" >>/etc/lighttpd/lighttpd.conf
