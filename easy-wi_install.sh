@@ -771,7 +771,7 @@ if [ "$INSTALL" == "EW" ] || [ "$INSTALL" == "WR" ]; then
 fi
 
 # If we need to install and configure a webspace than we need to identify the groupID
-if [ "$INSTALL" == "EW" ] || [ "$INSTALL" == "WR" ]; then
+if ([ "$INSTALL" == "EW" ] || [ "$INSTALL" == "WR" ] && [ "$WEBSERVER" != "None" ]); then
 	if [ "$OS" == "debian" ] || [ "$OS" == "ubuntu" ]; then
 		WEBGROUPNAME="www-data"
 		WEBGROUPTMPID="33"
@@ -956,7 +956,7 @@ if [ "$INSTALL" != "MY" ]; then
 	fi
 fi
 
-if [ "$INSTALL" == "WR" ] || [ "$INSTALL" == "EW" ]; then
+if ([ "$INSTALL" == "WR" ] || [ "$INSTALL" == "EW" ] && [ "$WEBSERVER" != "None" ]); then
 	makeDir /home/"$MASTERUSER"/sites-enabled/
 	makeDir /home/"$MASTERUSER"/skel
 	makeDir /home/"$MASTERUSER"/skel/htdocs
@@ -965,7 +965,7 @@ if [ "$INSTALL" == "WR" ] || [ "$INSTALL" == "EW" ]; then
 	makeDir /home/"$MASTERUSER"/skel/tmp
 	chown -cR "$MASTERUSER":$WEBGROUPNAME /home/"$MASTERUSER" >/dev/null 2>&1
 
-    #Fix Error 403 - You don't have permission to access /install/install.php on this server.
+  #Fix Error 403 - You don't have permission to access /install/install.php on this server.
 	chmod +x /home/"$MASTERUSER"/ >/dev/null 2>&1
 	chmod +x /home/"$MASTERUSER"/skel/ >/dev/null 2>&1
 	chmod +x /home/"$MASTERUSER"/skel/htdocs >/dev/null 2>&1
@@ -1771,7 +1771,7 @@ _EOF_
 	#TODO: Logrotate
 fi
 
-if [ "$INSTALL" == "WR" ] || [ "$INSTALL" == "EW" ]; then
+if ([ "$INSTALL" == "WR" ] || [ "$INSTALL" == "EW" ]) && [ "$WEBSERVER" != "None" ]; then
 	if [ "$WEBSERVER" == "Lighttpd" ]; then
 		backUpFile /etc/lighttpd/lighttpd.conf
 		echo "include_shell \"find /home/$MASTERUSER/sites-enabled/ -maxdepth 1 -type f -exec cat {} \;\"" >>/etc/lighttpd/lighttpd.conf
@@ -1783,8 +1783,8 @@ if [ "$INSTALL" == "WR" ] || [ "$INSTALL" == "EW" ]; then
 		elif [ "$OS" == "slackware" ]; then
 			APACHE_CONFIG="/etc/httpd/httpd.conf"
 		fi
+		backUpFile $APACHE_CONFIG
 	fi
-	backUpFile $APACHE_CONFIG
 
 	if [ "$OS" == "centos" ]; then
 		if [ -z "$(grep '<IfModule mpm_itk_module>' "$APACHE_CONFIG")" ]; then
@@ -1908,7 +1908,7 @@ if [ "$INSTALL" == "GS" ] || [ "$INSTALL" == "WR" ]; then
 		echo "$MASTERUSER ALL = (ALL, !root:$MASTERUSER) NOPASSWD: /bin/bash /home/$MASTERUSER/temp/*.sh" >>/etc/sudoers
 	fi
 
-	if [ "$INSTALL" == "WR" ]; then
+	if [ "$INSTALL" == "WR" ] && [ "$WEBSERVER" != "None" ]; then
 		if [ "$OS" == "debian" ] || [ "$OS" == "ubuntu" ]; then
 			if [ "$WEBSERVER" == "Lighttpd" ]; then
 				HTTPDBIN=$(lighttpd)
@@ -1935,7 +1935,7 @@ if [ "$INSTALL" == "GS" ] || [ "$INSTALL" == "WR" ]; then
 	fi
 fi
 
-if [ "$INSTALL" == "WR" ]; then
+if [ "$INSTALL" == "WR" ] && [ "$WEBSERVER" != "None" ]; then
 	chown -cR "$MASTERUSER":$WEBGROUPNAME /home/"$MASTERUSER"/ >/dev/null 2>&1
 
 	cyanMessage " "
@@ -1960,7 +1960,7 @@ if [ "$INSTALL" == "WR" ]; then
 	fi
 fi
 
-if ([ "$INSTALL" == "GS" ] || [ "$INSTALL" == "WR" ] && [ "$QUOTAINSTALL" == "Yes" ]); then
+if ([ "$INSTALL" == "GS" ] || [ "$INSTALL" == "WR" ] && [ "$QUOTAINSTALL" == "Yes" ] && [ "$WEBSERVER" != "None" ]); then
 	cyanMessage " "
 	greenOneLineMessage "The setquota command is: "
 	cyanMessage "sudo $(which setquota) %cmd%"
