@@ -771,7 +771,7 @@ if [ "$INSTALL" == "EW" ] || [ "$INSTALL" == "WR" ]; then
 fi
 
 # If we need to install and configure a webspace than we need to identify the groupID
-if ([ "$INSTALL" == "EW" ] || [ "$INSTALL" == "WR" ] && [ "$WEBSERVER" != "None" ]); then
+if [ "$INSTALL" == "EW" ] || [ "$INSTALL" == "WR" ]; then
 	if [ "$OS" == "debian" ] || [ "$OS" == "ubuntu" ]; then
 		WEBGROUPNAME="www-data"
 		WEBGROUPTMPID="33"
