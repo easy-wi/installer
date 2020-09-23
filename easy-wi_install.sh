@@ -864,17 +864,11 @@ if [ "$INSTALL" == "VS" ]; then
 		DOWNLOAD_URL_VERSION="https://files.teamspeak-services.com/releases/server/$VERSION/teamspeak3-server_linux_$ARCH-$VERSION.tar.bz2"
 		STATUS=$(curl -I "$DOWNLOAD_URL_VERSION" 2>&1 | grep "HTTP/" | awk '{print $2}')
 
-		#if [ "$STATUS" == "200" ]; then
 		DOWNLOAD_URL=$DOWNLOAD_URL_VERSION
 		break
-		#fi
 	done
 
-	#if [ "$STATUS" == "200" -a -n "$DOWNLOAD_URL" ]; then
 	okAndSleep "Detected latest server version as $VERSION with download URL $DOWNLOAD_URL"
-	#else
-	#errorAndExit "Could not detect latest server version"
-	#fi
 fi
 
 if [ "$INSTALL" != "MY" ]; then
@@ -895,14 +889,12 @@ if [ "$INSTALL" != "MY" ]; then
 		fi
 	fi
 
-	##if [ -n "$(id "$1" 2>/dev/null)" ]; then
-		if [ "$INSTALL" == "EW" ] || [ "$INSTALL" == "WR" ]; then
-			$USERADD -m -b /home -s /bin/bash -g $WEBGROUPNAME "$MASTERUSER"
-		else
-			$GROUPADD "$MASTERUSER"
-			$USERADD -m -b /home -s /bin/bash -g "$MASTERUSER" "$MASTERUSER"
-		fi
-	##fi
+	if [ "$INSTALL" == "EW" ] || [ "$INSTALL" == "WR" ]; then
+		$USERADD -m -b /home -s /bin/bash -g "$WEBGROUPNAME" "$MASTERUSER"
+	else
+		$GROUPADD "$MASTERUSER"
+		$USERADD -m -b /home -s /bin/bash -g "$MASTERUSER" "$MASTERUSER"
+	fi
 
 	cyanMessage " "
 	cyanMessage "Create key or set password for login?"
