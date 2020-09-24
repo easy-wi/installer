@@ -286,36 +286,32 @@ clearPassword() {
 }
 
 portRange() {
-
 	RANDOMPORTRANGE=$(seq 1001 65536 | shuf -n 1)
-
 	PORT_RANGE=$((RANDOMPORTRANGE + 200))
-
 	echo "$RANDOMPORTRANGE" $PORT_RANGE
-
 }
 
-function setPath() {
-## As standard sudo users on Slackware do not have access to /sbin and /usr/sbin
-## directories which blocks access to usermod, userdel and useradd commands.
+setPath() {
+	## As standard sudo users on Slackware do not have access to /sbin and /usr/sbin
+	## directories which blocks access to usermod, userdel and useradd commands.
 
-CURRENTPATH=$(cat /etc/profile | grep PATH= | sed '/$PATH/d')
-CORRECTPATH='PATH="/usr/local/bin:/usr/bin:/bin:/usr/games:/sbin:/usr/sbin"'
+	CURRENTPATH=$(cat /etc/profile | grep PATH= | sed '/$PATH/d')
+	CORRECTPATH='PATH="/usr/local/bin:/usr/bin:/bin:/usr/games:/sbin:/usr/sbin"'
 
-## If the PATH variable doesn't exist .. Yikes .. let's GTFO
- yellowMessage " "
- yellowMessage "Checking if PATH is set ...."
- if [ $CURRENTPATH == "" ]; then
- 	errorAndExit "No PATH detected, you need to fix this! ... Exiting"
- 	exit 1
- fi
+	## If the PATH variable doesn't exist .. Yikes .. let's GTFO
+	yellowMessage " "
+	yellowMessage "Checking if PATH is set ...."
+	if [ $CURRENTPATH == "" ]; then
+		errorAndExit "No PATH detected, you need to fix this! ... Exiting"
+		exit 1
+	fi
 
-## Write the new PATH to /etc/profile if it's not correct already
-if [ $CURRENTPATH != $CORRECTPATH ]; then
-yellowMessage " "
-yellowMessage "Writing new PATH to /etc/profile ..."
-sed -i "s|$CURRENTPATH|"'PATH="/usr/local/bin:/usr/bin:/bin:/usr/games:/sbin:/usr/sbin"|' /etc/profile
-fi
+	## Write the new PATH to /etc/profile if it's not correct already
+	if [ $CURRENTPATH != $CORRECTPATH ]; then
+		yellowMessage " "
+		yellowMessage "Writing new PATH to /etc/profile ..."
+		sed -i "s|$CURRENTPATH|"'PATH="/usr/local/bin:/usr/bin:/bin:/usr/games:/sbin:/usr/sbin"|' /etc/profile
+	fi
 }
 
 cyanMessage " "
@@ -489,7 +485,6 @@ if [ -f /etc/slackware-version ]; then
 	OSVERSION_TMP=$(grep '\bVERSION_ID=\b' /etc/os-release | sed -n 's/^.*VERSION_ID=//p')
 	OSBRANCH=$(grep '\bVERSION_CODENAME=\b' /etc/os-release | sed -n 's/^.*VERSION_CODENAME=//p')
 else
-
 	OS=$(lsb_release -i 2>/dev/null | grep 'Distributor' | awk '{print tolower($3)}')
 	OSVERSION_TMP=$(lsb_release -r 2>/dev/null | grep 'Release' | awk '{print $2}')
 	OSBRANCH=$(lsb_release -c 2>/dev/null | grep 'Codename' | awk '{print $2}')
@@ -523,10 +518,10 @@ else
 	elif [ "$OS" == "centos" ]; then
 		OSVERSION=$(echo "$OSVERSION_TMP" | tr -d . | cut -c 1-2)
 	elif [ "$OS" == "debian" ]; then
-		if [ "$OSVERSION_TMP" == "10" ]; then
-			OSVERSION=$(echo "$OSVERSION_TMP")
+		if [ $(echo -n "$OSVERSION" | wc -c) == "2" ]; then
+			OSVERSION=$(echo "$OSVERSION_TMP")0
 		else
-			OSVERSION=$(echo "$OSVERSION_TMP" | tr -d . | cut -c 1)
+			OSVERSION=$(echo "$OSVERSION_TMP" | tr -d . | cut -c 1)0
 		fi
 	fi
 fi
@@ -537,7 +532,7 @@ else
 	okAndSleep "Detected architecture: $ARCH"
 fi
 
-if [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -lt "1604" ] || [ "$OS" == "debian" ] && [ "$OSVERSION" -lt "8" ] || [ "$OS" == "centos" ] && [ "$OSVERSION" -lt "60" ]; then
+if [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -lt "1604" ] || [ "$OS" == "debian" ] && [ "$OSVERSION" -lt "90" ] || [ "$OS" == "centos" ] && [ "$OSVERSION" -lt "60" ]; then
 	echo
 	echo
 	redMessage "Error: Your OS \"$OS $OSVERSION_TMP\" is not more supported from Easy-WI Installer."
@@ -554,7 +549,7 @@ if [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -lt "1604" ] || [ "$OS" == "debian" ]
 	if [ "$OS" == "ubuntu" ]; then
 		OSBRANCH_NEW="xenial (Ubuntu 16.04 LTS)"
 	else
-		OSBRANCH_NEW="jessie (Debian 8)"
+		OSBRANCH_NEW="stretch (Debian 9)"
 	fi
 
 	cyanMessage "Upgrade to $OS $OSBRANCH_NEW?"
@@ -572,7 +567,7 @@ if [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -lt "1604" ] || [ "$OS" == "debian" ]
 			checkInstall update-manager-core
 			do-release-upgrade
 		elif [ "$OS" == "debian" ]; then
-			sed -i "s/$OSBRANCH/jessie/g" /etc/apt/sources.list
+			sed -i "s/$OSBRANCH/stretch/g" /etc/apt/sources.list
 			$INSTALLER -y update
 			$INSTALLER -y upgrade
 			$INSTALLER -y dist-upgrade -u
@@ -734,7 +729,7 @@ if [ "$INSTALL" == "EW" ] || [ "$INSTALL" == "WR" ]; then
 				cyanMessage " "
 				okAndSleep "Adding entries to /etc/apt/sources.list"
 
-				if [ "$OSBRANCH" == "jessie" ] || [ "$OSBRANCH" == "stretch" ]; then
+				if [ "$OSBRANCH" == "stretch" ]; then
 					checkInstall software-properties-common
 				fi
 
@@ -1248,9 +1243,9 @@ else
 fi
 
 if [ "$PHPINSTALL" == "Yes" ]; then
-	if [ "$OS" == "debian" ] && [ "$OSVERSION" -ge "10" ]; then
+	if [ "$OS" == "debian" ] && [ "$OSVERSION" -ge "100" ]; then
 		USE_PHP_VERSION='7.3'
-	elif [ "$OS" == "debian" ] && [ "$OSVERSION" -ge "85" ] || [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -lt "1610" ]; then
+	elif ([ "$OS" == "debian" ] && [ "$OSVERSION" -ge "85" ]) || ([ "$OS" == "ubuntu" ] && [ "$OSVERSION" -lt "1610" ]); then
 		USE_PHP_VERSION='7.0'
 	elif [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -ge "1610" ] && [ "$OSVERSION" -lt "1803" ]; then
 		USE_PHP_VERSION='7.1'
@@ -1291,14 +1286,14 @@ if [ "$PHPINSTALL" == "Yes" ]; then
 		checkInstall php${USE_PHP_VERSION}-common
 		checkInstall php${USE_PHP_VERSION}-curl
 		checkInstall php${USE_PHP_VERSION}-gd
-		if [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -lt "1803" ] || [ "$OS" == "debian" ] && [ "$OSVERSION" -lt "10" ]; then
+		if ([ "$OS" == "ubuntu" ] && [ "$OSVERSION" -lt "1803" ]) || ([ "$OS" == "debian" ] && [ "$OSVERSION" -lt "100" ]); then
 			checkInstall php${USE_PHP_VERSION}-mcrypt
 		elif [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -ge "1804" ]; then
 			checkInstall libsodium-dev
 		fi
 		checkInstall php${USE_PHP_VERSION}-mysql
 		checkInstall php${USE_PHP_VERSION}-cli
-		if [ "$OS" == "debian" ] && [ "$OSVERSION" -ge "85" ] || [ "$OS" == "debian" ] && [ "$OSVERSION" == "10" ] || [ "$OS" == "ubuntu" ]; then
+		if ([ "$OS" == "debian" ] && [ "$OSVERSION" -ge "85" ]) || ([ "$OS" == "debian" ] && [ "$OSVERSION" == "100" ]) || [ "$OS" == "ubuntu" ]; then
 			checkInstall php${USE_PHP_VERSION}-xml
 			checkInstall php${USE_PHP_VERSION}-mbstring
 			checkInstall php${USE_PHP_VERSION}-zip
@@ -2036,7 +2031,7 @@ EOF
 
 			$INSTALLER -y install zlib1g
 			$INSTALLER -y install libc6-i386
-			if [ "$OS" == "debian" ] && [ "$OSVERSION" -gt "9" ] || [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -gt "1803" ]; then
+			if [ "$OS" == "debian" ] && [ "$OSVERSION" -gt "90" ] || [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -gt "1803" ]; then
 				$INSTALLER -y install lib32readline7
 				$INSTALLER -y install libreadline7:i386
 			else
@@ -2058,7 +2053,7 @@ EOF
 			$INSTALLER -y install libncursesw5-dev
 			$INSTALLER -y install zlib1g:i386
 		else
-			if [ "$OS" == "debian" ] && [ "$OSVERSION" -gt "9" ] || [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -gt "1803" ]; then
+			if [ "$OS" == "debian" ] && [ "$OSVERSION" -gt "90" ] || [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -gt "1803" ]; then
 				$INSTALLER -y install libreadline7 libncursesw5
 			else
 				$INSTALLER -y install libreadline5 libncursesw5
@@ -2320,19 +2315,7 @@ _EOF_
 			cyanMessage " "
 			okAndSleep "Installing package certbot"
 			if [ "$OS" == "debian" ]; then
-				if [ "$OSBRANCH" == "wheezy" ]; then
-					wget https://dl.eff.org/certbot-auto
-					chmod a+x certbot-auto
-				elif [ "$OSBRANCH" == "jessie" ]; then
-					if [ -z "$(grep jessie-backports /etc/apt/sources.list)" ]; then
-						okAndSleep "Adding jessie backports"
-						echo "deb http://ftp.de.debian.org/debian jessie-backports main" >>/etc/apt/sources.list
-					fi
-					$INSTALLER -y update
-					$INSTALLER -y install certbot -t jessie-backports
-				else
-					checkInstall certbot
-				fi
+				checkInstall certbot
 			elif [ "$OS" == "ubuntu" ]; then
 				add-apt-repository -y ppa:certbot/certbot
 				$INSTALLER -y update
@@ -2386,14 +2369,7 @@ _EOF_
 				service apache2 stop
 			fi
 			cyanMessage " "
-			if [ "$OS" == "debian" ] && [ "$OSBRANCH" == "wheezy" ]; then
-				/root/certbot-auto certonly --standalone -d "$IP_DOMAIN" -d www."$IP_DOMAIN"
-				if [ ! -d /etc/letsencrypt/live/"$IP_DOMAIN" ]; then
-					cyanMessage " "
-					redMessage 'Error in certificate.. it will be tried without "www."'
-					/root/certbot-auto certonly --standalone -d "$IP_DOMAIN"
-				fi
-			else
+			if [ "$OS" == "debian" ]; then
 				certbot certonly --standalone -d "$IP_DOMAIN" -d www."$IP_DOMAIN"
 				if [ ! -d /etc/letsencrypt/live/"$IP_DOMAIN" ]; then
 					cyanMessage " "
