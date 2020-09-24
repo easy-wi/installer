@@ -193,7 +193,7 @@ RestartWebserver() {
 		if [ "$WEBSERVER" == "Apache" ]; then
 			cyanMessage " "
 			okAndSleep "Restarting Apache2."
-			service apache2 restart 1>/dev/null
+			apache2ctl restart 1>/dev/null
 		elif [ "$WEBSERVER" == "Lighttpd" ]; then
 			cyanMessage " "
 			okAndSleep "Restarting Lighttpd."
@@ -518,10 +518,10 @@ else
 	elif [ "$OS" == "centos" ]; then
 		OSVERSION=$(echo "$OSVERSION_TMP" | tr -d . | cut -c 1-2)
 	elif [ "$OS" == "debian" ]; then
-		if [ $(echo -n "$OSVERSION" | wc -c) == "2" ]; then
-			OSVERSION=$(echo "$OSVERSION_TMP")0
+		if [ $(echo "$OSVERSION_TMP" | wc -c) == "6" ]; then
+			OSVERSION=$(echo "$OSVERSION_TMP" | tr -d . | cut -c 1-3)
 		else
-			OSVERSION=$(echo "$OSVERSION_TMP" | tr -d . | cut -c 1)0
+			OSVERSION=$(echo "$OSVERSION_TMP" | cut -c 1-3 | tr -d .)
 		fi
 	fi
 fi
@@ -1254,18 +1254,17 @@ if [ "$PHPINSTALL" == "Yes" ]; then
 	elif [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -eq "2004" ]; then
 		USE_PHP_VERSION='7.4'
 	elif [ "$OS" == "centos" ] && [ "$OSVERSION" -lt "80" ]; then
-
-        REMIREPO=$(yum list installed | grep "remi-release" | awk '{print $1}')
-        if [ -z "$REMIREPO" ]; then
-            checkInstall http://rpms.remirepo.net/enterprise/remi-release-7.rpm
-        fi
+		REMIREPO=$(yum list installed | grep "remi-release" | awk '{print $1}')
+		if [ -z "$REMIREPO" ]; then
+			checkInstall http://rpms.remirepo.net/enterprise/remi-release-7.rpm
+		fi
 		yum-config-manager --enable remi-php71
 		RUNUPDATE="1"
 	elif [ "$OS" == "centos" ] && [ "$OSVERSION" -ge "80" ]; then
-        REMIREPO=$(yum list installed | grep "remi-release" | awk '{print $1}')
-        if [ -z "$REMIREPO" ]; then
-            checkInstall http://rpms.remirepo.net/enterprise/remi-release-8.rpm
-        fi
+		REMIREPO=$(yum list installed | grep "remi-release" | awk '{print $1}')
+		if [ -z "$REMIREPO" ]; then
+			checkInstall http://rpms.remirepo.net/enterprise/remi-release-8.rpm
+		fi
 		yum-config-manager --enable remi-php72
 		RUNUPDATE="1"
 	else
