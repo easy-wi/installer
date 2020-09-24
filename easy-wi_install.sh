@@ -518,10 +518,10 @@ else
 	elif [ "$OS" == "centos" ]; then
 		OSVERSION=$(echo "$OSVERSION_TMP" | tr -d . | cut -c 1-2)
 	elif [ "$OS" == "debian" ]; then
-		if [ $(echo "$OSVERSION_TMP" | wc -c) == "6" ]; then
-			OSVERSION=$(echo "$OSVERSION_TMP" | tr -d . | cut -c 1-3)
+		if [ $(echo "$OSVERSION_TMP" | wc -c) == "3" ]; then
+			OSVERSION=$(echo "$OSVERSION_TMP")0
 		else
-			OSVERSION=$(echo "$OSVERSION_TMP" | cut -c 1-3 | tr -d .)
+			OSVERSION=$(echo "$OSVERSION_TMP" | tr -d . | cut -c 1-2)
 		fi
 	fi
 fi
