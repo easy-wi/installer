@@ -19,11 +19,9 @@ LATEST_VERSION=`wget -O installer.tar.gz https://github.com/easy-wi/installer/ar
 tar zxf installer.tar.gz && mv ./installer-*/easy-wi_install.sh ./
 rm -r installer.tar.gz installer-*/
 
-#if you runnig as user (not root):
+#start the installer with (sudo required):
 sudo bash ./easy-wi_install.sh
 
-#if you runnig as root:
-bash ./easy-wi_install.sh
 ```
 ___
 
