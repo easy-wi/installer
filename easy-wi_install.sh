@@ -1268,7 +1268,7 @@ if [ "$PHPINSTALL" == "Yes" ]; then
 		yum-config-manager --enable remi-php72
 		RUNUPDATE="1"
 	else
-		USE_PHP_VERSION='5'
+		USE_PHP_VERSION='7.4'
 	fi
 
 	if [ "$RUNUPDATE" == "1" ]; then
