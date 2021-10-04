@@ -1128,6 +1128,7 @@ gpgcheck=1" >/etc/yum.repos.d/MariaDB.repo
 	else
 		errorAndExit "$SQL Database not fully installed!"
 	fi
+
 	RestartDatabase
 
 	cyanMessage " "
@@ -1200,6 +1201,11 @@ _EOF_
 
 	MYSQL_VERSION=$(mysql -V | awk {'print $5'} | tr -d ,)
 
+	# FIX MariaDB Install (#107)
+	if [ "$MYSQL_VERSION" = "Linux" ]; then
+		MYSQL_VERSION=$(mysql -V | awk {'print $3'} | tr -d . | cut -c 1-2)
+	fi
+
 	if [ "$OS" == "debian" ] || [ "$OS" == "ubuntu" ]; then
 		if [ -n "$(grep -E 'key_buffer[[:space:]]*=' /etc/mysql/my.cnf)" ] && [ "printf ""${MYSQL_VERSION}"\n5.5" | sort -V | tail -n 1" != "5.5" ]; then
 			sed -i -e "51s/key_buffer[[:space:]]*=/key_buffer_size = /g" $MYSQL_CONF
@@ -1207,7 +1213,11 @@ _EOF_
 		fi
 		if [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -ge "1603" ] && [ ! -f /etc/mysql/conf.d/disable_strict_mode.cnf ]; then
 			echo '[mysqld]' >/etc/mysql/conf.d/disable_strict_mode.cnf
-			echo 'sql_mode=IGNORE_SPACE,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION' >>/etc/mysql/conf.d/disable_strict_mode.cnf
+			if [ "$MYSQL_VERSION" -lt "80" ]; then
+				echo 'sql_mode=IGNORE_SPACE,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION' >>/etc/mysql/conf.d/disable_strict_mode.cnf
+      else
+        echo 'sql_mode=IGNORE_SPACE,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' >>/etc/mysql/conf.d/disable_strict_mode.cnf
+      fi
 		fi
 	fi
 
