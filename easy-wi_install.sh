@@ -2292,8 +2292,8 @@ _EOF_
 	fi
 
 	# FIX MariaDB Install (#107)
-	if [ "$MYSQL" -le "80" ]; then
-		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "CREATE DATABASE IF NOT EXISTS easy_wi; GRANT ALL ON easy_wi.* TO 'easy_wi'@'localhost' IDENTIFIED BY '$DB_PASSWORD'; FLUSH PRIVILEGES;"
+	if [ "$MYSQL_VERSION" -le "80" ]; then
+    mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "CREATE DATABASE IF NOT EXISTS easy_wi; CREATE USER IF NOT EXISTS 'easy_wi'@'localhost' IDENTIFIED BY '$DB_PASSWORD'; GRANT ALL PRIVILEGES ON easy_wi.* TO 'easy_wi'@'localhost' WITH GRANT OPTION; FLUSH PRIVILEGES;"
 	else
 		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "CREATE DATABASE IF NOT EXISTS easy_wi; CREATE USER IF NOT EXISTS 'easy_wi'@'localhost' IDENTIFIED BY '$DB_PASSWORD'; GRANT ALL ON easy_wi.* TO 'easy_wi'@'localhost'; FLUSH PRIVILEGES;"
 	fi
