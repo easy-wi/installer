@@ -1289,6 +1289,8 @@ if [ "$PHPINSTALL" == "Yes" ]; then
 	fi
 
 	if [ "$OS" == "debian" ] || [ "$OS" == "ubuntu" ]; then
+		sudo add-apt-repository ppa:ondrej/php
+		
 		if [ "$WEBSERVER" == "Apache" ]; then
 			checkInstall php${USE_PHP_VERSION}
 		fi
