@@ -1268,7 +1268,8 @@ if [ "$PHPINSTALL" == "Yes" ]; then
 		if [ -z "$REMIREPO" ]; then
 			checkInstall http://rpms.remirepo.net/enterprise/remi-release-7.rpm
 		fi
-		yum-config-manager --enable remi-php71
+		yum-config-manager --enable remi-
+		1
 		RUNUPDATE="1"
 	elif [ "$OS" == "centos" ] && [ "$OSVERSION" -ge "80" ]; then
 		REMIREPO=$(yum list installed | grep "remi-release" | awk '{print $1}')
@@ -1292,6 +1293,8 @@ if [ "$PHPINSTALL" == "Yes" ]; then
 		if [ "$WEBSERVER" == "Apache" ]; then
 			checkInstall php${USE_PHP_VERSION}
 		fi
+		sudo add-apt-repository ppa:ondrej/php
+		
 		checkInstall php${USE_PHP_VERSION}-common
 		checkInstall php${USE_PHP_VERSION}-curl
 		checkInstall php${USE_PHP_VERSION}-gd
