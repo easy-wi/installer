@@ -359,7 +359,7 @@ elif [ -f /etc/os-release ]; then
 	fi
 fi
 
-INSTALLER_VERSION="3.2"
+INSTALLER_VERSION="3.1"
 PKILL=$(which pkill)
 USERADD=$(which useradd)
 USERMOD=$(which usermod)
@@ -2036,7 +2036,9 @@ EOF
 			okAndSleep "Installing 32bit support for 64bit systems."
 
 			dpkg --add-architecture i386
+			$INSTALLER -y install libcurl3-gnutls:i386
 			$INSTALLER -y update
+			$INSTALLER -y upgrade
 
 			$INSTALLER -y install zlib1g
 			$INSTALLER -y install libc6-i386
