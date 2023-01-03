@@ -2112,7 +2112,7 @@ EOF
 	cd /home/"$MASTERUSER"/masterserver || exit
 	makeDir /home/"$MASTERUSER"/masterserver/steamCMD/
 	cd /home/"$MASTERUSER"/masterserver/steamCMD/ || exit
-	curl --remote-name http://media.steampowered.com/client/steamcmd_linux.tar.gz
+	curl --remote-name https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz
 
 	if [ -f steamcmd_linux.tar.gz ]; then
 		tar xfvz steamcmd_linux.tar.gz
