@@ -359,7 +359,7 @@ elif [ -f /etc/os-release ]; then
 	fi
 fi
 
-INSTALLER_VERSION="3.1"
+INSTALLER_VERSION="3.2"
 PKILL=$(which pkill)
 USERADD=$(which useradd)
 USERMOD=$(which usermod)
