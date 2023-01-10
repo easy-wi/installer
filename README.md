@@ -25,7 +25,7 @@ sudo bash ./easy-wi_install.sh
 ```
 ___
 
-## Unstable Installer (Developer Version)
+## Unstable Installer (Developer Version) [Newer Java Installer Included]
   
 ```sh 
 wget --no-check-certificate https://raw.githubusercontent.com/easy-wi/installer/master/easy-wi_install.sh
