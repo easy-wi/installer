@@ -12,7 +12,7 @@ Supported OS:
 
 ___
 
-## Stable Installer up to Debian 8, 9 and 10, Ubuntu 16.10, 18.04, 18.10 and 20.04 and CentOS 7 and 8
+## Stable Installer up to Debian 8, 9 and 10, Ubuntu 16.10, 18.04, 18.10 and 20.04 and CentOS 7 and 8 [NOT UPDATED TO JDK-17]
   
 ```sh
 wget -O installer.tar.gz https://github.com/easy-wi/installer/archive/3.2.tar.gz
@@ -25,7 +25,7 @@ sudo bash ./easy-wi_install.sh
 ```
 ___
 
-## Unstable Installer (Developer Version) [Newer Java Installer Included]
+## Unstable Installer (Developer Version) [UPDATED TO JDK-17]
   
 ```sh 
 wget --no-check-certificate https://raw.githubusercontent.com/easy-wi/installer/master/easy-wi_install.sh
