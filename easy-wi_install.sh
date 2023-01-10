@@ -359,7 +359,7 @@ elif [ -f /etc/os-release ]; then
 	fi
 fi
 
-INSTALLER_VERSION="3.2"
+INSTALLER_VERSION=3.2
 PKILL=$(which pkill)
 USERADD=$(which useradd)
 USERMOD=$(which usermod)
@@ -1987,14 +1987,14 @@ if [ "$INSTALL" == "GS" ]; then
 		esac
 	done
 
-	if [ "$OPTION" == "Yes" ]; then
+if [ "$OPTION" == "Yes" ]; then
 		cyanMessage " "
-		okAndSleep "Adding AdoptOpenJDK backports"
+		okAndSleep "Adding ADOPTIUM Temurin backports"
 		if [ "$OS" == "debian" ] || [ "$OS" == "ubuntu" ]; then
-			if [ -z "$(grep adoptopenjdk /etc/apt/sources.list)" ]; then
+			if [ -z "$(grep adoptium //etc/apt/sources.list.d/adoptium.list)" ]; then
 				$INSTALLER install apt-transport-https ca-certificates dirmngr gnupg software-properties-common -y
-				wget -qO - https://adoptopenjdk.jfrog.io/adoptopenjdk/api/gpg/key/public | sudo apt-key add -
-				add-apt-repository --yes https://adoptopenjdk.jfrog.io/adoptopenjdk/deb/
+				wget -O - https://packages.adoptium.net/artifactory/api/gpg/key/public | sudo apt-key add -
+				echo "deb https://packages.adoptium.net/artifactory/deb $(awk -F= '/^VERSION_CODENAME/{print$2}' /etc/os-release) main" | sudo tee /etc/apt/sources.list.d/adoptium.list
 			fi
 		elif [ "$OS" == "centos" ]; then
 			cat <<EOF >/etc/yum.repos.d/adoptopenjdk.repo
@@ -2007,8 +2007,9 @@ gpgkey=https://adoptopenjdk.jfrog.io/adoptopenjdk/api/gpg/key/public
 EOF
 		fi
 		$INSTALLER -y update
-		checkInstall adoptopenjdk-16-hotspot
+		checkInstall temurin-17-jdk
 	fi
+
 
 	cyanMessage " "
 	okAndSleep "Creating folders and files"
