@@ -2007,7 +2007,7 @@ gpgkey=https://adoptopenjdk.jfrog.io/adoptopenjdk/api/gpg/key/public
 EOF
 		fi
 		$INSTALLER -y update
-		checkInstall adoptopenjdk-8-hotspot
+		checkInstall adoptopenjdk-16-hotspot
 	fi
 
 	cyanMessage " "
