@@ -89,16 +89,6 @@ removeIfExists() {
 	fi
 }
 
-runSpinner() {
-	SPINNER=("-" "\\" "|" "/")
-
-	for SEQUENCE in $(seq 1 "$1"); do
-		for I in "${SPINNER[@]}"; do
-			echo -ne "\b$I"
-			sleep 0.1
-		done
-	done
-}
 
 okAndSleep() {
 	greenMessage "$1"
@@ -857,7 +847,6 @@ if [ "$INSTALL" == "VS" ]; then
 
 	for VERSION in $(curl -s "https://files.teamspeak-services.com/releases/server/?C=M;O=D" | grep -Po '(?<=href=")[0-9]+(\.[0-9]+){2,3}(?=")' | sort -Vr); do
 		DOWNLOAD_URL_VERSION="https://files.teamspeak-services.com/releases/server/$VERSION/teamspeak3-server_linux_$ARCH-$VERSION.tar.bz2"
-		STATUS=$(curl -I "$DOWNLOAD_URL_VERSION" 2>&1 | grep "HTTP/" | awk '{print $2}')
 
 		DOWNLOAD_URL=$DOWNLOAD_URL_VERSION
 		break
@@ -1070,7 +1059,7 @@ if [ "$INSTALL" == "EW" ] || [ "$INSTALL" == "MY" ]; then
 # http://downloads.mariadb.org/mariadb/repositories/
 [mariadb]
 name = MariaDB
-baseurl = http://yum.mariadb.org/"$MARIADB_VERSION"/centos"$MARIADB_TMP_VERSION"-amd64
+baseurl = "http://yum.mariadb.org/"$MARIADB_VERSION"/centos"$MARIADB_TMP_VERSION"-amd64"
 gpgkey=https://yum.mariadb.org/RPM-GPG-KEY-MariaDB
 gpgcheck=1" >/etc/yum.repos.d/MariaDB.repo
 				fi
@@ -1977,7 +1966,7 @@ if [ "$INSTALL" == "GS" ]; then
 	fi
 
 	cyanMessage " "
-	cyanMessage "Java JDK 17 will be required for running Minecraft and its mods. Shall it be installed? (CentOS may install JRE-8)"
+	cyanMessage "Java JDK 17 will be required for running Minecraft and its mods. Shall it be installed?"
 	OPTIONS=("Yes" "No" "Quit")
 	select OPTION in "${OPTIONS[@]}"; do
 		case "$REPLY" in
@@ -1997,13 +1986,13 @@ if [ "$INSTALL" == "GS" ]; then
 				echo "deb https://packages.adoptium.net/artifactory/deb $(awk -F= '/^VERSION_CODENAME/{print$2}' /etc/os-release) main" | sudo tee /etc/apt/sources.list.d/adoptium.list
 			fi
 		elif [ "$OS" == "centos" ]; then
-			cat <<EOF >/etc/yum.repos.d/adoptopenjdk.repo
-[AdoptOpenJDK]
-name=AdoptOpenJDK
-baseurl=http://adoptopenjdk.jfrog.io/adoptopenjdk/rpm/centos/7/$(uname -m)
+			cat <<EOF > /etc/yum.repos.d/adoptium.repo
+[Adoptium]
+name=Adoptium
+baseurl=https://packages.adoptium.net/artifactory/rpm/centos/8/$(uname -m)
 enabled=1
 gpgcheck=1
-gpgkey=https://adoptopenjdk.jfrog.io/adoptopenjdk/api/gpg/key/public
+gpgkey=https://packages.adoptium.net/artifactory/api/gpg/key/public
 EOF
 		fi
 		$INSTALLER -y update
@@ -2665,7 +2654,7 @@ if [ "$INSTALL" == "VS" ]; then
 	greenMessage " "
 	greenMessage "Starting the TS3 server for the first time and shutting it down again as the password will be visible in the process tree."
 	su -c "./ts3server_startscript.sh start serveradmin_password=$QUERY_PASSWORD" "$MASTERUSER"
-	runSpinner 25
+sleep 25
 	su -c "./ts3server_startscript.sh stop" "$MASTERUSER"
 
 	greenMessage " "
