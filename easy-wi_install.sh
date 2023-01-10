@@ -1977,7 +1977,7 @@ if [ "$INSTALL" == "GS" ]; then
 	fi
 
 	cyanMessage " "
-	cyanMessage "Java JDK 17 will be required for running Minecraft and its mods. Shall it be installed?"
+	cyanMessage "Java JDK 17 will be required for running Minecraft and its mods. Shall it be installed? (CentOS may install JRE-8)"
 	OPTIONS=("Yes" "No" "Quit")
 	select OPTION in "${OPTIONS[@]}"; do
 		case "$REPLY" in
