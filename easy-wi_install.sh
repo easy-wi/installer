@@ -1977,7 +1977,7 @@ if [ "$INSTALL" == "GS" ]; then
 	fi
 
 	cyanMessage " "
-	cyanMessage "Java JRE 8 will be required for running Minecraft and its mods. Shall it be installed?"
+	cyanMessage "Java JDK 17 will be required for running Minecraft and its mods. Shall it be installed?"
 	OPTIONS=("Yes" "No" "Quit")
 	select OPTION in "${OPTIONS[@]}"; do
 		case "$REPLY" in
@@ -1987,7 +1987,7 @@ if [ "$INSTALL" == "GS" ]; then
 		esac
 	done
 
-if [ "$OPTION" == "Yes" ]; then
+	if [ "$OPTION" == "Yes" ]; then
 		cyanMessage " "
 		okAndSleep "Adding ADOPTIUM Temurin backports"
 		if [ "$OS" == "debian" ] || [ "$OS" == "ubuntu" ]; then
