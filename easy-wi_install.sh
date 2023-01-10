@@ -89,6 +89,16 @@ removeIfExists() {
 	fi
 }
 
+runSpinner() {
+	SPINNER=("-" "\\" "|" "/")
+
+	for SEQUENCE in $(seq 1 "$1"); do
+		for I in "${SPINNER[@]}"; do
+			echo -ne "\b$I"
+			sleep 0.1
+		done
+	done
+}
 
 okAndSleep() {
 	greenMessage "$1"
@@ -2654,7 +2664,7 @@ if [ "$INSTALL" == "VS" ]; then
 	greenMessage " "
 	greenMessage "Starting the TS3 server for the first time and shutting it down again as the password will be visible in the process tree."
 	su -c "./ts3server_startscript.sh start serveradmin_password=$QUERY_PASSWORD" "$MASTERUSER"
-sleep 25
+	runSpinner 25
 	su -c "./ts3server_startscript.sh stop" "$MASTERUSER"
 
 	greenMessage " "
