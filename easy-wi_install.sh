@@ -1253,7 +1253,7 @@ fi
 
 if [ "$PHPINSTALL" == "Yes" ]; then
 	if [ "$OS" == "debian" ] && [ "$OSVERSION" -ge "100" ]; then
-		USE_PHP_VERSION='7.3'
+		USE_PHP_VERSION='7.4'
 	elif ([ "$OS" == "debian" ] && [ "$OSVERSION" -ge "85" ]) || ([ "$OS" == "ubuntu" ] && [ "$OSVERSION" -lt "1610" ]); then
 		USE_PHP_VERSION='7.0'
 	elif [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -ge "1610" ] && [ "$OSVERSION" -lt "1803" ]; then
