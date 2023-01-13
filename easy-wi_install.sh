@@ -1035,7 +1035,7 @@ if [ "$INSTALL" == "EW" ] || [ "$INSTALL" == "MY" ]; then
 	fi
 
 	if [ "$SQL" == "MariaDB" ]; then
-		MARIADB_VERSION="10.4"
+		MARIADB_VERSION="10.5"
 		RUNUPDATE="0"
 		if [ "$OS" == "debian" ] || [ "$OS" == "ubuntu" ] && [ -z "$(grep '/mariadb/' /etc/apt/sources.list)" ]; then
 			checkInstall software-properties-common
