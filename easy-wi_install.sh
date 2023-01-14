@@ -765,7 +765,7 @@ if [ "$INSTALL" == "EW" ] || [ "$INSTALL" == "WR" ]; then
 	fi
 fi
 
-# If we need to install and configure a webspace than we need to identify the groupID
+# If we need to install and configure a webspace then we need to identify the groupID
 if [ "$INSTALL" == "EW" ] || [ "$INSTALL" == "WR" ]; then
 	if [ "$OS" == "debian" ] || [ "$OS" == "ubuntu" ]; then
 		WEBGROUPNAME="www-data"
