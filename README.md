@@ -12,7 +12,7 @@ Supported OS:
 
 ___
 # Currently CentOS 8 & 9 is not Supported we are working on it !
-## Stable Installer up to Debian 8/9/10/11, Ubuntu 16/17/18/19/20/21/22 and CentOS 7/8 [NOT UPDATED TO JDK-17]
+## Stable Installer up to Debian 10/11, Ubuntu 20/21/22 and CentOS 7 [NOT UPDATED TO JDK-17]
   
 ```sh
 wget -O installer.tar.gz https://github.com/easy-wi/installer/archive/3.2.tar.gz
