@@ -11,7 +11,7 @@ Supported OS:
   - CentOS 7 and 8
 
 ___
-
+# Currently CentOS 8 & 9 is not Supported we are working on it !
 ## Stable Installer up to Debian 8/9/10/11, Ubuntu 16/17/18/19/20/21/22 and CentOS 7/8 [NOT UPDATED TO JDK-17]
   
 ```sh
