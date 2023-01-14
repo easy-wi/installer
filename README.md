@@ -11,7 +11,7 @@ Supported OS:
   - CentOS 7 and 8
 
 ___
-# Currently CentOS 8 & 9 is not Supported we are working on it !
+# Currently CentOS 8 & 9 is not supported, we are working on it!
 > Due to WebServer ID issue
 ## Stable Installer up to Debian 10/11, Ubuntu 20/21/22 and CentOS 7 [NOT UPDATED TO JDK-17]
   
