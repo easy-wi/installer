@@ -470,11 +470,11 @@ if [ "$OS" == "centos" ]; then
 				redMessage "Please reboot your Root/Vserver to disabled SELinux Security Function!"
 				redMessage "Otherwise, the WebInterface can not work."
 				redMessage " "
-				doReboot "System is rebooting now for finish SELinux Security Function!"
+				doReboot "System is rebooting now for finish SELinux Security Function! (if this message is permanent please disable it by hand and delete /tmp/easy-wi_reboot)"
 			fi
 		fi
 	else
-		doReboot "System is rebooting now for finish SELinux Security Function!" "Please reboot your Root/Vserver to disabled SELinux Security Function"
+		doReboot "System is rebooting now for finish SELinux Security Function!(if this message is permanent please disable it by hand and delete /tmp/easy-wi_reboot)" "Please reboot your Root/Vserver to disabled SELinux Security Function(if this message is permanent please disable it by hand and delete /tmp/easy-wi_reboot)"
 	fi
 fi
 
@@ -1253,13 +1253,15 @@ fi
 
 if [ "$PHPINSTALL" == "Yes" ]; then
 	if [ "$OS" == "debian" ] && [ "$OSVERSION" -ge "100" ]; then
-		USE_PHP_VERSION='7.3'
+		USE_PHP_VERSION='7.4'
 	elif ([ "$OS" == "debian" ] && [ "$OSVERSION" -ge "85" ]) || ([ "$OS" == "ubuntu" ] && [ "$OSVERSION" -lt "1610" ]); then
-		USE_PHP_VERSION='7.0'
+		USE_PHP_VERSION='7.4'
+	elif [ "$OS" == "debian" ] && [ "$OSVERSION" -ge "110" ]; then
+		USE_PHP_VERSION='7.4'
 	elif [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -ge "1610" ] && [ "$OSVERSION" -lt "1803" ]; then
-		USE_PHP_VERSION='7.1'
-	elif [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -ge "1803" ] && [ "$OSVERSION" -lt "2004" ]; then
-		USE_PHP_VERSION='7.2'
+		USE_PHP_VERSION='7.4'
+	elif [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -ge "1803" ]; then
+		USE_PHP_VERSION='7.4'
 	elif [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -eq "2004" ]; then
 		USE_PHP_VERSION='7.4'
 	elif [ "$OS" == "centos" ] && [ "$OSVERSION" -lt "80" ]; then
@@ -1267,14 +1269,14 @@ if [ "$PHPINSTALL" == "Yes" ]; then
 		if [ -z "$REMIREPO" ]; then
 			checkInstall http://rpms.remirepo.net/enterprise/remi-release-7.rpm
 		fi
-		yum-config-manager --enable remi-php71
+		yum-config-manager --enable remi-php74
 		RUNUPDATE="1"
 	elif [ "$OS" == "centos" ] && [ "$OSVERSION" -ge "80" ]; then
 		REMIREPO=$(yum list installed | grep "remi-release" | awk '{print $1}')
 		if [ -z "$REMIREPO" ]; then
 			checkInstall http://rpms.remirepo.net/enterprise/remi-release-8.rpm
 		fi
-		yum-config-manager --enable remi-php72
+		yum-config-manager --enable remi-php74
 		RUNUPDATE="1"
 	else
 		USE_PHP_VERSION='7.4'
@@ -1288,7 +1290,14 @@ if [ "$PHPINSTALL" == "Yes" ]; then
 	fi
 
 	if [ "$OS" == "debian" ] || [ "$OS" == "ubuntu" ]; then
-		sudo add-apt-repository ppa:ondrej/php
+		if [ "$OS" == "debian" ] && [ "$OSVERSION" -ge "100" ]; then
+			sudo apt -y install lsb-release apt-transport-https ca-certificates 
+			sudo wget -O /etc/apt/trusted.gpg.d/php.gpg https://packages.sury.org/php/apt.gpg
+			echo "deb https://packages.sury.org/php/ $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/php.list
+			sudo apt update
+		else
+			sudo add-apt-repository ppa:ondrej/php
+		fi
 		
 		if [ "$WEBSERVER" == "Apache" ]; then
 			checkInstall php${USE_PHP_VERSION}
