@@ -234,11 +234,18 @@ RestartWebserver() {
 }
 
 RestartDatabase() {
-	if [ "$OS" == "debian" ] || [ "$OS" == "ubuntu" ]; then
+	# debian11 uses mariadb as service now
+	if [[ "$OS" == "debian" && "$OSVERSION" -le "100" ]] || [ "$OS" == "ubuntu" ]; then
 		if [ -f /etc/init.d/mysql ]; then
 			/etc/init.d/mysql restart 1>/dev/null
 		else
 			systemctl restart mysql 1>/dev/null
+		fi
+	elif [[ "$OS" == "debian" && "$OSVERSION" -ge "110" ]]; then
+		if [ -f /etc/init.d/mariadb ]; then
+			/etc/init.d/mariadb restart 1>/dev/null
+		else
+			systemctl restart mariadb 1>/dev/null
 		fi
 	elif [ "$OS" == "centos" ]; then
 		systemctl restart mariadb.service 1>/dev/null
@@ -977,11 +984,11 @@ if [ "$INSTALL" == "EW" ] || [ "$INSTALL" == "MY" ]; then
 		cyanMessage " "
 		okAndSleep "Please note that Easy-Wi requires a MySQL or MariaDB installed and will install MySQL if no DB is installed"
 	fi
-
-	if [ "$OS" == "debian" ] && [ "$OSVERSION" -lt "100" ] || [ "$OS" == "ubuntu" ]; then
-		if [ -z "$(ps fax | grep 'mysqld' | grep -v 'grep')" ]; then
+	// -lt -> less than
+	if [ "$OS" == "debian" ] && [ "$OSVERSION" -lt "110" ] || [ "$OS" == "ubuntu" ]; then
+		if [[ -z "$(ps fax | grep 'mysqld' | grep -v 'grep')" || -z "$(ps fax | grep 'mariadb' | grep -v 'grep')" ]]; then
 			cyanMessage " "
-			cyanMessage "Please select if an which database server to install."
+			cyanMessage "Please select which database server to install."
 
 			OPTIONS=("MySQL" "MariaDB" "None" "Quit")
 			select SQL in "${OPTIONS[@]}"; do
@@ -1201,7 +1208,7 @@ _EOF_
 	MYSQL_VERSION=$(mysql -V | awk {'print $5'} | tr -d ,)
 
 	# FIX MariaDB Install (#107)
-	if [ "$MYSQL_VERSION" = "Linux" ]; then
+	if [ "$MYSQL_VERSION" == "Linux" ]; then
 		MYSQL_VERSION=$(mysql -V | awk {'print $3'} | tr -d . | cut -c 1-2)
 	fi
 
@@ -1222,7 +1229,7 @@ _EOF_
 
 	RestartDatabase
 
-	if [ -z "$(ps ax | grep mysql | grep -v grep)" ]; then
+	if [[ -z "$(ps fax | grep 'mysqld' | grep -v 'grep')" || -z "$(ps fax | grep 'mariadb' | grep -v 'grep')" ]]; then
 		cyanMessage " "
 		errorAndExit "Error: No SQL server running but required for Webpanel installation."
 	fi
@@ -1252,6 +1259,7 @@ else
 fi
 
 if [ "$PHPINSTALL" == "Yes" ]; then
+	#should already include debian11
 	if [ "$OS" == "debian" ] && [ "$OSVERSION" -ge "100" ]; then
 		USE_PHP_VERSION='7.4'
 	elif ([ "$OS" == "debian" ] && [ "$OSVERSION" -ge "85" ]) || ([ "$OS" == "ubuntu" ] && [ "$OSVERSION" -lt "1610" ]); then
@@ -2689,7 +2697,7 @@ if [ "$INSTALL" == "MY" ]; then
 	MYSQL_USER_PASSWORD=$(tr </dev/urandom -dc A-Za-z0-9 | head -c18)
 
 	if [ "$EXTERNAL_INSTALL" == "No" ]; then
-		if [ -n "$(ps fax | grep 'mysqld' | grep -v 'grep')" ]; then
+		if [[ -n "$(ps fax | grep 'mariadb' | grep -v 'grep')" || -n "$(ps fax | grep 'mysqld' | grep -v 'grep')" ]]; then
 			mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e exit 2>/dev/null
 			ERROR_CODE=$?
 
