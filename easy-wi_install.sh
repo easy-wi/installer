@@ -583,6 +583,7 @@ if [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -lt "1604" ] || [ "$OS" == "debian" ]
 		doReboot "System is rebooting now for finish Upgrade!"
 	else
 		if [ "$OS" == "ubuntu" ]; then
+			redMessage "Run this command to manually update your OS: "
 			redMessage "Command: do-release-upgrade"
 			redMessage " "
 			errorAndQuit
@@ -982,9 +983,9 @@ fi
 if [ "$INSTALL" == "EW" ] || [ "$INSTALL" == "MY" ]; then
 	if [ "$INSTALL" == "EW" ]; then
 		cyanMessage " "
-		okAndSleep "Please note that Easy-Wi requires a MySQL or MariaDB installed and will install MySQL if no DB is installed"
+		okAndSleep "Please note that Easy-Wi requires a MySQL or MariaDB server to be installed, and will install MariaDB if no server is already installed"
 	fi
-	// -lt -> less than
+	# -lt -> less than
 	if [ "$OS" == "debian" ] && [ "$OSVERSION" -lt "110" ] || [ "$OS" == "ubuntu" ]; then
 		if [[ -z "$(ps fax | grep 'mysqld' | grep -v 'grep')" || -z "$(ps fax | grep 'mariadb' | grep -v 'grep')" ]]; then
 			cyanMessage " "
@@ -1073,12 +1074,12 @@ if [ "$INSTALL" == "EW" ] || [ "$INSTALL" == "MY" ]; then
 			for search_mariadb in "${MARIADB_FILE[@]}"; do
 				if [ -z "$(grep '/MariaDB/' "$search_mariadb" >/dev/null 2>&1)" ] && [ ! -f /etc/yum.repos.d/MariaDB.repo ]; then
 					echo "# MariaDB $MARIADB_VERSION CentOS repository list
-# http://downloads.mariadb.org/mariadb/repositories/
-[mariadb]
-name = MariaDB
-baseurl = "http://yum.mariadb.org/"$MARIADB_VERSION"/centos"$MARIADB_TMP_VERSION"-amd64"
-gpgkey=https://yum.mariadb.org/RPM-GPG-KEY-MariaDB
-gpgcheck=1" >/etc/yum.repos.d/MariaDB.repo
+						# http://downloads.mariadb.org/mariadb/repositories/
+						[mariadb]
+						name = MariaDB
+						baseurl = "http://yum.mariadb.org/"$MARIADB_VERSION"/centos"$MARIADB_TMP_VERSION"-amd64"
+						gpgkey=https://yum.mariadb.org/RPM-GPG-KEY-MariaDB
+						gpgcheck=1" >/etc/yum.repos.d/MariaDB.repo
 				fi
 			done
 			importKey https://yum.mariadb.org/RPM-GPG-KEY-MariaDB
@@ -1094,12 +1095,12 @@ gpgcheck=1" >/etc/yum.repos.d/MariaDB.repo
 	fi
 
 	if [ "$SQL" == "MySQL" ]; then
-		cyanMessage " "
+		cyanMessage " Checking if MySQL is installed ..."
 		checkInstall mysql-server
 		checkInstall mysql-client
 		checkInstall mysql-common
 	elif [ "$SQL" == "MariaDB" ]; then
-		cyanMessage " "
+		cyanMessage " Checking if MariaDB is installed ..."
 		# FIX MariaDB Install (#96) && => ||
 		if [ "$OS" == "debian" ] || [ "$OS" == "ubuntu" ]; then
 			checkInstall mariadb-server
@@ -1147,11 +1148,11 @@ gpgcheck=1" >/etc/yum.repos.d/MariaDB.repo
 		fi
 
 		mysql --user=root --password="$MYSQL_ROOT_PASSWORD" <<_EOF_
-DELETE FROM mysql.user WHERE User='';
-DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
-DROP DATABASE IF EXISTS test;
-DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';
-FLUSH PRIVILEGES;
+				DELETE FROM mysql.user WHERE User='';
+				DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
+				DROP DATABASE IF EXISTS test;
+				DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';
+				FLUSH PRIVILEGES;
 _EOF_
 	else
 		cyanMessage " "
