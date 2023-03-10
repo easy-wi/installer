@@ -16,7 +16,7 @@ ___
 ## Stable Installer up to Debian 10/11, Ubuntu 20/21/22 and CentOS 7 [NOT UPDATED TO JDK-17]
   
 ```sh
-wget -O installer.tar.gz https://github.com/easy-wi/installer/archive/3.2.tar.gz
+wget -O installer.tar.gz https://github.com/easy-wi/installer/archive/3.3.tar.gz
 tar zxf installer.tar.gz && mv ./installer-*/easy-wi_install.sh ./
 rm -r installer.tar.gz installer-*/
 
