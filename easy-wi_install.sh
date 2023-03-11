@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # DEBUG MODE
-DEBUG="ON"
+DEBUG="OFF"
 
 #    Author:     Ulrich Block <support@easy-wi.com>,
 #                Alexander Doerwald <support@easy-wi.com>
