@@ -2324,8 +2324,7 @@ _EOF_
 		read -r MYSQL_ROOT_PASSWORD
 	fi
 
-# FIX MariaDB Install (#107)
-
+	# FIX MariaDB Install (#107)
 	if [ "$MYSQL_VERSION" == "Linux" ]; then
 		MYSQL_VERSION=$(mysql -V | awk {'print $3'} | tr -d . | cut -c 1-2)
 	elif [[ "$MYSQL_VERSION" == *"-MariaDB" ]]; then
