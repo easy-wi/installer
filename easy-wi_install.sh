@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # DEBUG MODE
-DEBUG="OFF"
+DEBUG="ON"
 
 #    Author:     Ulrich Block <support@easy-wi.com>,
 #                Alexander Doerwald <support@easy-wi.com>
@@ -872,8 +872,8 @@ if [ "$INSTALL" == "VS" ]; then
 
 	okAndSleep "Detected latest server version as $VERSION with download URL $DOWNLOAD_URL"
 fi
-
-if [ "$INSTALL" != "MY" ]; then
+#evenntuell ändern
+if [[ "$INSTALL" != "MY" ]]; then
 	cyanMessage " "
 	cyanMessage "Please enter the name of the masteruser, which does not exist yet."
 	read MASTERUSER
@@ -985,8 +985,8 @@ if [ "$INSTALL" == "EW" ] || [ "$INSTALL" == "MY" ]; then
 		cyanMessage " "
 		okAndSleep "Please note that Easy-Wi requires a MySQL or MariaDB server to be installed, and will install MariaDB if no server is already installed"
 	fi
-	# -lt -> less than
-	if [ "$OS" == "debian" ] && [ "$OSVERSION" -lt "110" ] || [ "$OS" == "ubuntu" ]; then
+	# don't use mysql for debian >= 10
+	if [ "$OS" == "debian" ] && [ "$OSVERSION" -lt "100" ] || [ "$OS" == "ubuntu" ]; then
 		if [[ -z "$(ps fax | grep 'mysqld' | grep -v 'grep')" || -z "$(ps fax | grep 'mariadb' | grep -v 'grep')" ]]; then
 			cyanMessage " "
 			cyanMessage "Please select which database server to install."
@@ -1230,7 +1230,7 @@ _EOF_
 
 	RestartDatabase
 
-	if [[ -z "$(ps fax | grep 'mysqld' | grep -v 'grep')" || -z "$(ps fax | grep 'mariadb' | grep -v 'grep')" ]]; then
+	if [-z "$(ps fax | grep 'mysqld' | grep -v 'grep')" ] || [-z "$(ps fax | grep 'mariadb' | grep -v 'grep')" ]; then
 		cyanMessage " "
 		errorAndExit "Error: No SQL server running but required for Webpanel installation."
 	fi
