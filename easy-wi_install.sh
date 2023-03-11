@@ -234,11 +234,18 @@ RestartWebserver() {
 }
 
 RestartDatabase() {
-	if [ "$OS" == "debian" ] || [ "$OS" == "ubuntu" ]; then
+	# debian11 uses mariadb as service now
+	if [[ "$OS" == "debian" && "$OSVERSION" -le "100" ]] || [ "$OS" == "ubuntu" ]; then
 		if [ -f /etc/init.d/mysql ]; then
 			/etc/init.d/mysql restart 1>/dev/null
 		else
 			systemctl restart mysql 1>/dev/null
+		fi
+	elif [[ "$OS" == "debian" && "$OSVERSION" -ge "110" ]]; then
+		if [ -f /etc/init.d/mariadb ]; then
+			/etc/init.d/mariadb restart 1>/dev/null
+		else
+			systemctl restart mariadb 1>/dev/null
 		fi
 	elif [ "$OS" == "centos" ]; then
 		systemctl restart mariadb.service 1>/dev/null
@@ -576,6 +583,7 @@ if [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -lt "1604" ] || [ "$OS" == "debian" ]
 		doReboot "System is rebooting now for finish Upgrade!"
 	else
 		if [ "$OS" == "ubuntu" ]; then
+			redMessage "Run this command to manually update your OS: "
 			redMessage "Command: do-release-upgrade"
 			redMessage " "
 			errorAndQuit
@@ -864,8 +872,8 @@ if [ "$INSTALL" == "VS" ]; then
 
 	okAndSleep "Detected latest server version as $VERSION with download URL $DOWNLOAD_URL"
 fi
-
-if [ "$INSTALL" != "MY" ]; then
+#evenntuell ändern
+if [[ "$INSTALL" != "MY" ]]; then
 	cyanMessage " "
 	cyanMessage "Please enter the name of the masteruser, which does not exist yet."
 	read MASTERUSER
@@ -918,7 +926,15 @@ if [ "$INSTALL" != "MY" ]; then
 
 		cyanMessage " "
 		cyanMessage "It is recommended but not required to set a password"
-		su -c "ssh-keygen -t rsa" "$MASTERUSER"
+
+
+		#ssh-keygen creates not yet supported encrypted open ssh keys since version 7.8 -> https://www.openssh.com/txt/release-7.8
+		# support for encrypted open ssh keys comes with phpseclib v3
+		if [ $(ssh -V |& awk -F'[_.]' '{ print $2 "." $3+0 }') -lt "7.8"];then
+			su -c "ssh-keygen -t rsa" "$MASTERUSER"
+		else
+			su -c "ssh-keygen -m PEM" "$MASTERUSER"
+		fi
 
 		KEYNAME=$(find -maxdepth 1 -name "*.pub" | head -n 1)
 
@@ -975,13 +991,13 @@ fi
 if [ "$INSTALL" == "EW" ] || [ "$INSTALL" == "MY" ]; then
 	if [ "$INSTALL" == "EW" ]; then
 		cyanMessage " "
-		okAndSleep "Please note that Easy-Wi requires a MySQL or MariaDB installed and will install MySQL if no DB is installed"
+		okAndSleep "Please note that Easy-Wi requires a MySQL or MariaDB server to be installed, and will install MariaDB if no server is already installed"
 	fi
-
+	# don't use mysql for debian >= 10
 	if [ "$OS" == "debian" ] && [ "$OSVERSION" -lt "100" ] || [ "$OS" == "ubuntu" ]; then
-		if [ -z "$(ps fax | grep 'mysqld' | grep -v 'grep')" ]; then
+		if [[ -z "$(ps fax | grep 'mysqld' | grep -v 'grep')" || -z "$(ps fax | grep 'mariadb' | grep -v 'grep')" ]]; then
 			cyanMessage " "
-			cyanMessage "Please select if an which database server to install."
+			cyanMessage "Please select which database server to install."
 
 			OPTIONS=("MySQL" "MariaDB" "None" "Quit")
 			select SQL in "${OPTIONS[@]}"; do
@@ -1045,7 +1061,7 @@ if [ "$INSTALL" == "EW" ] || [ "$INSTALL" == "MY" ]; then
 			fi
 
             # FIX MariaDB Install (#96)
-			if [ -z $(apt-cache search mariadb-server-$MARIADB_VERSION 2> /dev/null) ]; then
+			if [ -z "$(apt-cache search mariadb-server-"$MARIADB_VERSION" 2> /dev/null)" ]; then
 			    curl -LsSO https://downloads.mariadb.com/MariaDB/mariadb-keyring-2019.gpg
                 mv mariadb-keyring-2019.gpg /etc/apt/trusted.gpg.d/
 				add-apt-repository "deb https://downloads.mariadb.com/MariaDB/mariadb-$MARIADB_VERSION/repo/$OS $OSBRANCH main"
@@ -1066,12 +1082,12 @@ if [ "$INSTALL" == "EW" ] || [ "$INSTALL" == "MY" ]; then
 			for search_mariadb in "${MARIADB_FILE[@]}"; do
 				if [ -z "$(grep '/MariaDB/' "$search_mariadb" >/dev/null 2>&1)" ] && [ ! -f /etc/yum.repos.d/MariaDB.repo ]; then
 					echo "# MariaDB $MARIADB_VERSION CentOS repository list
-# http://downloads.mariadb.org/mariadb/repositories/
-[mariadb]
-name = MariaDB
-baseurl = "http://yum.mariadb.org/"$MARIADB_VERSION"/centos"$MARIADB_TMP_VERSION"-amd64"
-gpgkey=https://yum.mariadb.org/RPM-GPG-KEY-MariaDB
-gpgcheck=1" >/etc/yum.repos.d/MariaDB.repo
+						# http://downloads.mariadb.org/mariadb/repositories/
+						[mariadb]
+						name = MariaDB
+						baseurl = "http://yum.mariadb.org/"$MARIADB_VERSION"/centos"$MARIADB_TMP_VERSION"-amd64"
+						gpgkey=https://yum.mariadb.org/RPM-GPG-KEY-MariaDB
+						gpgcheck=1" >/etc/yum.repos.d/MariaDB.repo
 				fi
 			done
 			importKey https://yum.mariadb.org/RPM-GPG-KEY-MariaDB
@@ -1087,12 +1103,12 @@ gpgcheck=1" >/etc/yum.repos.d/MariaDB.repo
 	fi
 
 	if [ "$SQL" == "MySQL" ]; then
-		cyanMessage " "
+		cyanMessage " Checking if MySQL is installed ..."
 		checkInstall mysql-server
 		checkInstall mysql-client
 		checkInstall mysql-common
 	elif [ "$SQL" == "MariaDB" ]; then
-		cyanMessage " "
+		cyanMessage " Checking if MariaDB is installed ..."
 		# FIX MariaDB Install (#96) && => ||
 		if [ "$OS" == "debian" ] || [ "$OS" == "ubuntu" ]; then
 			checkInstall mariadb-server
@@ -1140,11 +1156,11 @@ gpgcheck=1" >/etc/yum.repos.d/MariaDB.repo
 		fi
 
 		mysql --user=root --password="$MYSQL_ROOT_PASSWORD" <<_EOF_
-DELETE FROM mysql.user WHERE User='';
-DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
-DROP DATABASE IF EXISTS test;
-DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';
-FLUSH PRIVILEGES;
+				DELETE FROM mysql.user WHERE User='';
+				DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
+				DROP DATABASE IF EXISTS test;
+				DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';
+				FLUSH PRIVILEGES;
 _EOF_
 	else
 		cyanMessage " "
@@ -1201,8 +1217,11 @@ _EOF_
 	MYSQL_VERSION=$(mysql -V | awk {'print $5'} | tr -d ,)
 
 	# FIX MariaDB Install (#107)
-	if [ "$MYSQL_VERSION" = "Linux" ]; then
+	if [ "$MYSQL_VERSION" == "Linux" ]; then
 		MYSQL_VERSION=$(mysql -V | awk {'print $3'} | tr -d . | cut -c 1-2)
+	elif [ "$MYSQL_VERSION" == *"-MariaDB"]; then
+		# -> mysql  Ver 15.1 Distrib 10.5.18-MariaDB, for debian-linux-gnu (x86_64) using  EditLine wrapper into 10
+		MYSQL_VERSION=$(mysql -V | awk '{ print $5 }' | tr -d , | tr -d 'MariaDB' | awk -F\- '{ print $1 }' | cut -c 1-2)
 	fi
 
 	if [ "$OS" == "debian" ] || [ "$OS" == "ubuntu" ]; then
@@ -1222,7 +1241,7 @@ _EOF_
 
 	RestartDatabase
 
-	if [ -z "$(ps ax | grep mysql | grep -v grep)" ]; then
+	if [-z "$(ps fax | grep 'mysqld' | grep -v 'grep')" ] || [-z "$(ps fax | grep 'mariadb' | grep -v 'grep')" ]; then
 		cyanMessage " "
 		errorAndExit "Error: No SQL server running but required for Webpanel installation."
 	fi
@@ -1252,11 +1271,10 @@ else
 fi
 
 if [ "$PHPINSTALL" == "Yes" ]; then
+	#should already include debian11
 	if [ "$OS" == "debian" ] && [ "$OSVERSION" -ge "100" ]; then
 		USE_PHP_VERSION='7.4'
 	elif ([ "$OS" == "debian" ] && [ "$OSVERSION" -ge "85" ]) || ([ "$OS" == "ubuntu" ] && [ "$OSVERSION" -lt "1610" ]); then
-		USE_PHP_VERSION='7.4'
-	elif [ "$OS" == "debian" ] && [ "$OSVERSION" -ge "110" ]; then
 		USE_PHP_VERSION='7.4'
 	elif [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -ge "1610" ] && [ "$OSVERSION" -lt "1803" ]; then
 		USE_PHP_VERSION='7.4'
@@ -2305,10 +2323,13 @@ _EOF_
 	fi
 
 	# FIX MariaDB Install (#107)
-	if [ "$MYSQL_VERSION" -le "80" ]; then
-    mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "CREATE DATABASE IF NOT EXISTS easy_wi; CREATE USER IF NOT EXISTS 'easy_wi'@'localhost' IDENTIFIED BY '$DB_PASSWORD'; GRANT ALL PRIVILEGES ON easy_wi.* TO 'easy_wi'@'localhost' WITH GRANT OPTION; FLUSH PRIVILEGES;"
-	else
-		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "CREATE DATABASE IF NOT EXISTS easy_wi; CREATE USER IF NOT EXISTS 'easy_wi'@'localhost' IDENTIFIED BY '$DB_PASSWORD'; GRANT ALL ON easy_wi.* TO 'easy_wi'@'localhost'; FLUSH PRIVILEGES;"
+	if [ "$MYSQL_VERSION" == "Linux" ]; then
+		MYSQL_VERSION=$(mysql -V | awk {'print $3'} | tr -d . | cut -c 1-2)
+	elif [[ "$MYSQL_VERSION" == *"-MariaDB" ]]; then
+		# -> mysql  Ver 15.1 Distrib 10.5.18-MariaDB, for debian-linux-gnu (x86_64) using  EditLine wrapper into 10
+		MYSQL_VERSION=$(mysql -V | awk '{ print $5 }' | tr -d , | tr -d 'MariaDB' | awk -F\- '{ print $1 }' | cut -c 1-2)
+		# adds 0 at the end for further checks now MYSQL_VERSION is 100
+		MYSQL_VERSION+="0"
 	fi
 
 	cyanMessage " "
@@ -2689,7 +2710,7 @@ if [ "$INSTALL" == "MY" ]; then
 	MYSQL_USER_PASSWORD=$(tr </dev/urandom -dc A-Za-z0-9 | head -c18)
 
 	if [ "$EXTERNAL_INSTALL" == "No" ]; then
-		if [ -n "$(ps fax | grep 'mysqld' | grep -v 'grep')" ]; then
+		if [[ -n "$(ps fax | grep 'mariadb' | grep -v 'grep')" || -n "$(ps fax | grep 'mysqld' | grep -v 'grep')" ]]; then
 			mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e exit 2>/dev/null
 			ERROR_CODE=$?
 
@@ -2854,7 +2875,8 @@ elif [ "$INSTALL" == "GS" ]; then
 		greenOneLineMessage "Keyfile Name: "
 		cyanMessage "$MASTERUSER"
 	else
-		yellowMessage "Don't forget to copy Keyfile into \"/home/easywi_web/keys/\""
+		yellowMessage "Don't forget to copy your private Keyfile id_rsa from /home/"$MASTERUSER"/ into \"/home/EASYWI_PANEL/htdocs/keys/\" as "$MASTERUSER""
+		yellowMessage "Don't forget to copy your public Keyfile id_rsa.pub from /home/"$MASTERUSER"/ into \"/home/EASYWI_PANEL/htdocs/keys/\" as "$MASTERUSER".pub"
 	fi
 	if [ "$OS" == "centos" ] && [ "$FIREWALL" == "Yes" ]; then
 		redMessage " "
@@ -2890,7 +2912,8 @@ elif [ "$INSTALL" == "VS" ]; then
 		greenOneLineMessage "Keyfile Name: "
 		cyanMessage "$MASTERUSER"
 	else
-		yellowMessage "Don't forget to copy Keyfile into \"/home/easywi_web/keys/\""
+		yellowMessage "Don't forget to copy your private Keyfile id_rsa from /home/"$MASTERUSER"/ into \"/home/EASYWI_PANEL/htdocs/keys/\" as "$MASTERUSER""
+		yellowMessage "Don't forget to copy your public Keyfile id_rsa.pub from /home/"$MASTERUSER"/ into \"/home/EASYWI_PANEL/htdocs/keys/\" as "$MASTERUSER".pub"
 	fi
 	greenMessage " "
 elif [ "$INSTALL" == "WR" ]; then
@@ -2911,7 +2934,7 @@ elif [ "$INSTALL" == "WR" ]; then
 		greenOneLineMessage "Keyfile Name: "
 		cyanMessage "$MASTERUSER"
 	else
-		yellowMessage "Don't forget to copy Keyfile into \"/home/easywi_web/htdocs/keys/\""
+		yellowMessage "Don't forget to copy and your Keyfiles id_rsa and id_rsa.pub from /home/"$MASTERUSER"/.ssh into \"/home/EASYWI_PANEL/htdocs/keys/\""
 	fi
 	greenMessage " "
 	if [ -n "$MYSQL_ROOT_PASSWORD" ]; then
