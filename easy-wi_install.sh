@@ -926,7 +926,15 @@ if [[ "$INSTALL" != "MY" ]]; then
 
 		cyanMessage " "
 		cyanMessage "It is recommended but not required to set a password"
-		su -c "ssh-keygen -t rsa" "$MASTERUSER"
+
+
+		#ssh-keygen creates not yet supported encrypted open ssh keys since version 7.8 -> https://www.openssh.com/txt/release-7.8
+		# support for encrypted open ssh keys comes with phpseclib v3
+		if [ $(ssh -V |& awk -F'[_.]' '{ print $2 "." $3+0 }') -lt "7.8"];then
+			su -c "ssh-keygen -t rsa" "$MASTERUSER"
+		else
+			su -c "ssh-keygen -m PEM" "$MASTERUSER"
+		fi
 
 		KEYNAME=$(find -maxdepth 1 -name "*.pub" | head -n 1)
 
