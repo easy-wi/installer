@@ -1061,7 +1061,7 @@ if [ "$INSTALL" == "EW" ] || [ "$INSTALL" == "MY" ]; then
 			fi
 
             # FIX MariaDB Install (#96)
-			if [ -z $(apt-cache search mariadb-server-$MARIADB_VERSION 2> /dev/null) ]; then
+			if [ -z "$(apt-cache search mariadb-server-"$MARIADB_VERSION" 2> /dev/null)" ]; then
 			    curl -LsSO https://downloads.mariadb.com/MariaDB/mariadb-keyring-2019.gpg
                 mv mariadb-keyring-2019.gpg /etc/apt/trusted.gpg.d/
 				add-apt-repository "deb https://downloads.mariadb.com/MariaDB/mariadb-$MARIADB_VERSION/repo/$OS $OSBRANCH main"
@@ -2323,7 +2323,7 @@ _EOF_
 
 	# FIX MariaDB Install (#107)
 	if [ "$MYSQL_VERSION" -le "80" ]; then
-    mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "CREATE DATABASE IF NOT EXISTS easy_wi; CREATE USER IF NOT EXISTS 'easy_wi'@'localhost' IDENTIFIED BY '$DB_PASSWORD'; GRANT ALL PRIVILEGES ON easy_wi.* TO 'easy_wi'@'localhost' WITH GRANT OPTION; FLUSH PRIVILEGES;"
+    	mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "CREATE DATABASE IF NOT EXISTS easy_wi; CREATE USER IF NOT EXISTS 'easy_wi'@'localhost' IDENTIFIED BY '$DB_PASSWORD'; GRANT ALL PRIVILEGES ON easy_wi.* TO 'easy_wi'@'localhost' WITH GRANT OPTION; FLUSH PRIVILEGES;"
 	else
 		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "CREATE DATABASE IF NOT EXISTS easy_wi; CREATE USER IF NOT EXISTS 'easy_wi'@'localhost' IDENTIFIED BY '$DB_PASSWORD'; GRANT ALL ON easy_wi.* TO 'easy_wi'@'localhost'; FLUSH PRIVILEGES;"
 	fi
