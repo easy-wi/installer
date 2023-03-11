@@ -1219,6 +1219,9 @@ _EOF_
 	# FIX MariaDB Install (#107)
 	if [ "$MYSQL_VERSION" == "Linux" ]; then
 		MYSQL_VERSION=$(mysql -V | awk {'print $3'} | tr -d . | cut -c 1-2)
+	elif [ "$MYSQL_VERSION" == *"-MariaDB"]; then
+		# -> mysql  Ver 15.1 Distrib 10.5.18-MariaDB, for debian-linux-gnu (x86_64) using  EditLine wrapper into 10
+		MYSQL_VERSION=$(mysql -V | awk '{ print $5 }' | tr -d , | tr -d 'MariaDB' | awk -F\- '{ print $1 }' | cut -c 1-2)
 	fi
 
 	if [ "$OS" == "debian" ] || [ "$OS" == "ubuntu" ]; then
@@ -2321,11 +2324,15 @@ _EOF_
 		read -r MYSQL_ROOT_PASSWORD
 	fi
 
-	# FIX MariaDB Install (#107)
-	if [ "$MYSQL_VERSION" -le "80" ]; then
-    	mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "CREATE DATABASE IF NOT EXISTS easy_wi; CREATE USER IF NOT EXISTS 'easy_wi'@'localhost' IDENTIFIED BY '$DB_PASSWORD'; GRANT ALL PRIVILEGES ON easy_wi.* TO 'easy_wi'@'localhost' WITH GRANT OPTION; FLUSH PRIVILEGES;"
-	else
-		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "CREATE DATABASE IF NOT EXISTS easy_wi; CREATE USER IF NOT EXISTS 'easy_wi'@'localhost' IDENTIFIED BY '$DB_PASSWORD'; GRANT ALL ON easy_wi.* TO 'easy_wi'@'localhost'; FLUSH PRIVILEGES;"
+# FIX MariaDB Install (#107)
+
+	if [ "$MYSQL_VERSION" == "Linux" ]; then
+		MYSQL_VERSION=$(mysql -V | awk {'print $3'} | tr -d . | cut -c 1-2)
+	elif [[ "$MYSQL_VERSION" == *"-MariaDB" ]]; then
+		# -> mysql  Ver 15.1 Distrib 10.5.18-MariaDB, for debian-linux-gnu (x86_64) using  EditLine wrapper into 10
+		MYSQL_VERSION=$(mysql -V | awk '{ print $5 }' | tr -d , | tr -d 'MariaDB' | awk -F\- '{ print $1 }' | cut -c 1-2)
+		# adds 0 at the end for further checks now MYSQL_VERSION is 100
+		MYSQL_VERSION+="0"
 	fi
 
 	cyanMessage " "
