@@ -2863,7 +2863,8 @@ elif [ "$INSTALL" == "GS" ]; then
 		greenOneLineMessage "Keyfile Name: "
 		cyanMessage "$MASTERUSER"
 	else
-		yellowMessage "Don't forget to copy Keyfile into \"/home/easywi_web/keys/\""
+		yellowMessage "Don't forget to copy your private Keyfile id_rsa from /home/"$MASTERUSER"/ into \"/home/EASYWI_PANEL/htdocs/keys/\" as "$MASTERUSER""
+		yellowMessage "Don't forget to copy your public Keyfile id_rsa.pub from /home/"$MASTERUSER"/ into \"/home/EASYWI_PANEL/htdocs/keys/\" as "$MASTERUSER".pub"
 	fi
 	if [ "$OS" == "centos" ] && [ "$FIREWALL" == "Yes" ]; then
 		redMessage " "
@@ -2899,7 +2900,8 @@ elif [ "$INSTALL" == "VS" ]; then
 		greenOneLineMessage "Keyfile Name: "
 		cyanMessage "$MASTERUSER"
 	else
-		yellowMessage "Don't forget to copy Keyfile into \"/home/easywi_web/keys/\""
+		yellowMessage "Don't forget to copy your private Keyfile id_rsa from /home/"$MASTERUSER"/ into \"/home/EASYWI_PANEL/htdocs/keys/\" as "$MASTERUSER""
+		yellowMessage "Don't forget to copy your public Keyfile id_rsa.pub from /home/"$MASTERUSER"/ into \"/home/EASYWI_PANEL/htdocs/keys/\" as "$MASTERUSER".pub"
 	fi
 	greenMessage " "
 elif [ "$INSTALL" == "WR" ]; then
@@ -2920,7 +2922,7 @@ elif [ "$INSTALL" == "WR" ]; then
 		greenOneLineMessage "Keyfile Name: "
 		cyanMessage "$MASTERUSER"
 	else
-		yellowMessage "Don't forget to copy Keyfile into \"/home/easywi_web/htdocs/keys/\""
+		yellowMessage "Don't forget to copy and your Keyfiles id_rsa and id_rsa.pub from /home/"$MASTERUSER"/.ssh into \"/home/EASYWI_PANEL/htdocs/keys/\""
 	fi
 	greenMessage " "
 	if [ -n "$MYSQL_ROOT_PASSWORD" ]; then
