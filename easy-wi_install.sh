@@ -421,6 +421,7 @@ if [ "$UPDATE_UPGRADE_SYSTEM" == "Yes" ]; then
 		$INSTALLER -y upgrade
 		checkInstall debconf-utils
 		checkInstall lsb-release
+		checkInstall software-properties-common
 	elif [ "$OS" == "centos" ]; then
 		cyanMessage " "
 		cyanMessage "Update all obsolete packages."
@@ -930,7 +931,7 @@ if [[ "$INSTALL" != "MY" ]]; then
 
 		#ssh-keygen creates not yet supported encrypted open ssh keys since version 7.8 -> https://www.openssh.com/txt/release-7.8
 		# support for encrypted open ssh keys comes with phpseclib v3
-		if [ $(ssh -V |& awk -F'[_.]' '{ print $2 "." $3+0 }') -lt "7.8"];then
+		if [ $(ssh -V |& awk -F'[_.]' '{ print $2 "." $3+0 }') -lt "7.8" ];then
 			su -c "ssh-keygen -t rsa" "$MASTERUSER"
 		else
 			su -c "ssh-keygen -m PEM" "$MASTERUSER"
