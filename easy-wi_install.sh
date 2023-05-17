@@ -1063,7 +1063,8 @@ if [ "$INSTALL" == "EW" ] || [ "$INSTALL" == "MY" ]; then
             # FIX MariaDB Install (#96)
 			if [ -z "$(apt-cache search mariadb-server-"$MARIADB_VERSION" 2> /dev/null)" ]; then
 			    curl -LsSO https://downloads.mariadb.com/MariaDB/mariadb-keyring-2019.gpg
-                mv mariadb-keyring-2019.gpg /etc/apt/trusted.gpg.d/
+			    
+                            mv mariadb-keyring-2019.gpg /etc/apt/trusted.gpg.d/
 				add-apt-repository "deb https://downloads.mariadb.com/MariaDB/mariadb-$MARIADB_VERSION/repo/$OS $OSBRANCH main"
 
 				RUNUPDATE=1
@@ -1219,7 +1220,7 @@ _EOF_
 	# FIX MariaDB Install (#107)
 	if [ "$MYSQL_VERSION" == "Linux" ]; then
 		MYSQL_VERSION=$(mysql -V | awk {'print $3'} | tr -d . | cut -c 1-2)
-	elif [ "$MYSQL_VERSION" == *"-MariaDB"]; then
+	elif [ "$MYSQL_VERSION" == *"-MariaDB" ]; then
 		# -> mysql  Ver 15.1 Distrib 10.5.18-MariaDB, for debian-linux-gnu (x86_64) using  EditLine wrapper into 10
 		MYSQL_VERSION=$(mysql -V | awk '{ print $5 }' | tr -d , | tr -d 'MariaDB' | awk -F\- '{ print $1 }' | cut -c 1-2)
 	fi
