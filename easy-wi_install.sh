@@ -1138,11 +1138,11 @@ if [ "$INSTALL" == "EW" ] || [ "$INSTALL" == "MY" ]; then
 	RestartDatabase
 
 	cyanMessage " "
-	okAndSleep "Securing MySQL by running \"mysql_secure_installation\" commands."
+	okAndSleep "Securing MySQL by running \"mariadb-secure-installation\" commands."
 	if [ -n "$MYSQL_ROOT_PASSWORD" ]; then
 		if [ "$OS" == "centos" ] && [ "$INSTALL" == "EW" ]; then
 			mysqladmin -u root password "$MYSQL_ROOT_PASSWORD"
-			mysqladmin shutdown -p"$MYSQL_ROOT_PASSWORD"
+			mysqladmin shutdown -p "$MYSQL_ROOT_PASSWORD"
 			RestartDatabase
 		fi
 
