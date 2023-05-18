@@ -1063,19 +1063,13 @@ if [ "$INSTALL" == "EW" ] || [ "$INSTALL" == "MY" ]; then
 
             # FIX MariaDB Install (#96)
 			if [ -z "$(apt-cache search mariadb-server-"$MARIADB_VERSION" 2> /dev/null)" ]; then
-			    curl -LsSO https://downloads.mariadb.com/MariaDB/mariadb-keyring-2019.gpg
-			    
-                            mv mariadb-keyring-2019.gpg /etc/apt/trusted.gpg.d/
-				add-apt-repository "deb https://downloads.mariadb.com/MariaDB/mariadb-$MARIADB_VERSION/repo/$OS $OSBRANCH main"
-
+					wget -qO- https://dlm.mariadb.com/3/MariaDB/mariadb_repo_setup | bash -s --  --skip-check-installed
 				RUNUPDATE=1
 			fi
 
 
 			if [ "$OS" == "debian" ] && [ "$DOTDEB" == "Yes" ]; then
-				echo "Package: *" >/etc/apt/preferences.d/mariadb.pref
-				echo "Pin: origin downloads.mariadb.com" >>/etc/apt/preferences.d/mariadb.pref
-				echo "Pin-Priority: 1000" >>/etc/apt/preferences.d/mariadb.pref
+					wget -qO- https://dlm.mariadb.com/3/MariaDB/mariadb_repo_setup | bash -s --  --skip-check-installed
 				RUNUPDATE=1
 			fi
 		elif ([ "$OS" == "centos" ] && [ "$SQL_VERSION" == "10" ] && [ ! -f /etc/yum.repos.d/MariaDB.repo ]); then
@@ -1083,16 +1077,9 @@ if [ "$INSTALL" == "EW" ] || [ "$INSTALL" == "MY" ]; then
 			MARIADB_FILE=$(ls /etc/yum.repos.d/)
 			for search_mariadb in "${MARIADB_FILE[@]}"; do
 				if [ -z "$(grep '/MariaDB/' "$search_mariadb" >/dev/null 2>&1)" ] && [ ! -f /etc/yum.repos.d/MariaDB.repo ]; then
-					echo "# MariaDB $MARIADB_VERSION CentOS repository list
-						# http://downloads.mariadb.org/mariadb/repositories/
-						[mariadb]
-						name = MariaDB
-						baseurl = "http://yum.mariadb.org/"$MARIADB_VERSION"/centos"$MARIADB_TMP_VERSION"-amd64"
-						gpgkey=https://yum.mariadb.org/RPM-GPG-KEY-MariaDB
-						gpgcheck=1" >/etc/yum.repos.d/MariaDB.repo
+					wget -qO- https://dlm.mariadb.com/3/MariaDB/mariadb_repo_setup | bash -s --  --skip-check-installed
 				fi
 			done
-			importKey https://yum.mariadb.org/RPM-GPG-KEY-MariaDB
 			RUNUPDATE=1
 		fi
 
