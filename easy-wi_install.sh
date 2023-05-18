@@ -1110,11 +1110,12 @@ if [ "$INSTALL" == "EW" ] || [ "$INSTALL" == "MY" ]; then
 		elif [ "$OS" == "centos" ] && [ "$OSVERSION" -lt "80" ]; then
 		    checkInstall perl-DBI
 			checkInstall mariadb-server
+			checkInstall mariadb
 			systemctl enable mariadb.service >/dev/null 2>&1
 		elif [ "$OS" == "centos" ] && [ "$OSVERSION" -ge "80" ]; then
 		    dnf install -y perl-DBI
 			dnf install -y boost-program-options
-			dnf install -y MariaDB-server MariaDB-client --disablerepo=AppStream
+			dnf install -y MariaDB MariaDB-server MariaDB-client --disablerepo=AppStream
 		fi
 	fi
 
