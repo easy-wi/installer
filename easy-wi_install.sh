@@ -248,6 +248,7 @@ RestartDatabase() {
 			systemctl restart mariadb 1>/dev/null
 		fi
 	elif [ "$OS" == "centos" ]; then
+	    
 		systemctl restart mariadb.service 1>/dev/null
 
 		if [ "$?" -ne "0" ]; then
@@ -1231,7 +1232,7 @@ _EOF_
 
 	RestartDatabase
 
-	if [-z "$(ps fax | grep 'mysqld' | grep -v 'grep')" ] || [-z "$(ps fax | grep 'mariadb' | grep -v 'grep')" ]; then
+	if [ -z "$(ps fax | grep 'mysqld' | grep -v 'grep')" ] || [-z "$(ps fax | grep 'mariadb' | grep -v 'grep')" ]; then
 		cyanMessage " "
 		errorAndExit "Error: No SQL server running but required for Webpanel installation."
 	fi
