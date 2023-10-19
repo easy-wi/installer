@@ -248,6 +248,7 @@ RestartDatabase() {
 			systemctl restart mariadb 1>/dev/null
 		fi
 	elif [ "$OS" == "centos" ]; then
+	    
 		systemctl restart mariadb.service 1>/dev/null
 
 		if [ "$?" -ne "0" ]; then
@@ -339,6 +340,9 @@ if [ -f /etc/debian_version ]; then
 	fi
 	if [ -z "$(which apt-utils)" ]; then
 		checkInstall apt-utils
+	fi
+	if [ -z "$(which sudo)" ]; then
+		checkInstall sudo
 	fi
 elif [ -f /etc/centos-release ]; then
 	INSTALLER="yum"
@@ -930,10 +934,10 @@ if [[ "$INSTALL" != "MY" ]]; then
 
 		#ssh-keygen creates not yet supported encrypted open ssh keys since version 7.8 -> https://www.openssh.com/txt/release-7.8
 		# support for encrypted open ssh keys comes with phpseclib v3
-		if [ $(ssh -V |& awk -F'[_.]' '{ print $2 "." $3+0 }') -lt "7.8"];then
-			su -c "ssh-keygen -t rsa" "$MASTERUSER"
+		if [ "$(ssh -V 2>&1 | awk -F'[_.]' '{ print $2 "." $3+0 }')" \< "7.8" ]; then
+			su -c "ssh-keygen -t rsa -f /home/$MASTERUSER/.ssh/id_rsa -N ''" "$MASTERUSER"
 		else
-			su -c "ssh-keygen -m PEM" "$MASTERUSER"
+			su -c "ssh-keygen -m PEM -f /home/$MASTERUSER/.ssh/id_rsa -N ''" "$MASTERUSER"
 		fi
 
 		KEYNAME=$(find -maxdepth 1 -name "*.pub" | head -n 1)
@@ -995,7 +999,9 @@ if [ "$INSTALL" == "EW" ] || [ "$INSTALL" == "MY" ]; then
 	fi
 	# don't use mysql for debian >= 10
 	if [ "$OS" == "debian" ] && [ "$OSVERSION" -lt "100" ] || [ "$OS" == "ubuntu" ]; then
-		if [[ -z "$(ps fax | grep 'mysqld' | grep -v 'grep')" || -z "$(ps fax | grep 'mariadb' | grep -v 'grep')" ]]; then
+		if [[ -n "$(ps fax | grep 'mysqld' | grep -v 'grep')" || -n "$(ps fax | grep 'mariadb' | grep -v 'grep')" ]]; then
+			cyanMessage " "
+		else
 			cyanMessage " "
 			cyanMessage "Please select which database server to install."
 
@@ -1017,7 +1023,7 @@ if [ "$INSTALL" == "EW" ] || [ "$INSTALL" == "MY" ]; then
 		SQL="MariaDB"
 	fi
 
-	if [ -n "$(ps fax | grep 'mysqld' | grep -v 'grep')" ]; then
+	if [[ -n "$(ps fax | grep 'mysqld' | grep -v 'grep')" || -n "$(ps fax | grep 'mariadb' | grep -v 'grep')" ]]; then
 		if [ -f /root/database_root_login.txt ]; then
 			MYSQL_ROOT_PASSWORD=$(grep "Password:" /root/database_root_login.txt | awk '{print $2}')
 		else
@@ -1147,11 +1153,11 @@ if [ "$INSTALL" == "EW" ] || [ "$INSTALL" == "MY" ]; then
 	RestartDatabase
 
 	cyanMessage " "
-	okAndSleep "Securing MySQL by running \"mysql_secure_installation\" commands."
+	okAndSleep "Securing MySQL by running \"mariadb-secure-installation\" commands."
 	if [ -n "$MYSQL_ROOT_PASSWORD" ]; then
 		if [ "$OS" == "centos" ] && [ "$INSTALL" == "EW" ]; then
 			mysqladmin -u root password "$MYSQL_ROOT_PASSWORD"
-			mysqladmin shutdown -p"$MYSQL_ROOT_PASSWORD"
+			mysqladmin shutdown -p "$MYSQL_ROOT_PASSWORD"
 			RestartDatabase
 		fi
 
@@ -1217,9 +1223,9 @@ _EOF_
 	MYSQL_VERSION=$(mysql -V | awk {'print $5'} | tr -d ,)
 
 	# FIX MariaDB Install (#107)
-	if [ "$MYSQL_VERSION" == "Linux" ]; then
+	if [[ "$MYSQL_VERSION" == "Linux" ]]; then
 		MYSQL_VERSION=$(mysql -V | awk {'print $3'} | tr -d . | cut -c 1-2)
-	elif [ "$MYSQL_VERSION" == *"-MariaDB"]; then
+	elif [[ "$MYSQL_VERSION" == *"-MariaDB" ]]; then
 		# -> mysql  Ver 15.1 Distrib 10.5.18-MariaDB, for debian-linux-gnu (x86_64) using  EditLine wrapper into 10
 		MYSQL_VERSION=$(mysql -V | awk '{ print $5 }' | tr -d , | tr -d 'MariaDB' | awk -F\- '{ print $1 }' | cut -c 1-2)
 	fi
@@ -1241,7 +1247,9 @@ _EOF_
 
 	RestartDatabase
 
-	if [-z "$(ps fax | grep 'mysqld' | grep -v 'grep')" ] || [-z "$(ps fax | grep 'mariadb' | grep -v 'grep')" ]; then
+	if [[ -n "$(ps fax | grep 'mysqld' | grep -v 'grep')" || -n "$(ps fax | grep 'mariadb' | grep -v 'grep')" ]]; then
+		cyanMessage " "
+	else
 		cyanMessage " "
 		errorAndExit "Error: No SQL server running but required for Webpanel installation."
 	fi
@@ -2330,6 +2338,11 @@ _EOF_
 		MYSQL_VERSION=$(mysql -V | awk '{ print $5 }' | tr -d , | tr -d 'MariaDB' | awk -F\- '{ print $1 }' | cut -c 1-2)
 		# adds 0 at the end for further checks now MYSQL_VERSION is 100
 		MYSQL_VERSION+="0"
+	fi
+	if [ "$MYSQL_VERSION" -le "80" ]; then
+	    	mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "CREATE DATABASE IF NOT EXISTS easy_wi; CREATE USER IF NOT EXISTS 'easy_wi'@'localhost' IDENTIFIED BY '$DB_PASSWORD'; GRANT ALL PRIVILEGES ON easy_wi.* TO 'easy_wi'@'localhost' WITH GRANT OPTION; FLUSH PRIVILEGES;"
+	else
+		mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "CREATE DATABASE IF NOT EXISTS easy_wi; CREATE USER IF NOT EXISTS 'easy_wi'@'localhost' IDENTIFIED BY '$DB_PASSWORD'; GRANT ALL ON easy_wi.* TO 'easy_wi'@'localhost'; FLUSH PRIVILEGES;"
 	fi
 
 	cyanMessage " "
