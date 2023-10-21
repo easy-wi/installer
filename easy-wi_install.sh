@@ -36,36 +36,52 @@ DEBUG="OFF"
 #    Sie sollten eine Kopie der GNU General Public License zusammen mit diesem
 #    Programm erhalten haben. Wenn nicht, siehe <http://www.gnu.org/licenses/>.
 
-if [ "$DEBUG" == "ON" ] || [ "$1" == "--debug" ]; then
+# #shellcheck SC2193 https://github.com/koalaman/shellcheck/wiki/SC2193
+# [ "$1" == "--debug" ]
+if [ "$DEBUG" == "ON" ] || [ "${1}" == "--debug" ]; then
 	set -x
 fi
 
+# #shellcheck SC2145 https://github.com/koalaman/shellcheck/wiki/SC2145
+# echo -e "\\033[32;1m${@}}\033[0m"
 greenMessage() {
-	echo -e "\\033[32;1m${@}\033[0m"
+	echo -e "\\033[32;1m$*\033[0m"
 }
 
+# #shellcheck SC2145 https://github.com/koalaman/shellcheck/wiki/SC2145
+# echo -e "\\033[36;1m${@}\033[0m"
 cyanMessage() {
-	echo -e "\\033[36;1m${@}\033[0m"
+	echo -e "\\033[36;1m$*\033[0m"
 }
 
+# #shellcheck SC2145 https://github.com/koalaman/shellcheck/wiki/SC2145
+# echo -e "\\033[31;1m${@}\033[0m"
 redMessage() {
-	echo -e "\\033[31;1m${@}\033[0m"
+	echo -e "\\033[31;1m$*\033[0m"
 }
 
+# #shellcheck SC2145 https://github.com/koalaman/shellcheck/wiki/SC2145
+# echo -e "\\033[33;1m${@}\033[0m"
 yellowMessage() {
-	echo -e "\\033[33;1m${@}\033[0m"
+	echo -e "\\033[33;1m$*\033[0m"
 }
 
+# #shellcheck SC2145 https://github.com/koalaman/shellcheck/wiki/SC2145
+# echo -en "\\033[32;1m${@}\033[0m"
 greenOneLineMessage() {
-	echo -en "\\033[32;1m${@}\033[0m"
+	echo -en "\\033[32;1m$*\033[0m"
 }
 
+# #shellcheck SC2145 https://github.com/koalaman/shellcheck/wiki/SC2145
+# echo -en "\\033[36;1m${@}\033[0m"
 cyanOneLineMessage() {
-	echo -en "\\033[36;1m${@}\033[0m"
+	echo -en "\\033[36;1m$*\033[0m"
 }
 
+# #shellcheck SC2145 https://github.com/koalaman/shellcheck/wiki/SC2145
+# echo -en "\\033[33;1m${@}\033[0m"
 yellowOneLineMessage() {
-	echo -en "\\033[33;1m${@}\033[0m"
+	echo -en "\\033[33;1m$*\033[0m"
 }
 
 errorAndQuit() {
@@ -74,7 +90,7 @@ errorAndQuit() {
 
 errorAndExit() {
 	cyanMessage " "
-	redMessage "${@}"
+	redMessage "$*"
 	cyanMessage " "
 	exit 1
 }
@@ -84,48 +100,48 @@ errorAndContinue() {
 }
 
 removeIfExists() {
-	if [ -n "$1" ] && [ -f "$1" ]; then
-		rm -f "$1"
+	if [ -n "${1}" ] && [ -f "${1}" ]; then
+		rm -f "${1}"
 	fi
 }
 
 runSpinner() {
 	SPINNER=("-" "\\" "|" "/")
 
-	for SEQUENCE in $(seq 1 "$1"); do
-		for I in "${SPINNER[@]}"; do
-			echo -ne "\b$I"
+	for _ in $(seq 1 "$1"); do
+		for I in ${SPINNER[*]}; do
+			echo -ne "\b${I}"
 			sleep 0.1
 		done
 	done
 }
 
 okAndSleep() {
-	greenMessage "$1"
+	greenMessage "${1}"
 	sleep 1
 }
 
 makeDir() {
-	if [ -n "$1" ] && [ ! -d "$1" ]; then
-		mkdir -p "$1"
+	if [ -n "${1}" ] && [ ! -d "${1}" ]; then
+		mkdir -p "${1}"
 	fi
 }
 
 backUpFile() {
-	if [ ! -f "$1.easy-install.backup" ]; then
-		cp "$1" "$1.easy-install.backup"
+	if [ ! -f "${1}.easy-install.backup" ]; then
+		cp "${1}" "${1}.easy-install.backup"
 	fi
 }
 
 checkInstall() {
-	if [ "$OS" == "debian" ] || [ "$OS" == "ubuntu" ]; then
+	if [ "${OS}" == "debian" ] || [ "${OS}" == "ubuntu" ]; then
 		if [ -z "$(dpkg-query -s "$1" 2>/dev/null)" ]; then
 			cyanMessage " "
-			okAndSleep "Installing package $1"
-			$INSTALLER -y install "$1"
+			okAndSleep "Installing package ${1}"
+			$INSTALLER -y install "${1}"
 		fi
 	elif [ "$OS" == "centos" ]; then
-		if [ -z "$(rpm -qa "$1")" ]; then
+		if [ -z "$(rpm -qa "${1}")" ]; then
 			cyanMessage " "
 			okAndSleep "Installing package $1"
 			$INSTALLER -y install "$1"
@@ -322,6 +338,19 @@ setPath() {
 	fi
 }
 
+
+# We need to be root to install and update
+if [ "$(id -u)" != "0" ]; then
+	cyanMessage "Change to root account required"
+	su -
+fi
+
+if [ "$(id -u)" != "0" ]; then
+	errorAndExit "Still not root, aborting"
+fi
+
+
+
 cyanMessage " "
 yellowMessage "Please wait... Update is currently running."
 cyanMessage " "
@@ -394,15 +423,7 @@ else
 	okAndSleep "You are using the up to date version ${INSTALLER_VERSION}"
 fi
 
-# We need to be root to install and update
-if [ "$(id -u)" != "0" ]; then
-	cyanMessage "Change to root account required"
-	su -
-fi
 
-if [ "$(id -u)" != "0" ]; then
-	errorAndExit "Still not root, aborting"
-fi
 
 cyanMessage " "
 okAndSleep "Update the system packages to the latest version? Required, as otherwise dependencies might break!"
@@ -1290,6 +1311,8 @@ if [ "$PHPINSTALL" == "Yes" ]; then
 		USE_PHP_VERSION='7.4'
 	elif [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -eq "2004" ]; then
 		USE_PHP_VERSION='7.4'
+  elif [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -eq "2204" ]; then
+    USE_PHP_VERSION='7.4'
 	elif [ "$OS" == "centos" ] && [ "$OSVERSION" -lt "80" ]; then
 		REMIREPO=$(yum list installed | grep "remi-release" | awk '{print $1}')
 		if [ -z "$REMIREPO" ]; then
@@ -1321,7 +1344,9 @@ if [ "$PHPINSTALL" == "Yes" ]; then
 			sudo wget -O /etc/apt/trusted.gpg.d/php.gpg https://packages.sury.org/php/apt.gpg
 			echo "deb https://packages.sury.org/php/ $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/php.list
 			sudo apt update
-		else
+		fi
+
+		if [ "$OS" == "ubuntu" ] && [ "$OSVERSION" -eq "2204" ]; then
 			sudo add-apt-repository ppa:ondrej/php
 		fi
 		
