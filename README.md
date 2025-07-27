@@ -40,7 +40,7 @@ ___
 ## Non-interactive Installation Mode
 
 ```sh
-./easy-wi-install.sh \
+./easy-wi_install_non_interactive.sh \
   update=yes \
   install_component=panel \
   url=http://192.168.1.1 \
