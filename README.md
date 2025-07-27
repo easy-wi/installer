@@ -37,6 +37,13 @@ sudo bash ./easy-wi_install.sh
 ```
 ___
 
+## Non-interactive Installation Mode
+
+```sh
+
+```
+___
+
 ## Support Channel
 Discord: [Easy-WI Discord Channel](https://discord.gg/quJvvfF)
 
