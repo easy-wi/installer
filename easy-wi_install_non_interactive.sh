@@ -349,7 +349,52 @@ if [ "$(id -u)" != "0" ]; then
 	errorAndExit "Still not root, aborting"
 fi
 
+# Non-interactive Modus
+for ARG in "$@"; do
+  case $ARG in
+    update=*)
+      UPDATE=${ARG#*=}
+      shift
+      ;;
+    install_component=*)
+      INSTALL_COMPONENT=${ARG#*=}
+      shift
+      ;;
+    url=*)
+      IP_DOMAIN=${ARG#*=}
+      shift
+      ;;
+    version=*)
+      RELEASE_TYPE=${ARG#*=}
+      shift
+      ;;
+    user=*)
+      MASTERUSER=${ARG#*=}
+      shift
+      ;;
+    password=*)
+      USER_PASSWORD=${ARG#*=}
+      shift
+      ;;
+    db=*)
+      SQL=${ARG#*=}
+      shift
+      ;;
+    ssl=*)
+      SSL=${ARG#*=}
+      shift
+      ;;
+    *)
+      ;;
+  esac
+done
 
+# Set to non-interactive Mode, when all Variables set
+if [[ -n "$UPDATE" && -n "$INSTALL_COMPONENT" && -n "$IP_DOMAIN" && -n "$RELEASE_TYPE" && -n "$MASTERUSER" && -n "$USER_PASSWORD" && -n "$SQL" && -n "$SSL" ]]; then
+  INTERACTIVE_MODE="no"
+else
+  INTERACTIVE_MODE="yes"
+fi
 
 cyanMessage " "
 yellowMessage "Please wait... Update is currently running."
@@ -422,8 +467,6 @@ if [ "$(printf "${LATEST_VERSION}\n${INSTALLER_VERSION}" | sort -V | tail -n 1)"
 else
 	okAndSleep "You are using the up to date version ${INSTALLER_VERSION}"
 fi
-
-
 
 cyanMessage " "
 okAndSleep "Update the system packages to the latest version? Required, as otherwise dependencies might break!"
@@ -624,27 +667,40 @@ yellowOneLineMessage "If you want to install everything on this system, then ple
 cyanOneLineMessage "Easy-WI Webpanel "
 yellowMessage "first!"
 cyanMessage " "
-cyanMessage "What shall be installed/prepared?"
 
-OPTIONS=("Easy-WI Webpanel" "Gameserver Root" "Voicemaster" "Webspace Root" "MySQL" "Quit")
-select OPTION in "${OPTIONS[@]}"; do
-	case "$REPLY" in
-	1 | 2 | 3 | 4 | 5) break ;;
-	6) errorAndQuit ;;
-	*) errorAndContinue ;;
+if [ "$INTERACTIVE_MODE" == "yes" ]; then
+	cyanMessage "What shall be installed/prepared?"
+
+	OPTIONS=("Easy-WI Webpanel" "Gameserver Root" "Voicemaster" "Webspace Root" "MySQL" "Quit")
+	select OPTION in "${OPTIONS[@]}"; do
+		case "$REPLY" in
+		1 | 2 | 3 | 4 | 5) break ;;
+		6) errorAndQuit ;;
+		*) errorAndContinue ;;
+		esac
+	done
+
+	if [ "$OPTION" == "Easy-WI Webpanel" ]; then
+		INSTALL="EW"
+	elif [ "$OPTION" == "Gameserver Root" ]; then
+		INSTALL="GS"
+	elif [ "$OPTION" == "Voicemaster" ]; then
+		INSTALL="VS"
+	elif [ "$OPTION" == "Webspace Root" ]; then
+		INSTALL="WR"
+	elif [ "$OPTION" == "MySQL" ]; then
+		INSTALL="MY"
+	fi
+else
+	# non-interaktiver Modus
+	case "$INSTALL_COMPONENT" in
+		panel) INSTALL="EW" ;;
+		root) INSTALL="WR" ;;
+		mysql) INSTALL="MY" ;;
+		gameserver) INSTALL="GS" ;;
+		voice) INSTALL="VS" ;;
+		*) errorAndExit "Unbekannter install_component-Typ: $INSTALL_COMPONENT" ;;
 	esac
-done
-
-if [ "$OPTION" == "Easy-WI Webpanel" ]; then
-	INSTALL="EW"
-elif [ "$OPTION" == "Gameserver Root" ]; then
-	INSTALL="GS"
-elif [ "$OPTION" == "Voicemaster" ]; then
-	INSTALL="VS"
-elif [ "$OPTION" == "Webspace Root" ]; then
-	INSTALL="WR"
-elif [ "$OPTION" == "MySQL" ]; then
-	INSTALL="MY"
 fi
 
 OTHER_PANEL=""
@@ -696,44 +752,56 @@ fi
 
 # Run the domain/IP check up front to avoid late error out.
 if [ "$INSTALL" == "EW" ]; then
-	cyanMessage " "
-	cyanMessage "At which URL/Domain should Easy-Wi be placed?"
-	OPTIONS=("$LOCAL_IP" "Domain/IP" "Quit")
-	select OPTION in "${OPTIONS[@]}"; do
-		case "$REPLY" in
-		1 | 2) break ;;
-		3) errorAndQuit ;;
-		*) errorAndContinue ;;
-		esac
-	done
-
-	if [ "$OPTION" == "Domain/IP" ]; then
+	if [ "$INTERACTIVE_MODE" == "yes" ]; then
 		cyanMessage " "
-		cyanMessage "Please specify the IP or domain Easy-Wi should run at."
-		read IP_DOMAIN
+		cyanMessage "At which URL/Domain should Easy-Wi be placed?"
+		OPTIONS=("$LOCAL_IP" "Domain/IP" "Quit")
+		select OPTION in "${OPTIONS[@]}"; do
+			case "$REPLY" in
+			1 | 2) break ;;
+			3) errorAndQuit ;;
+			*) errorAndContinue ;;
+			esac
+		done
+
+		if [ "$OPTION" == "Domain/IP" ]; then
+			cyanMessage " "
+			cyanMessage "Please specify the IP or domain Easy-Wi should run at."
+			read IP_DOMAIN
+		else
+			IP_DOMAIN=$OPTION
+		fi
+
+		if [ -z "$(grep -E '\b((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.|$)){4}\b' <<<"$IP_DOMAIN")" ] && [ -z "$(grep -E '^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$' <<<"$IP_DOMAIN")" ]; then
+			errorAndExit "Error: $IP_DOMAIN is neither a domain nor an IPv4 address!"
+		fi
+
+		FILE_NAME=${IP_DOMAIN//./_}
 	else
-		IP_DOMAIN=$OPTION
+	  FILE_NAME=${IP_DOMAIN//./_}
 	fi
 
-	if [ -z "$(grep -E '\b((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.|$)){4}\b' <<<"$IP_DOMAIN")" ] && [ -z "$(grep -E '^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$' <<<"$IP_DOMAIN")" ]; then
-		errorAndExit "Error: $IP_DOMAIN is neither a domain nor an IPv4 address!"
-	fi
+	if [ "$INTERACTIVE_MODE" == "yes" ]; then
+		cyanMessage " "
+		cyanMessage "Install stable or latest developer version?"
 
-	FILE_NAME=${IP_DOMAIN//./_}
+		OPTIONS=("Stable" "Developer" "Quit")
+		select OPTION in "${OPTIONS[@]}"; do
+			case "$REPLY" in
+			1 | 2) break ;;
+			3) errorAndQuit ;;
+			*) errorAndContinue ;;
+			esac
+		done
 
-	cyanMessage " "
-	cyanMessage "Install stable or latest developer version?"
-
-	OPTIONS=("Stable" "Developer" "Quit")
-	select OPTION in "${OPTIONS[@]}"; do
-		case "$REPLY" in
-		1 | 2) break ;;
-		3) errorAndQuit ;;
-		*) errorAndContinue ;;
+		RELEASE_TYPE=$OPTION
+	else
+		case "$RELEASE_TYPE" in
+			stable|Stable) RELEASE_TYPE="Stable" ;;
+			dev|developer|Developer) RELEASE_TYPE="Developer" ;;
+			*) errorAndExit "Invalid version: $RELEASE_TYPE" ;;
 		esac
-	done
-
-	RELEASE_TYPE=$OPTION
+	fi
 fi
 
 if [ "$INSTALL" == "EW" ] || [ "$INSTALL" == "WR" ]; then
@@ -896,7 +964,7 @@ if [ "$INSTALL" == "VS" ]; then
 
 	okAndSleep "Detected latest server version as $VERSION with download URL $DOWNLOAD_URL"
 fi
-#evenntuell ändern
+
 if [[ "$INSTALL" != "MY" ]]; then
 	cyanMessage " "
 	cyanMessage "Please enter the name of the masteruser, which does not exist yet."
@@ -977,8 +1045,12 @@ if [[ "$INSTALL" != "MY" ]]; then
 		fi
 	elif [ "$OPTION" == "Set password" ]; then
 		cyanMessage " "
-		cyanMessage "Please provide the user password for $MASTERUSER."
-		passwd "$MASTERUSER"
+		if [ "$INTERACTIVE_MODE" == "no" ]; then
+			echo "$MASTERUSER:$USER_PASSWORD" | chpasswd
+		else
+			cyanMessage "Please provide the user password for $MASTERUSER."
+			passwd "$MASTERUSER"
+		fi
 	fi
 fi
 
@@ -991,7 +1063,7 @@ if [ "$INSTALL" == "WR" ] || [ "$INSTALL" == "EW" ]; then
 	makeDir /home/"$MASTERUSER"/skel/tmp
 	chown -cR "$MASTERUSER":$WEBGROUPNAME /home/"$MASTERUSER" >/dev/null 2>&1
 
-  #Fix Error 403 - You don't have permission to access /install/install.php on this server.
+	#Fix Error 403 - You don't have permission to access /install/install.php on this server.
 	chmod +x /home/"$MASTERUSER"/ >/dev/null 2>&1
 	chmod +x /home/"$MASTERUSER"/skel/ >/dev/null 2>&1
 	chmod +x /home/"$MASTERUSER"/skel/htdocs >/dev/null 2>&1
@@ -1022,17 +1094,26 @@ if [ "$INSTALL" == "EW" ] || [ "$INSTALL" == "MY" ]; then
 		if [[ -n "$(ps fax | grep 'mysqld' | grep -v 'grep')" || -n "$(ps fax | grep 'mariadb' | grep -v 'grep')" ]]; then
 			cyanMessage " "
 		else
-			cyanMessage " "
-			cyanMessage "Please select which database server to install."
+			if [ "$INTERACTIVE_MODE" == "yes" ]; then
+				cyanMessage " "
+				cyanMessage "Please select which database server to install."
 
-			OPTIONS=("MySQL" "MariaDB" "None" "Quit")
-			select SQL in "${OPTIONS[@]}"; do
-				case "$REPLY" in
-				1 | 2 | 3) break ;;
-				4) errorAndQuit ;;
-				*) errorAndContinue ;;
+				OPTIONS=("MySQL" "MariaDB" "None" "Quit")
+				select SQL in "${OPTIONS[@]}"; do
+					case "$REPLY" in
+					1 | 2 | 3) break ;;
+					4) errorAndQuit ;;
+					*) errorAndContinue ;;
+					esac
+				done
+			else
+				case "$SQL" in
+					mariadb|MariaDB) SQL="MariaDB" ;;
+					mysql|MySQL) SQL="MySQL" ;;
+					none|None) SQL="None" ;;
+					*) errorAndExit "Invalid db type: $SQL" ;;
 				esac
-			done
+			fi
 		fi
 	elif [ "$OS" == "centos" ]; then
 		if [ -z "$(ps fax | grep 'mysqld' | grep -v 'grep')" ]; then
@@ -2370,15 +2451,23 @@ _EOF_
 	fi
 
 	cyanMessage " "
-	cyanMessage "Secure Vhost with SSL? (recommended!)"
-	OPTIONS=("Yes" "No" "Quit")
-	select SSL in "${OPTIONS[@]}"; do
-		case "$REPLY" in
-		1 | 2) break ;;
-		3) errorAndQuit ;;
-		*) errorAndContinue ;;
+	if [ "$INTERACTIVE_MODE" == "yes" ]; then
+		cyanMessage "Secure Vhost with SSL? (recommended!)"
+		OPTIONS=("Yes" "No" "Quit")
+		select SSL in "${OPTIONS[@]}"; do
+			case "$REPLY" in
+			1 | 2) break ;;
+			3) errorAndQuit ;;
+			*) errorAndContinue ;;
+			esac
+		done
+	else
+		case "$SSL" in
+			yes|Yes|true|TRUE) SSL="Yes" ;;
+			no|No|false|FALSE) SSL="No" ;;
+			*) errorAndExit "Invalid ssl setting: $SSL" ;;
 		esac
-	done
+	fi
 
 	if [ "$SSL" == "Yes" ]; then
 		if [[ "$IP_DOMAIN" =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
