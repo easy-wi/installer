@@ -40,7 +40,15 @@ ___
 ## Non-interactive Installation Mode
 
 ```sh
-
+./easy-wi-install.sh \
+  update=yes \
+  install_component=panel \
+  url=http://192.168.1.1 \
+  version=stable \
+  user=admin \
+  password=MySecurePassword123 \
+  db=mariadb \
+  ssl=no
 ```
 ___
 
