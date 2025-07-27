@@ -477,7 +477,6 @@ elif [ "$OS" == "slackware" ]; then
 		echo "export LANG=en_US.UTF-8" >>/etc/profile.d/lang.sh
 
 	fi
-
 else
 	checkInstall locales
 	if [ "$(grep en_US.UTF-8 /etc/locale.gen)" != "en_US.UTF-8 UTF-8" ]; then
